@@ -42,6 +42,7 @@ const SearchButton = React.lazy(() => import('./views/components/search-button/S
 const Spinners = React.lazy(() => import('./views/components/spinners/Spinners'))
 const Tabs = React.lazy(() => import('./views/components/tabs/Tabs'))
 const Tables = React.lazy(() => import('./views/components/tables/Tables'))
+const TablaInsumos = React.lazy(() => import('./views/components/tabla-insumos/TablaInsumos'))
 const Toasts = React.lazy(() => import('./views/components/toasts/Toasts'))
 const Tooltips = React.lazy(() => import('./views/components/tooltips/Tooltips'))
 
@@ -109,6 +110,7 @@ export const routes = [
   { path: '/components/spinners', name: 'Spinners', element: Spinners },
   { path: '/components/tabs', name: 'Tabs', element: Tabs },
   { path: '/components/tables', name: 'Tables', element: Tables },
+  { path: '/tabla-insumos', name: 'Insumos', element: TablaInsumos },
   { path: '/components/toasts', name: 'Toasts', element: Toasts },
   { path: '/components/tooltips', name: 'Tooltips', element: Tooltips },
   { path: '/charts', name: 'Charts', element: Charts },
