@@ -19,32 +19,34 @@ import React from 'react'
 const Dashboard = React.lazy(() => import('./views/dashboard/Dashboard'))
 
 // Components
-const Accordion = React.lazy(() => import('./views/components/accordion/Accordion'))
-const Alerts = React.lazy(() => import('./views/components/alerts/Alerts'))
-const Badges = React.lazy(() => import('./views/components/badge/Badge'))
-const Breadcrumbs = React.lazy(() => import('./views/components/breadcrumb/Breadcrumb'))
-const Buttons = React.lazy(() => import('./views/components/buttons/Buttons'))
-const ButtonGroups = React.lazy(() => import('./views/components/button-group/ButtonGroup'))
-const Cards = React.lazy(() => import('./views/components/cards/Cards'))
-const Carousels = React.lazy(() => import('./views/components/carousel/Carousel'))
-const Chip = React.lazy(() => import('./views/components/chip/Chip'))
-const ChipSet = React.lazy(() => import('./views/components/chip-set/ChipSet'))
-const Collapses = React.lazy(() => import('./views/components/collapse/Collapse'))
-const Dropdowns = React.lazy(() => import('./views/components/dropdowns/Dropdowns'))
-const ListGroups = React.lazy(() => import('./views/components/list-group/ListGroup'))
-const Modals = React.lazy(() => import('./views/components/modals/Modals'))
-const Navs = React.lazy(() => import('./views/components/navs-tabs/NavsTabs'))
-const Paginations = React.lazy(() => import('./views/components/pagination/Pagination'))
-const Placeholders = React.lazy(() => import('./views/components/placeholders/Placeholders'))
-const Popovers = React.lazy(() => import('./views/components/popovers/Popovers'))
-const Progress = React.lazy(() => import('./views/components/progress/Progress'))
-const SearchButton = React.lazy(() => import('./views/components/search-button/SearchButton'))
-const Spinners = React.lazy(() => import('./views/components/spinners/Spinners'))
-const Tabs = React.lazy(() => import('./views/components/tabs/Tabs'))
-const Tables = React.lazy(() => import('./views/components/tables/Tables'))
-const TablaInsumos = React.lazy(() => import('./views/components/tabla-insumos/TablaInsumos'))
-const Toasts = React.lazy(() => import('./views/components/toasts/Toasts'))
-const Tooltips = React.lazy(() => import('./views/components/tooltips/Tooltips'))
+const Accordion = React.lazy(() => import('./views/components-ejemplos/accordion/Accordion'))
+const Alerts = React.lazy(() => import('./views/components-ejemplos/alerts/Alerts'))
+const Badges = React.lazy(() => import('./views/components-ejemplos/badge/Badge'))
+const Breadcrumbs = React.lazy(() => import('./views/components-ejemplos/breadcrumb/Breadcrumb'))
+const Buttons = React.lazy(() => import('./views/components-ejemplos/buttons/Buttons'))
+const ButtonGroups = React.lazy(() => import('./views/components-ejemplos/button-group/ButtonGroup'))
+const Cards = React.lazy(() => import('./views/components-ejemplos/cards/Cards'))
+const Carousels = React.lazy(() => import('./views/components-ejemplos/carousel/Carousel'))
+const Chip = React.lazy(() => import('./views/components-ejemplos/chip/Chip'))
+const ChipSet = React.lazy(() => import('./views/components-ejemplos/chip-set/ChipSet'))
+const Collapses = React.lazy(() => import('./views/components-ejemplos/collapse/Collapse'))
+const Dropdowns = React.lazy(() => import('./views/components-ejemplos/dropdowns/Dropdowns'))
+const ListGroups = React.lazy(() => import('./views/components-ejemplos/list-group/ListGroup'))
+const Modals = React.lazy(() => import('./views/components-ejemplos/modals/Modals'))
+const Navs = React.lazy(() => import('./views/components-ejemplos/navs-tabs/NavsTabs'))
+const Paginations = React.lazy(() => import('./views/components-ejemplos/pagination/Pagination'))
+const Placeholders = React.lazy(() => import('./views/components-ejemplos/placeholders/Placeholders'))
+const Popovers = React.lazy(() => import('./views/components-ejemplos/popovers/Popovers'))
+const Progress = React.lazy(() => import('./views/components-ejemplos/progress/Progress'))
+const SearchButton = React.lazy(() => import('./views/components-ejemplos/search-button/SearchButton'))
+const Spinners = React.lazy(() => import('./views/components-ejemplos/spinners/Spinners'))
+const Tabs = React.lazy(() => import('./views/components-ejemplos/tabs/Tabs'))
+const Tables = React.lazy(() => import('./views/components-ejemplos/tables/Tables'))
+const Toasts = React.lazy(() => import('./views/components-ejemplos/toasts/Toasts'))
+const Tooltips = React.lazy(() => import('./views/components-ejemplos/tooltips/Tooltips'))
+const Productos = React.lazy(() => import('./views/components/productos/Productos'))
+const Insumos = React.lazy(() => import('./views/components/insumos/Insumos'))
+
 
 //Forms
 const ChecksRadios = React.lazy(() => import('./views/forms/checks-radios/ChecksRadios'))
@@ -110,7 +112,8 @@ export const routes = [
   { path: '/components/spinners', name: 'Spinners', element: Spinners },
   { path: '/components/tabs', name: 'Tabs', element: Tabs },
   { path: '/components/tables', name: 'Tables', element: Tables },
-  { path: '/tabla-insumos', name: 'Insumos', element: TablaInsumos },
+  { path: '/insumos', name: 'Insumos', element: Insumos },
+  { path: '/productos', name: 'Productos', element: Productos },
   { path: '/components/toasts', name: 'Toasts', element: Toasts },
   { path: '/components/tooltips', name: 'Tooltips', element: Tooltips },
   { path: '/charts', name: 'Charts', element: Charts },

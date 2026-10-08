@@ -15,23 +15,23 @@ import {
   CTableRow,
 } from '@coreui/react'
 
-import Modal_test from '../modal-test/Modal'
+import ModalProductos from './ModalProductos'
 
-const TablaInsumos = () => {
-    const [insumos, setInsumos] = useState([])
+const Productos = () => {
+    const [productos, setProductos] = useState([])
     const [cargando, setCargando] = useState(true)
     const [error, setError] = useState('')
 
 useEffect(() => {
-  const cargarInsumos = async () => {
+  const cargarProductos = async () => {
     try {
-      const respuesta = await fetch('http://localhost:8000/api/insumos/')
+      const respuesta = await fetch('http://localhost:8000/api/productos/')
 
       if (!respuesta.ok) {
         throw new Error(`Error del servidor: ${respuesta.status}`)
       }
       const datos = await respuesta.json()
-      setInsumos(datos)
+      setProductos(datos)
     } catch (error) {
       setError(error.message)
     } finally {
@@ -39,16 +39,16 @@ useEffect(() => {
     }
   }
 
-  cargarInsumos()
+  cargarProductos()
   
 }, [])
 
-  if (cargando) return <p>Cargando insumos...</p>
-  if (error) return <p>Error al cargar insumos: {error}</p>
+  if (cargando) return <p>Cargando productos...</p>
+  if (error) return <p>Error al cargar productos: {error}</p>
 
   return (
     <div>
-      <Modal_test/>
+      <ModalProductos/>
       <CCard>
         <CCardBody>
           <CTable>
@@ -57,16 +57,16 @@ useEffect(() => {
                     <CTableHeaderCell scope="col">#</CTableHeaderCell>
                     <CTableHeaderCell scope="col">Nombre</CTableHeaderCell>
                     <CTableHeaderCell scope="col">Descripción</CTableHeaderCell>
-                    <CTableHeaderCell scope="col">Unidad</CTableHeaderCell>
+                    <CTableHeaderCell scope="col">Precio unitario</CTableHeaderCell>
                 </CTableRow>
             </CTableHead>
             <CTableBody>
-                {insumos.map((insumo) => (
-                  <CTableRow key={insumo.id_insumos}>
-                    <CTableHeaderCell scope="row">{insumo.id_insumos}</CTableHeaderCell>
-                    <CTableDataCell>{insumo.nombre}</CTableDataCell>
-                    <CTableDataCell>{insumo.descripcion}</CTableDataCell>
-                    <CTableDataCell>{insumo.unidad}</CTableDataCell>
+                {productos.map((producto) => (
+                  <CTableRow key={producto.id_productos}>
+                    <CTableHeaderCell scope="row">{producto.id_productos}</CTableHeaderCell>
+                    <CTableDataCell>{producto.nombre}</CTableDataCell>
+                    <CTableDataCell>{producto.descripcion}</CTableDataCell>
+                    <CTableDataCell>${producto.precio_unitario}</CTableDataCell>
                     </CTableRow>
                 ))}
             </CTableBody>
@@ -78,4 +78,4 @@ useEffect(() => {
   )
 }
 
-export default TablaInsumos
+export default Productos

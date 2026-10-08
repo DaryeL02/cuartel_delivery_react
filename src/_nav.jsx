@@ -126,7 +126,7 @@ const _nav = [
   {
     component: CNavItem,
     name: 'Insumos',
-    to: '/tabla-insumos',
+    to: '/insumos',
     icon: <CIcon icon={cilLemon} customClassName="nav-icon" />,
     badge: {
       color: 'info',
