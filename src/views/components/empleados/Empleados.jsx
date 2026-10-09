@@ -12,6 +12,7 @@ import {
 } from '@coreui/react'
 
 import ModalEmpleados from './ModalEmpleados'
+import api from '../api/api'
 
 const Empleados = () => {
     const [empleados, setEmpleados] = useState([])
@@ -21,7 +22,8 @@ const Empleados = () => {
 useEffect(() => {
   const cargarEmpleados = async () => {
     // try {
-      const respuesta = await fetch('http://localhost:8000/api/empleados/')
+      const respuesta = await fetch(api, '/api/empleados/')
+      
 
       // if (!respuesta.ok) {
       //   throw new Error(`Error del servidor: ${respuesta.status}`)
