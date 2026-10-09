@@ -46,6 +46,7 @@ const Toasts = React.lazy(() => import('./views/components-ejemplos/toasts/Toast
 const Tooltips = React.lazy(() => import('./views/components-ejemplos/tooltips/Tooltips'))
 const Productos = React.lazy(() => import('./views/components/productos/Productos'))
 const Insumos = React.lazy(() => import('./views/components/insumos/Insumos'))
+const Empleados = React.lazy(() => import('./views/components/empleados/Empleados'))
 
 
 //Forms
@@ -114,6 +115,7 @@ export const routes = [
   { path: '/components/tables', name: 'Tables', element: Tables },
   { path: '/insumos', name: 'Insumos', element: Insumos },
   { path: '/productos', name: 'Productos', element: Productos },
+  { path: '/empleados', name: 'Empleados', element: Empleados },
   { path: '/components/toasts', name: 'Toasts', element: Toasts },
   { path: '/components/tooltips', name: 'Tooltips', element: Tooltips },
   { path: '/charts', name: 'Charts', element: Charts },
