@@ -3,12 +3,8 @@ import { useEffect, useState } from 'react'
 import {
   CCard,
   CCardBody,
-  CCardHeader,
-  CCol,
-  CRow,
   CTable,
   CTableBody,
-  CTableCaption,
   CTableDataCell,
   CTableHead,
   CTableHeaderCell,
@@ -19,32 +15,32 @@ import ModalEmpleados from './ModalEmpleados'
 
 const Empleados = () => {
     const [empleados, setEmpleados] = useState([])
-    const [cargando, setCargando] = useState(true)
-    const [error, setError] = useState('')
+    // const [cargando, setCargando] = useState(true)
+    // const [error, setError] = useState('')
 
 useEffect(() => {
   const cargarEmpleados = async () => {
-    try {
+    // try {
       const respuesta = await fetch('http://localhost:8000/api/empleados/')
 
-      if (!respuesta.ok) {
-        throw new Error(`Error del servidor: ${respuesta.status}`)
-      }
+      // if (!respuesta.ok) {
+      //   throw new Error(`Error del servidor: ${respuesta.status}`)
+      // }
       const datos = await respuesta.json()
       setEmpleados(datos)
-    } catch (error) {
-      setError(error.message)
-    } finally {
-      setCargando(false)
-    }
+    // } catch (error) {
+    //   setError(error.message)
+    // } finally {
+    //   setCargando(false)
+    // }
   }
 
   cargarEmpleados()
   
 }, [])
 
-  if (cargando) return <p>Cargando empleados...</p>
-  if (error) return <p>Error al cargar empleados: {error}</p>
+  // if (cargando) return <p>Cargando empleados...</p>
+  // if (error) return <p>Error al cargar empleados: {error}</p>
 
   return (
     <div>

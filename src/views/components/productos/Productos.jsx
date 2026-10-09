@@ -3,12 +3,8 @@ import { useEffect, useState } from 'react'
 import {
   CCard,
   CCardBody,
-  CCardHeader,
-  CCol,
-  CRow,
   CTable,
   CTableBody,
-  CTableCaption,
   CTableDataCell,
   CTableHead,
   CTableHeaderCell,
@@ -19,32 +15,19 @@ import ModalProductos from './ModalProductos'
 
 const Productos = () => {
     const [productos, setProductos] = useState([])
-    const [cargando, setCargando] = useState(true)
-    const [error, setError] = useState('')
 
 useEffect(() => {
   const cargarProductos = async () => {
-    try {
-      const respuesta = await fetch('http://localhost:8000/api/productos/')
 
-      if (!respuesta.ok) {
-        throw new Error(`Error del servidor: ${respuesta.status}`)
-      }
+      const respuesta = await fetch('http://localhost:8000/api/productos/')
       const datos = await respuesta.json()
       setProductos(datos)
-    } catch (error) {
-      setError(error.message)
-    } finally {
-      setCargando(false)
-    }
+
   }
 
   cargarProductos()
-  
-}, [])
 
-  if (cargando) return <p>Cargando productos...</p>
-  if (error) return <p>Error al cargar productos: {error}</p>
+}, [])
 
   return (
     <div>

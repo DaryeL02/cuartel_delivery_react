@@ -3,12 +3,8 @@ import { useEffect, useState } from 'react'
 import {
   CCard,
   CCardBody,
-  CCardHeader,
-  CCol,
-  CRow,
   CTable,
   CTableBody,
-  CTableCaption,
   CTableDataCell,
   CTableHead,
   CTableHeaderCell,
@@ -19,32 +15,19 @@ import Modal_test from './ModalInsumos'
 
 const TablaInsumos = () => {
     const [insumos, setInsumos] = useState([])
-    const [cargando, setCargando] = useState(true)
-    const [error, setError] = useState('')
 
 useEffect(() => {
   const cargarInsumos = async () => {
-    try {
-      const respuesta = await fetch('http://localhost:8000/api/insumos/')
 
-      if (!respuesta.ok) {
-        throw new Error(`Error del servidor: ${respuesta.status}`)
-      }
+      const respuesta = await fetch('http://localhost:8000/api/insumos/')
       const datos = await respuesta.json()
       setInsumos(datos)
-    } catch (error) {
-      setError(error.message)
-    } finally {
-      setCargando(false)
-    }
+
   }
 
   cargarInsumos()
   
 }, [])
-
-  if (cargando) return <p>Cargando insumos...</p>
-  if (error) return <p>Error al cargar insumos: {error}</p>
 
   return (
     <div>
