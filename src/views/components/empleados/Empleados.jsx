@@ -1,8 +1,8 @@
-import React from 'react'
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   CCard,
   CCardBody,
+  CButton,
   CTable,
   CTableBody,
   CTableDataCell,
@@ -10,71 +10,94 @@ import {
   CTableHeaderCell,
   CTableRow,
 } from '@coreui/react'
+import { cilSettings } from '@coreui/icons'
+import CIcon from '@coreui/icons-react'
 
 import ModalEmpleados from './ModalEmpleados'
 import api from '../api/api'
 
 const Empleados = () => {
-    const [empleados, setEmpleados] = useState([])
-    // const [cargando, setCargando] = useState(true)
-    // const [error, setError] = useState('')
+  const [empleados, setEmpleados] = useState([])
+  const [visibleModal, setVisibleModal] = useState(false)
+  const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState(null)
 
-useEffect(() => {
   const cargarEmpleados = async () => {
-    // try {
-      const respuesta = await fetch(api, '/api/empleados/')
-      
-
-      // if (!respuesta.ok) {
-      //   throw new Error(`Error del servidor: ${respuesta.status}`)
-      // }
-      const datos = await respuesta.json()
-      setEmpleados(datos)
-    // } catch (error) {
-    //   setError(error.message)
-    // } finally {
-    //   setCargando(false)
-    // }
+    try {
+      const respuesta = await api.get('/api/empleados/')
+      setEmpleados(respuesta.data)
+    } catch (error) {
+      console.error("Error al cargar empleados:", error)
+    }
   }
 
-  cargarEmpleados()
-  
-}, [])
+  useEffect(() => {
+    cargarEmpleados()
+  }, [])
 
-  // if (cargando) return <p>Cargando empleados...</p>
-  // if (error) return <p>Error al cargar empleados: {error}</p>
+  // Función para abrir el modal vacío (Crear)
+  const handleAgregar = () => {
+    setEmpleadoSeleccionado(null) // null indica que es un nuevo registro
+    setVisibleModal(true)
+  }
+
+  // Función para abrir el modal con datos (Editar)
+  const handleEditar = (empleado) => {
+    setEmpleadoSeleccionado(empleado) // pasamos el empleado a editar
+    setVisibleModal(true)
+  }
 
   return (
     <div>
-      <ModalEmpleados/>
+      {/* Botón para agregar arriba de la tabla */}
+      <div className="mb-3">
+        <CButton color="primary" onClick={handleAgregar}>
+          Agregar empleado
+        </CButton>
+      </div>
+
+      {/* Instancia única del modal reutilizable */}
+      <ModalEmpleados 
+        visible={visibleModal}
+        setVisible={setVisibleModal}
+        empleadoActual={empleadoSeleccionado}
+        onGuardadoExitoso={cargarEmpleados} // Refresca la tabla automáticamente al guardar
+      />
+
       <CCard>
         <CCardBody>
           <CTable>
             <CTableHead>
-                <CTableRow>
-                    <CTableHeaderCell scope="col">#</CTableHeaderCell>
-                    <CTableHeaderCell scope="col">Nombre</CTableHeaderCell>
-                    <CTableHeaderCell scope="col">Apellido</CTableHeaderCell>
-                    <CTableHeaderCell scope="col">Teléfono</CTableHeaderCell>
-                    <CTableHeaderCell scope="col">Domicilio</CTableHeaderCell>
-                </CTableRow>
+              <CTableRow>
+                <CTableHeaderCell scope="col">#</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Nombre</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Apellido</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Teléfono</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Domicilio</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Acciones</CTableHeaderCell>
+              </CTableRow>
             </CTableHead>
             <CTableBody>
-                {empleados.map((empleado) => (
-                  <CTableRow key={empleado.id_empleados}>
-                    <CTableHeaderCell scope="row">{empleado.id_empleados}</CTableHeaderCell>
-                    <CTableDataCell>{empleado.nombre}</CTableDataCell>
-                    <CTableDataCell>{empleado.apellido}</CTableDataCell>
-                    <CTableDataCell>{empleado.telefono}</CTableDataCell>
-                    <CTableDataCell>{empleado.domicilio}</CTableDataCell>
-                    </CTableRow>
-                ))}
+              {empleados.map((empleado) => (
+                <CTableRow key={empleado.id_empleados}>
+                  <CTableHeaderCell scope="row">{empleado.id_empleados}</CTableHeaderCell>
+                  <CTableDataCell>{empleado.nombre}</CTableDataCell>
+                  <CTableDataCell>{empleado.apellido}</CTableDataCell>
+                  <CTableDataCell>{empleado.telefono}</CTableDataCell>
+                  <CTableDataCell>{empleado.domicilio}</CTableDataCell>
+                  <CTableDataCell>
+                    <CIcon 
+                      icon={cilSettings} 
+                      style={{ cursor: 'pointer' }} 
+                      onClick={() => handleEditar(empleado)} 
+                    />
+                  </CTableDataCell>
+                </CTableRow>
+              ))}
             </CTableBody>
           </CTable>
         </CCardBody>
       </CCard>      
     </div>
-    
   )
 }
 

@@ -12,6 +12,7 @@ import {
 } from '@coreui/react'
 
 import Modal_test from './ModalInsumos'
+import api from '../api/api'
 
 const TablaInsumos = () => {
     const [insumos, setInsumos] = useState([])
@@ -19,10 +20,8 @@ const TablaInsumos = () => {
 useEffect(() => {
   const cargarInsumos = async () => {
 
-      const respuesta = await fetch('http://localhost:8000/api/insumos/')
-      const datos = await respuesta.json()
-      setInsumos(datos)
-
+      const respuesta = await api.get('/api/insumos/')
+      setInsumos(respuesta.data)
   }
 
   cargarInsumos()

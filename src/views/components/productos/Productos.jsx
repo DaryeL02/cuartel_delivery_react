@@ -12,6 +12,7 @@ import {
 } from '@coreui/react'
 
 import ModalProductos from './ModalProductos'
+import api from '../api/api'
 
 const Productos = () => {
     const [productos, setProductos] = useState([])
@@ -19,10 +20,8 @@ const Productos = () => {
 useEffect(() => {
   const cargarProductos = async () => {
 
-      const respuesta = await fetch('http://localhost:8000/api/productos/')
-      const datos = await respuesta.json()
-      setProductos(datos)
-
+      const respuesta = await api.get('/api/productos/')
+      setProductos(respuesta.data)
   }
 
   cargarProductos()
