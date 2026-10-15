@@ -6,19 +6,22 @@ import api from '../api/api'
 // Recibimos visible, setVisible y el empleado actual por props
 const ModalEmpleados = ({ visible, setVisible, empleadoActual, onGuardadoExitoso }) => {
   // Estados para los campos del formulario
+  const [dni, setDni] = useState('')
   const [nombre, setNombre] = useState('')
   const [apellido, setApellido] = useState('')
   const [telefono, setTelefono] = useState('')
   const [domicilio, setDomicilio] = useState('')
+  const [estado, setEstado] = useState(true)
 
-  // Cada vez que cambie 'empleadoActual', rellenamos el formulario o lo limpiamos
   useEffect(() => {
     if (empleadoActual) {
+      setDni(empleadoActual.dni || '')
       setNombre(empleadoActual.nombre || '')
       setApellido(empleadoActual.apellido || '')
       setTelefono(empleadoActual.telefono || '')
       setDomicilio(empleadoActual.domicilio || '')
     } else {
+      setDni('')
       setNombre('')
       setApellido('')
       setTelefono('')
@@ -28,18 +31,16 @@ const ModalEmpleados = ({ visible, setVisible, empleadoActual, onGuardadoExitoso
 
   const handleSubmit = async () => {
     try {
-      const datosEmpleado = { nombre, apellido, telefono, domicilio }
+      const datosEmpleado = { dni, nombre, apellido, telefono, domicilio, estado }
 
       if (empleadoActual) {
-        // Lógica para EDITAR (PUT o PATCH)
         await api.put(`/api/empleados/${empleadoActual.id_empleados}/`, datosEmpleado)
       } else {
-        // Lógica para CREAR (POST)
         await api.post('/api/empleados/', datosEmpleado)
       }
 
       setVisible(false)
-      if (onGuardadoExitoso) onGuardadoExitoso() // Para refrescar la tabla en el componente padre
+      if (onGuardadoExitoso) onGuardadoExitoso()
     } catch (error) {
       console.error("Error al guardar empleado:", error)
     }
@@ -58,6 +59,13 @@ const ModalEmpleados = ({ visible, setVisible, empleadoActual, onGuardadoExitoso
       </CModalHeader>
       <CModalBody>
         <CForm className="row g-3">
+          <CCol md={12}>
+            <CFormInput 
+              label="DNI" 
+              value={dni} 
+              onChange={(e) => setDni(e.target.value)} 
+            />
+          </CCol>
           <CCol md={12}>
             <CFormInput 
               label="Nombre" 

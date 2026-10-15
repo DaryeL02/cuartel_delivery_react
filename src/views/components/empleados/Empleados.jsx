@@ -9,6 +9,8 @@ import {
   CTableHead,
   CTableHeaderCell,
   CTableRow,
+  CPagination,
+  CPaginationItem,
 } from '@coreui/react'
 import { cilSettings } from '@coreui/icons'
 import CIcon from '@coreui/icons-react'
@@ -34,46 +36,42 @@ const Empleados = () => {
     cargarEmpleados()
   }, [])
 
-  // Función para abrir el modal vacío (Crear)
   const handleAgregar = () => {
-    setEmpleadoSeleccionado(null) // null indica que es un nuevo registro
+    setEmpleadoSeleccionado(null)
     setVisibleModal(true)
   }
 
-  // Función para abrir el modal con datos (Editar)
   const handleEditar = (empleado) => {
-    setEmpleadoSeleccionado(empleado) // pasamos el empleado a editar
+    setEmpleadoSeleccionado(empleado)
     setVisibleModal(true)
   }
 
   return (
     <div>
-      {/* Botón para agregar arriba de la tabla */}
       <div className="mb-3">
         <CButton color="primary" onClick={handleAgregar}>
           Agregar empleado
         </CButton>
       </div>
 
-      {/* Instancia única del modal reutilizable */}
       <ModalEmpleados 
         visible={visibleModal}
         setVisible={setVisibleModal}
         empleadoActual={empleadoSeleccionado}
-        onGuardadoExitoso={cargarEmpleados} // Refresca la tabla automáticamente al guardar
+        onGuardadoExitoso={cargarEmpleados}
       />
 
       <CCard>
         <CCardBody>
-          <CTable>
-            <CTableHead>
+          <CTable bordered>
+            <CTableHead color="light">
               <CTableRow>
                 <CTableHeaderCell scope="col">#</CTableHeaderCell>
                 <CTableHeaderCell scope="col">Nombre</CTableHeaderCell>
                 <CTableHeaderCell scope="col">Apellido</CTableHeaderCell>
                 <CTableHeaderCell scope="col">Teléfono</CTableHeaderCell>
                 <CTableHeaderCell scope="col">Domicilio</CTableHeaderCell>
-                <CTableHeaderCell scope="col">Acciones</CTableHeaderCell>
+                <CTableHeaderCell scope="col"></CTableHeaderCell>
               </CTableRow>
             </CTableHead>
             <CTableBody>
@@ -84,7 +82,7 @@ const Empleados = () => {
                   <CTableDataCell>{empleado.apellido}</CTableDataCell>
                   <CTableDataCell>{empleado.telefono}</CTableDataCell>
                   <CTableDataCell>{empleado.domicilio}</CTableDataCell>
-                  <CTableDataCell>
+                  <CTableDataCell style={{ textAlign: 'center' }}>
                     <CIcon 
                       icon={cilSettings} 
                       style={{ cursor: 'pointer' }} 
@@ -96,7 +94,14 @@ const Empleados = () => {
             </CTableBody>
           </CTable>
         </CCardBody>
-      </CCard>      
+      </CCard>
+      <CPagination className="justify-content-center" aria-label="Page navigation example">
+        <CPaginationItem disabled>Previous</CPaginationItem>
+        <CPaginationItem>1</CPaginationItem>
+        <CPaginationItem>2</CPaginationItem>
+        <CPaginationItem>3</CPaginationItem>
+        <CPaginationItem>Next</CPaginationItem>
+      </CPagination>
     </div>
   )
 }

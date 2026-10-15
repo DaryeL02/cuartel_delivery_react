@@ -50,7 +50,7 @@ const Tables = () => {
                     <CTableHeaderCell scope="row">2</CTableHeaderCell>
                     <CTableDataCell>Jacob</CTableDataCell>
                     <CTableDataCell>Thornton</CTableDataCell>
-                    <CTableDataCell>@fat</CTableDataCell>
+                    <CTableDataCell>@fatssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss Lorem ipsum dolor sit amet consectetur, adipisicing elit. Voluptas odio ex unde molestiae totam, placeat quis sunt. Cumque at consequuntur temporibus deserunt a, fugit quo minus ea quis ex odio.</CTableDataCell>
                   </CTableRow>
                   <CTableRow>
                     <CTableHeaderCell scope="row">3</CTableHeaderCell>
