@@ -28,7 +28,7 @@ const Empleados = () => {
       const respuesta = await api.get('/api/empleados/')
       setEmpleados(respuesta.data)
     } catch (error) {
-      console.error("Error al cargar empleados:", error)
+      console.error('Error al cargar empleados:', error)
     }
   }
 
@@ -54,7 +54,7 @@ const Empleados = () => {
         </CButton>
       </div>
 
-      <ModalEmpleados 
+      <ModalEmpleados
         visible={visibleModal}
         setVisible={setVisibleModal}
         empleadoActual={empleadoSeleccionado}
@@ -83,10 +83,10 @@ const Empleados = () => {
                   <CTableDataCell>{empleado.telefono}</CTableDataCell>
                   <CTableDataCell>{empleado.domicilio}</CTableDataCell>
                   <CTableDataCell style={{ textAlign: 'center' }}>
-                    <CIcon 
-                      icon={cilSettings} 
-                      style={{ cursor: 'pointer' }} 
-                      onClick={() => handleEditar(empleado)} 
+                    <CIcon
+                      icon={cilSettings}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => handleEditar(empleado)}
                     />
                   </CTableDataCell>
                 </CTableRow>

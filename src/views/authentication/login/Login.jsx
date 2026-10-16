@@ -33,27 +33,27 @@ const Login = () => {
               </div>
               <CCard className="p-4">
                 <CCardBody className="d-flex flex-column gap-4">
-                  <h2 className="h5 text-center mb-0">Login to your account</h2>
+                  <h2 className="h5 text-center mb-0">Accede a tu cuenta</h2>
                   <CForm className="row gy-3">
                     <CCol xs={12}>
-                      <CFormLabel htmlFor="email">Email address</CFormLabel>
+                      <CFormLabel htmlFor="email">Usuario</CFormLabel>
                       <CFormInput
-                        id="email"
-                        type="email"
-                        placeholder="your@email.com"
-                        autoComplete="email"
+                        id="text"
+                        type="text"
+                        placeholder="Introduce tu usuario"
+                        autoComplete="current-usuario"
                       />
                     </CCol>
                     <CCol xs={12}>
                       <div className="d-flex justify-content-between">
-                        <CFormLabel htmlFor="password">Password</CFormLabel>
-                        <Link to="/authentication/reset-password">I forgot password</Link>
+                        <CFormLabel htmlFor="password">Contraseña</CFormLabel>
+                        <Link to="/authentication/reset-password">¿Olvidaste tu contraseña?</Link>
                       </div>
                       <CInputGroup>
                         <CFormInput
                           id="password"
                           type="password"
-                          placeholder="Your password"
+                          placeholder="Introduce tu contraseña"
                           autoComplete="current-password"
                         />
                         <CInputGroupText>
@@ -70,22 +70,22 @@ const Login = () => {
                         </CInputGroupText>
                       </CInputGroup>
                     </CCol>
-                    <CCol xs={12}>
+                    {/* <CCol xs={12}>
                       <CFormCheck id="rememberMe" label="Remember me on this device" />
-                    </CCol>
+                    </CCol> */}
                     <CCol xs={12}>
                       <CButton color="primary" type="submit" className="w-100">
-                        Sign in
+                        Iniciar sesión
                       </CButton>
                     </CCol>
                   </CForm>
-                  <div className="position-relative">
+                  {/* <div className="position-relative">
                     <hr />
                     <div className="position-absolute top-50 start-50 translate-middle bg-body px-2 text-body-tertiary text-uppercase small">
                       or
                     </div>
-                  </div>
-                  <CRow>
+                  </div> */}
+                  {/* <CRow>
                     <CCol>
                       <CButton type="button" variant="outline" className="w-100">
                         <CIcon icon={google} className="me-1" />
@@ -98,12 +98,12 @@ const Login = () => {
                         Login with Apple
                       </CButton>
                     </CCol>
-                  </CRow>
+                  </CRow> */}
                 </CCardBody>
               </CCard>
-              <div className="text-center text-body-secondary">
+              {/* <div className="text-center text-body-secondary">
                 Need an account? <Link to="/authentication/register">Sign up</Link>
-              </div>
+              </div> */}
             </div>
           </CCol>
         </CRow>
