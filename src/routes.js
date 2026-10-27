@@ -44,9 +44,12 @@ const Tabs = React.lazy(() => import('./views/components-ejemplos/tabs/Tabs'))
 const Tables = React.lazy(() => import('./views/components-ejemplos/tables/Tables'))
 const Toasts = React.lazy(() => import('./views/components-ejemplos/toasts/Toasts'))
 const Tooltips = React.lazy(() => import('./views/components-ejemplos/tooltips/Tooltips'))
+
+
 const Productos = React.lazy(() => import('./views/components/productos/Productos'))
 const Insumos = React.lazy(() => import('./views/components/insumos/Insumos'))
 const Empleados = React.lazy(() => import('./views/components/empleados/Empleados'))
+const Pedidos = React.lazy(() => import('./views/components/pedidos/Pedidos'))
 
 
 //Forms
@@ -66,7 +69,6 @@ const Charts = React.lazy(() => import('./views/charts/Charts'))
 const CoreUIIcons = React.lazy(() => import('./views/icons/coreui-icons/CoreUIIcons'))
 const Flags = React.lazy(() => import('./views/icons/flags/Flags'))
 const Brands = React.lazy(() => import('./views/icons/brands/Brands'))
-
 const Widgets = React.lazy(() => import('./views/widgets/Widgets'))
 
 /**
@@ -113,9 +115,6 @@ export const routes = [
   { path: '/components/spinners', name: 'Spinners', element: Spinners },
   { path: '/components/tabs', name: 'Tabs', element: Tabs },
   { path: '/components/tables', name: 'Tables', element: Tables },
-  { path: '/insumos', name: 'Insumos', element: Insumos },
-  { path: '/productos', name: 'Productos', element: Productos },
-  { path: '/empleados', name: 'Empleados', element: Empleados },
   { path: '/components/toasts', name: 'Toasts', element: Toasts },
   { path: '/components/tooltips', name: 'Tooltips', element: Tooltips },
   { path: '/charts', name: 'Charts', element: Charts },
@@ -134,6 +133,11 @@ export const routes = [
   { path: '/icons/flags', name: 'Flags', element: Flags },
   { path: '/icons/brands', name: 'Brands', element: Brands },
   { path: '/widgets', name: 'Widgets', element: Widgets },
+
+  { path: '/insumos', name: 'Insumos', element: Insumos },
+  { path: '/productos', name: 'Productos', element: Productos },
+  { path: '/empleados', name: 'Empleados', element: Empleados },
+  { path: '/pedidos', name: 'Pedidos', element: Pedidos },
 ]
 
 export default routes
