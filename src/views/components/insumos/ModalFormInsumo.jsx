@@ -15,10 +15,12 @@ import {
 } from '@coreui/react'
 import api from '../api/api'
 
-const ModalFormInsumo = ({ visible, onClose, insumo, categorias, onSuccess }) => {
+const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, onSuccess }) => {
+
   // Inicializar el formulario según los atributos de la base de datos
     const [formData, setFormData] = useState({
-    categoria: 0,
+    categoria: '',
+    proveedor: '',
     nombre: '',
     descripcion: '',
     unidad: '',
@@ -31,9 +33,16 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, onSuccess }) =>
 
   // Efecto para cargar los datos del insumo si estamos editando
     useEffect(() => {
+    
     if (isEditMode && insumo) {
+
+        const ProveedorId = insumo.proveedores_asociados && insumo.proveedores_asociados.length > 0
+        ? insumo.proveedores_asociados[0].proveedor?.id_proveedores
+        : '';
+
         setFormData({
-        categoria: insumo.id_categorias || 0,
+        categoria: insumo.categoria_detalle?.id_categorias || '',
+        proveedor: ProveedorId,
         nombre: insumo.nombre || '',
         descripcion: insumo.descripcion || '',
         unidad: insumo.unidad || '',
@@ -43,6 +52,7 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, onSuccess }) =>
     } else {
         setFormData({
         categoria: 0,
+        proveedor: 0,
         nombre: '',
         descripcion: '',
         unidad: '',
@@ -119,7 +129,7 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, onSuccess }) =>
                 onChange={handleChange}
                 required
               >
-                <option value="">Selecciona...</option>
+                <option value="">{isEditMode ? insumo.categoria_detalle.nombre : "Selecciona..."}</option>
                 {categorias.map((cat) => (
                   <option key={cat.id_categorias} value={cat.id_categorias}>
                     {cat.nombre}
@@ -129,7 +139,7 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, onSuccess }) =>
             </CCol>
 
             {/* Descripción */}
-            <CCol md={12}>
+            <CCol md={8}>
               <CFormTextarea
                 label="Descripción"
                 name="descripcion"
@@ -137,8 +147,25 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, onSuccess }) =>
                 maxLength={200}
                 value={formData.descripcion}
                 onChange={handleChange}
-                placeholder="Detalles específicos de la materia prima..."
+                placeholder="Detalles específicos del insumo..."
               />
+            </CCol>
+
+            <CCol md={4}>
+              <CFormSelect
+                label="Proveedor"
+                name="proveedor"
+                value={formData.proveedor}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Selecciona...</option>
+                {proveedores.map((pro) => (
+                  <option key={pro.id_proveedores} value={pro.id_proveedores}>
+                    {pro.nombre}
+                  </option>
+                ))}
+              </CFormSelect>
             </CCol>
 
             {/* Unidad de Medida */}

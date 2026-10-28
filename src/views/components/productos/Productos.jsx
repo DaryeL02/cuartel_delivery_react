@@ -24,6 +24,8 @@ import {
 import CIcon from '@coreui/icons-react'
 import { cilPlus, cilOptions, cilPencil, cilTrash, cilFastfood } from '@coreui/icons'
 import api from '../api/api'
+// import ModalFormPruducto from './ModalFormPruducto'
+// import ModalDeletePruducto from './ModalDeletePruducto'
 
 
 const Productos = ({ onOpenModal }) => {
@@ -98,7 +100,8 @@ const Productos = ({ onOpenModal }) => {
                 </CTableHead>
                 
                 <CTableBody>
-                  {productosFiltrados.map((producto, index) => (
+                  {productosFiltrados.length > 0 ? (
+                  productosFiltrados.map((producto, index) => (
                     <CTableRow key={producto.id_productos}>
                       {/* N° Autogenerado basado en su posición en la lista (+1) */}
                       <CTableDataCell className="text-center text-muted fw-medium">
@@ -156,7 +159,15 @@ const Productos = ({ onOpenModal }) => {
                         </CDropdown>
                       </CTableDataCell>
                     </CTableRow>
-                  ))}
+                  ))
+                ) : (
+                  <CTableRow>
+                    <CTableDataCell colSpan="6" className="text-center py-4 text-muted">
+                      No se encontraron pruductos que coincidan con la búsqueda.
+                    </CTableDataCell>
+                  </CTableRow>
+                )
+                }
                 </CTableBody>
               </CTable>
             </div>

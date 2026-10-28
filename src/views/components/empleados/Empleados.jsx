@@ -94,7 +94,7 @@ const Empleados = ({ onOpenModal }) => {
               <CTable align="middle" className="mb-0 border-0" hover responsive>
                 <CTableHead className="text-nowrap bg-light text-muted fw-bold">
                   <CTableRow>
-                    <CTableHeaderCell className="text-center border-0" style={{ width: '5%' }}>#</CTableHeaderCell>
+                    <CTableHeaderCell className="text-center border-0" style={{ width: '5%' }}>N°</CTableHeaderCell>
                     <CTableHeaderCell className="border-0" style={{ width: '20%' }}>Empleado</CTableHeaderCell>
                     <CTableHeaderCell className="border-0" style={{ width: '15%' }}>DNI</CTableHeaderCell>
                     <CTableHeaderCell className="border-0" style={{ width: '10%' }}>Teléfono</CTableHeaderCell>

@@ -36,6 +36,7 @@ const Insumos = ({ onOpenModal }) => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [insumoAEditar, setInsumoAEditar] = useState(null)
   const [categorias, setCategorias] = useState([])
+  const [proveedores, setProveedores] = useState([])
   
 
   const cargarInsumos = async () => {
@@ -47,6 +48,7 @@ const Insumos = ({ onOpenModal }) => {
         }
     })  
       setInsumos(respuesta.data)
+      
     } catch (error) {
       console.error('Error al cargar insumos:', error)
     }
@@ -63,12 +65,27 @@ const Insumos = ({ onOpenModal }) => {
     setCategorias(respuesta.data)
   } catch (error) {
     console.error('Error al cargar categorías:', error)
+    }
   }
-}
+
+  const cargarProveedores = async () => {
+  try {
+    const token = localStorage.getItem('token')
+    const respuesta = await api.get('/api/proveedores/', {
+        headers: {
+          'Authorization': `Token ${token}`
+        }
+    }) 
+    setProveedores(respuesta.data)
+  } catch (error) {
+    console.error('Error al cargar proveedores:', error)
+    }
+  }
 
   useEffect(() => {
     cargarInsumos()
     cargarCategorias()
+    cargarProveedores()
   }, [])
 
   const insumosFiltrados = insumos.filter((insumo) =>
@@ -112,14 +129,16 @@ const Insumos = ({ onOpenModal }) => {
                       <CTableHeaderCell className="border-0" style={{ width: '25%' }}>Insumo</CTableHeaderCell>
                       <CTableHeaderCell className="border-0" style={{ width: '30%' }}>Descripción</CTableHeaderCell>
                       <CTableHeaderCell className="border-0" style={{ width: '10%' }}>Categoria</CTableHeaderCell>
-                      <CTableHeaderCell className="border-0" style={{ width: '10%' }}>Stock Actual</CTableHeaderCell>
-                      <CTableHeaderCell className="border-0" style={{ width: '10%' }}>Stock mínimo</CTableHeaderCell>
+                      <CTableHeaderCell className="border-0" style={{ width: '10%' }}>Proveedor</CTableHeaderCell>
+                      <CTableHeaderCell className="border-0" style={{ width: '5%' }}>Stock Actual</CTableHeaderCell>
+                      <CTableHeaderCell className="border-0" style={{ width: '5%' }}>Stock mínimo</CTableHeaderCell>
                       <CTableHeaderCell className="text-center border-0" style={{ width: '10%' }}>Acciones</CTableHeaderCell>
                     </CTableRow>
                   </CTableHead>
                   
                   <CTableBody>
-                    {insumosFiltrados.map((insumo, index) => (
+                    {insumosFiltrados.length > 0 ? (
+                    insumosFiltrados.map((insumo, index) => (
                       <CTableRow key={insumo.id_insumos}>
                         {/* N° Autogenerado secuencial */}
                         <CTableDataCell className="text-center text-muted fw-medium">
@@ -147,8 +166,20 @@ const Insumos = ({ onOpenModal }) => {
                           </div>
                         </CTableDataCell>
                         
-                        <CTableDataCell className="text-end fw-semibold text-dark text-nowrap">
-                          
+                        <CTableDataCell className="text-secondary text-truncate">
+                          {insumo.categoria_detalle.nombre}
+                        </CTableDataCell>
+
+                        <CTableDataCell className="text-secondary text-truncate">
+                          {insumo.proveedores_asociados && insumo.proveedores_asociados.length > 0 ? (
+                            insumo.proveedores_asociados.map((item) => (
+                              <div key={item.id_proveedores_insumos}>
+                                {item.proveedor?.nombre || 'Proveedor sin nombre'}
+                              </div>
+                            ))
+                          ) : (
+                            <span>Sin proveedor asignado</span>
+                          )}
                         </CTableDataCell>
 
                         {/* Precio o Costo unitario base */}
@@ -186,7 +217,15 @@ const Insumos = ({ onOpenModal }) => {
                           </CDropdown>
                         </CTableDataCell>
                       </CTableRow>
-                    ))}
+                    ))
+                  ) : (
+                    <CTableRow>
+                      <CTableDataCell colSpan="6" className="text-center py-4 text-muted">
+                        No se encontraron insumos que coincidan con la búsqueda.
+                      </CTableDataCell>
+                    </CTableRow>
+                  )
+                  }
                   </CTableBody>
                 </CTable>
               </div>
@@ -210,13 +249,13 @@ const Insumos = ({ onOpenModal }) => {
         onClose={() => setModalOpen(false)} 
         insumo={insumoAEditar}
         categorias={categorias}
+        proveedores={proveedores}
         onSuccess={cargarInsumos} // Ejecuta la recarga automática al guardar
       />
       <ModalDeleteInsumo 
         visible={deleteModalOpen} 
         onClose={() => setDeleteModalOpen(false)}
         insumo={insumoAEditar}
-        categorias={categorias}
         onSuccess={cargarInsumos} // Ejecuta la recarga automática al guardar
       />
     </div>
