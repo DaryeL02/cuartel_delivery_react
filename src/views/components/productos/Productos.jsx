@@ -62,7 +62,6 @@ const Productos = ({ onOpenModal }) => {
           <CCardHeader className="d-flex justify-content-between align-items-center bg-white py-3">
             <div>
               <h5 className="mb-0 text-dark fw-semibold">Catálogo de Productos</h5>
-              <small className="text-muted">Administra el menú, descripciones y precios de la sandwichería</small>
             </div>
 
             <div className="d-flex align-items-center gap-3" style={{ maxWidth: '450px', width: '100%' }}>

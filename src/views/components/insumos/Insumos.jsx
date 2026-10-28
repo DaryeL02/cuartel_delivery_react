@@ -26,12 +26,14 @@ import CIcon from '@coreui/icons-react'
 import { cilPlus, cilOptions, cilPencil, cilTrash, cilLayers } from '@coreui/icons'
 import api from '../api/api'
 import ModalFormInsumo from './ModalFormInsumo'
+import ModalDeleteInsumo from './ModalDeleteInsumo'
 
 const Insumos = ({ onOpenModal }) => {
   
   const [insumos, setInsumos] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [insumoAEditar, setInsumoAEditar] = useState(null)
   const [categorias, setCategorias] = useState([])
   
@@ -81,7 +83,6 @@ const Insumos = ({ onOpenModal }) => {
             <CCardHeader className="d-flex justify-content-between align-items-center bg-white py-3">
               <div>
                 <h5 className="mb-0 text-dark fw-semibold">Control de Insumos</h5>
-                <small className="text-muted">Administra las materias primas, costos base y stock de la cocina</small>
               </div>
               <div className="d-flex align-items-center gap-3" style={{ maxWidth: '450px', width: '100%' }}>
                 <CFormInput
@@ -108,8 +109,9 @@ const Insumos = ({ onOpenModal }) => {
                   <CTableHead className="text-nowrap bg-light text-muted fw-bold">
                     <CTableRow>
                       <CTableHeaderCell className="text-center border-0" style={{ width: '5%' }}>N°</CTableHeaderCell>
-                      <CTableHeaderCell className="border-0" style={{ width: '25%' }}>Insumo / Materia Prima</CTableHeaderCell>
-                      <CTableHeaderCell className="border-0" style={{ width: '40%' }}>Descripción / Unidad</CTableHeaderCell>
+                      <CTableHeaderCell className="border-0" style={{ width: '25%' }}>Insumo</CTableHeaderCell>
+                      <CTableHeaderCell className="border-0" style={{ width: '30%' }}>Descripción</CTableHeaderCell>
+                      <CTableHeaderCell className="border-0" style={{ width: '10%' }}>Categoria</CTableHeaderCell>
                       <CTableHeaderCell className="border-0" style={{ width: '10%' }}>Stock Actual</CTableHeaderCell>
                       <CTableHeaderCell className="border-0" style={{ width: '10%' }}>Stock mínimo</CTableHeaderCell>
                       <CTableHeaderCell className="text-center border-0" style={{ width: '10%' }}>Acciones</CTableHeaderCell>
@@ -145,6 +147,10 @@ const Insumos = ({ onOpenModal }) => {
                           </div>
                         </CTableDataCell>
                         
+                        <CTableDataCell className="text-end fw-semibold text-dark text-nowrap">
+                          
+                        </CTableDataCell>
+
                         {/* Precio o Costo unitario base */}
                         <CTableDataCell className="text-end fw-semibold text-dark text-nowrap">
                           {insumo.stock_actual}
@@ -170,7 +176,7 @@ const Insumos = ({ onOpenModal }) => {
                                 Editar
                               </CDropdownItem>
                               <CDropdownItem 
-                                onClick={() => {setInsumoAEditar(insumo); setModalOpen(true);}}  
+                                onClick={() => {setInsumoAEditar(insumo); setDeleteModalOpen(true);}}  
                                 className="d-flex align-items-center gap-2 text-danger"
                               >
                                 <CIcon icon={cilTrash} />
@@ -202,6 +208,13 @@ const Insumos = ({ onOpenModal }) => {
       <ModalFormInsumo 
         visible={modalOpen} 
         onClose={() => setModalOpen(false)} 
+        insumo={insumoAEditar}
+        categorias={categorias}
+        onSuccess={cargarInsumos} // Ejecuta la recarga automática al guardar
+      />
+      <ModalDeleteInsumo 
+        visible={deleteModalOpen} 
+        onClose={() => setDeleteModalOpen(false)}
         insumo={insumoAEditar}
         categorias={categorias}
         onSuccess={cargarInsumos} // Ejecuta la recarga automática al guardar

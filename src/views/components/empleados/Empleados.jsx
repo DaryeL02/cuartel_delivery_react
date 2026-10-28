@@ -67,7 +67,6 @@ const Empleados = ({ onOpenModal }) => {
           <CCardHeader className="d-flex justify-content-between align-items-center bg-white py-3">
             <div>
               <h5 className="mb-0 text-dark fw-semibold">Gestión de Empleados</h5>
-              <small className="text-muted">Administra el personal activo e inactivo de la sandwichería</small>
             </div>
             
             {/* Contenedor flex para alinear el buscador y el botón a la derecha */}
@@ -98,7 +97,7 @@ const Empleados = ({ onOpenModal }) => {
                     <CTableHeaderCell className="text-center border-0" style={{ width: '5%' }}>#</CTableHeaderCell>
                     <CTableHeaderCell className="border-0" style={{ width: '20%' }}>Empleado</CTableHeaderCell>
                     <CTableHeaderCell className="border-0" style={{ width: '15%' }}>DNI</CTableHeaderCell>
-                    <CTableHeaderCell className="border-0" style={{ width: '15%' }}>Teléfono</CTableHeaderCell>
+                    <CTableHeaderCell className="border-0" style={{ width: '10%' }}>Teléfono</CTableHeaderCell>
                     <CTableHeaderCell className="border-0" style={{ width: '30%' }}>Domicilio</CTableHeaderCell>
                     <CTableHeaderCell className="text-center border-0" style={{ width: '10%' }}>Estado</CTableHeaderCell>
                     <CTableHeaderCell className="text-center border-0" style={{ width: '10%' }}>Acciones</CTableHeaderCell>
@@ -118,7 +117,7 @@ const Empleados = ({ onOpenModal }) => {
                             <CAvatar color="light" text={empleado.nombre.charAt(0)} className="fw-semibold text-primary" />
                             <div>
                               <div className="fw-semibold text-dark">{empleado.nombre} {empleado.apellido}</div>
-                              <div className="small text-muted">{empleado.rol || 'Personal'}</div>
+                              {/* <div className="small text-muted">{empleado.rol || 'Personal'}</div> */}
                             </div>
                           </div>
                         </CTableDataCell>
