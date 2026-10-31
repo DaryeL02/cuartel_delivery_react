@@ -23,40 +23,35 @@ import { logo } from 'src/assets/brand/logo'
 import { eye } from 'src/assets/icons/eye'
 import api from '../../components/api/api'
 
-
-
 const Login = () => {
-const [usuario, setUsuario] = useState('');
-const [password, setPassword] = useState('');
-const [error, setError] = useState('') // Estado para manejar mensajes de error
-const [loading, setLoading] = useState(false) // Estado para deshabilitar el botón mientras carga
+  const [usuario, setUsuario] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('') // Estado para manejar mensajes de error
+  const [loading, setLoading] = useState(false) // Estado para deshabilitar el botón mientras carga
+  const [verPassword, setVerPassword] = useState(false)
+  const navigate = useNavigate()
 
-const navigate = useNavigate();
-
-const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault()
     setError('')
     setLoading(true)
-    console.log('Datos enviados:', { usuario, password });
-    
-    try {const response = await api.post('/api/login/', {
+    console.log('Datos enviados:', { usuario, password })
+
+    try {
+      const response = await api.post('/api/login/', {
         usuario: usuario,
         password: password,
       })
-    if (response.data && response.data.token) {
-      
-      localStorage.setItem('token', response.data.token)
-      
-      
-      navigate('/dashboard')
-    } else {
-      setError('No se recibió un token válido del servidor.')
+      if (response.data && response.data.token) {
+        localStorage.setItem('token', response.data.token)
+        navigate('/dashboard')
+      } else {
+        setError('No se recibió un token válido del servidor.')
+      }
+    } finally {
+      setLoading(false)
     }
-  }finally{
-    setLoading(false)
   }
-};
-
   return (
     <div className="bg-body-tertiary min-vh-100 d-flex flex-row align-items-center">
       <CContainer>
@@ -68,14 +63,10 @@ const handleSubmit = async (e) => {
               </div>
               <CCard className="p-4">
                 <CCardBody className="d-flex flex-column gap-4">
-
                   {error && <CAlert color="danger">{error}</CAlert>}
 
                   <h2 className="h5 text-center mb-0">Accede a tu cuenta</h2>
-                  <CForm 
-                  className="row gy-3"
-                  onSubmit={handleSubmit}
-                  >
+                  <CForm className="row gy-3" onSubmit={handleSubmit}>
                     <CCol xs={12}>
                       <CFormLabel htmlFor="text">Usuario</CFormLabel>
                       <CFormInput
@@ -95,7 +86,7 @@ const handleSubmit = async (e) => {
                       <CInputGroup>
                         <CFormInput
                           id="password"
-                          type="password"
+                          type={verPassword ? 'text' : 'password'}
                           placeholder="Introduce tu contraseña"
                           autoComplete="current-password"
                           value={password} // Vincula el valor
@@ -108,6 +99,7 @@ const handleSubmit = async (e) => {
                               color="link"
                               className="p-0 link-secondary"
                               aria-label="Show password"
+                              onClick={() => setVerPassword(!verPassword)}
                             >
                               <CIcon icon={eye} size="sm" />
                             </CButton>
@@ -116,11 +108,11 @@ const handleSubmit = async (e) => {
                       </CInputGroup>
                     </CCol>
                     <CCol xs={12}>
-                      <CButton 
-                      color="primary" 
-                      type="submit" 
-                      className="w-100"
-                      disabled={loading}
+                      <CButton
+                        color="primary"
+                        type="submit"
+                        className="w-100"
+                        disabled={loading}
                       >
                         {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
                       </CButton>
