@@ -5,205 +5,208 @@ import {
   CCardHeader,
   CCol,
   CRow,
-  CTable,
-  CTableHead,
-  CTableRow,
-  CTableHeaderCell,
-  CTableBody,
-  CTableDataCell,
-  CBadge,
-  CButton,
   CFormInput,
-  CFormSelect,
-  CFormSwitch,
-  CModal,
-  CModalHeader,
-  CModalTitle,
-  CModalBody,
-  CModalFooter
+  CButton,
+  CAvatar,
+  CBadge
 } from '@coreui/react'
 
-export default function CashierMenuAdmin() {
-  // Estado simulado para la tabla MENUS
-  const [menus, setMenus] = useState([
-    { id_menus: 1, nombre: 'Menú Ejecutivo Almuerzo', estado: true, fecha_hora_inicio: '2026-10-28 12:00', fecha_hora_fin: '2026-10-28 15:00' },
-    { id_menus: 2, nombre: 'Promo Sandwiches Fin de Semana', estado: false, fecha_hora_inicio: '2026-10-31 20:00', fecha_hora_fin: '2026-11-01 23:59' }
-  ])
+export default function Menus() {
+  // Estado que mapea la unión real del DER: EMPLEADOS + USUARIOS + LOCALES (solo nombre)
+  const [employeeData, setEmployeeData] = useState({
+    // TABLA: EMPLEADOS
+    id_empleados: 12,
+    id_locales: 2,
+    dni: 38475920,
+    nombre: 'Juan Carlos',
+    apellido: 'Gómez',
+    telefono: '+54 387 4123456',
+    domicilio: 'Av. Belgrano 1240, Salta',
+    estado: true, // BOOLEAN
+    fecha_hora_creacion_emp: '2025-03-15 08:30:00',
 
-  // Estado para el menú seleccionado y visualización de DETALLES DE MENU + PRODUCTOS
-  const [selectedMenu, setSelectedMenu] = useState(1)
-  const [modalOpen, setModalOpen] = useState(false)
+    // TABLA: USUARIOS (Relación 1 a 1 / Extensión de la entidad)
+    id_usuarios: 45,
+    usuario: 'jgomez_cajero',
+    password: '••••••••••••', // Enmascarado por seguridad de interfaz
+    fecha_hora_modificacion_usr: '2026-08-20 14:15:00',
+    fecha_hora_creacion_usr: '2025-03-15 08:45:00',
 
-  // Productos asignados al menú ejecutivo (ID 1) resolviendo la relación con DETALLES DE MENU
-  const [menuDetails, setMenuDetails] = useState([
-    { id_detalles_menus: 10, id_productos: 501, nombre: 'Sandwich de Milanesa Completo', precio_unitario: 6500, cantidad: 1, descuento: 10, estado: true },
-    { id_detalles_menus: 11, id_productos: 502, nombre: 'Lomito con Papas Fritas', precio_unitario: 8000, cantidad: 1, descuento: 0, estado: true },
-    { id_detalles_menus: 12, id_productos: 503, nombre: 'Gaseosa 500ml', precio_unitario: 1800, cantidad: 2, descuento: 0, estado: true }
-  ])
+    // TABLA: LOCALES (Solamente el Nombre solicitado)
+    local_nombre: 'Sucursal Centro - El Cuartel del Sandwich'
+  })
 
-  // Alternar estado de un menú (Activo/Inactivo)
-  const handleToggleMenuStatus = (id) => {
-    setMenus(menus.map(m => m.id_menus === id ? { ...m, estado: !m.estado } : m))
+  const [isEditing, setIsEditing] = useState(false)
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target
+    setEmployeeData({ ...employeeData, [name]: value })
+  }
+
+  const handleSave = () => {
+    setIsEditing(false)
+    alert('Datos del empleado y credenciales actualizados en el sistema.')
   }
 
   return (
     <div className="p-4" style={{ backgroundColor: '#f4f5f7', minHeight: '100vh' }}>
-      {/* Encabezado Principal */}
-      <CRow className="mb-4 align-items-center">
-        <CCol>
-          <h2 className="fw-bold text-dark">Panel de Control: Gestión de Menús</h2>
-          <p className="text-muted mb-0">Módulo de Administración para Cajero - Lomitería & Sandwichería</p>
-        </CCol>
-        <CCol xs="auto">
-          <CButton color="primary" className="px-4 shadow-sm" onClick={() => setModalOpen(true)}>
-            + Crear Nuevo Menú
-          </CButton>
-        </CCol>
-      </CRow>
-
-      <CRow>
-        {/* Tabla Central: MENUS */}
-        <CCol xs={12} lg={8} className="mb-4">
+      <CRow className="justify-content-center">
+        <CCol xs={12} lg={10}>
           <CCard className="shadow-sm border-0">
-            <CCardHeader className="bg-dark text-white fw-semibold py-3">
-              Lista de Menús Programados
-            </CCardHeader>
-            <CCardBody className="p-0">
-              <CTable align="middle" responsive hover className="mb-0">
-                <CTableHead color="light">
-                  <CTableRow>
-                    <CTableHeaderCell scope="col">ID</CTableHeaderCell>
-                    <CTableHeaderCell scope="col">Nombre del Menú</CTableHeaderCell>
-                    <CTableHeaderCell scope="col">Inicio</CTableHeaderCell>
-                    <CTableHeaderCell scope="col">Fin</CTableHeaderCell>
-                    <CTableHeaderCell scope="col" className="text-center">Estado</CTableHeaderCell>
-                    <CTableHeaderCell scope="col" className="text-end">Acciones</CTableHeaderCell>
-                  </CTableRow>
-                </CTableHead>
-                <CTableBody>
-                  {menus.map((menu) => (
-                    <CTableRow 
-                      key={menu.id_menus} 
-                      active={selectedMenu === menu.id_menus}
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => setSelectedMenu(menu.id_menus)}
-                    >
-                      <CTableDataCell className="fw-semibold">{menu.id_menus}</CTableDataCell>
-                      <CTableDataCell className="fw-medium">{menu.nombre}</CTableDataCell>
-                      <CTableDataCell className="small text-muted">{menu.fecha_hora_inicio}</CTableDataCell>
-                      <CTableDataCell className="small text-muted">{menu.fecha_hora_fin}</CTableDataCell>
-                      <CTableDataCell className="text-center">
-                        <CFormSwitch 
-                          id={`switch-${menu.id_menus}`}
-                          checked={menu.estado} 
-                          onChange={() => handleToggleMenuStatus(menu.id_menus)}
-                          onClick={(e) => e.stopPropagation()} // Evita activar selección de fila
-                        />
-                      </CTableDataCell>
-                      <CTableDataCell className="text-end">
-                        <CButton 
-                          color="info" 
-                          size="sm" 
-                          variant="outline"
-                          className="me-2"
-                          onClick={(e) => { e.stopPropagation(); setSelectedMenu(menu.id_menus); }}
-                        >
-                          Ver Ítems
-                        </CButton>
-                      </CTableDataCell>
-                    </CTableRow>
-                  ))}
-                </CTableBody>
-              </CTable>
-            </CCardBody>
-          </CCard>
-        </CCol>
-
-        {/* Detalle Lateral: DETALLES DE MENU vinculados al menú seleccionado */}
-        <CCol xs={12} lg={4}>
-          <CCard className="shadow-sm border-0">
-            <CCardHeader className="bg-primary text-white fw-semibold py-3 d-flex justify-content-between align-items-center">
-              <span>Productos en Menú #{selectedMenu}</span>
-              <CBadge color="light" text="primary" shape="rounded-pill">
-                {menuDetails.length} artículos
+            <CCardHeader className="bg-dark text-white py-3 fw-semibold d-flex justify-content-between align-items-center">
+              <span>Ficha Técnica y Credenciales del Empleado</span>
+              <CBadge color={employeeData.estado ? 'success' : 'danger'} shape="rounded-pill">
+                {employeeData.estado ? 'EMPLEADO ACTIVO' : 'INACTIVO'}
               </CBadge>
             </CCardHeader>
-            <CCardBody className="p-3">
-              <p className="text-muted small mb-3">
-                Listado detallado de productos vinculados, incluyendo precios y ofertas.
-              </p>
+            <CCardBody className="p-4">
               
-              {menuDetails.map((item) => (
-                <div key={item.id_detalles_menus} className="p-3 mb-2 border rounded bg-white shadow-xs">
-                  <div className="d-flex justify-content-between align-items-start">
-                    <div>
-                      <h6 className="mb-1 fw-bold text-dark">{item.nombre}</h6>
-                      <small className="text-muted d-block">ID Prod: {item.id_productos}</small>
-                      <small className="text-muted">Cant. permitida por combo: {item.cantidad}</small>
-                    </div>
-                    <span className="text-primary fw-bold">${item.precio_unitario.toLocaleString('es-AR')}</span>
-                  </div>
-                  
-                  <div className="mt-2 pt-2 border-top d-flex justify-content-between align-items-center">
-                    <div>
-                      {item.descuento > 0 ? (
-                        <CBadge color="danger">-{item.descuento}% desc.</CBadge>
-                      ) : (
-                        <span className="text-muted small">Sin descuento</span>
-                      )}
-                    </div>
-                    <CButton color="link" className="text-danger p-0 small text-decoration-none">
-                      Quitar
-                    </CButton>
-                  </div>
+              {/* Header de Identidad Operativa */}
+              <div className="d-flex align-items-center gap-4 mb-4 pb-4 border-bottom">
+                <CAvatar color="primary" text="white" size="xl" className="fw-bold">
+                  {employeeData.nombre.charAt(0)}{employeeData.apellido.charAt(0)}
+                </CAvatar>
+                <div>
+                  <h3 className="mb-1 fw-bold text-dark">{employeeData.nombre} {employeeData.apellido}</h3>
+                  <p className="text-primary mb-1 fw-semibold">
+                    🏪 {employeeData.local_nombre}
+                  </p>
+                  <small className="text-muted d-block">
+                    ID Empleado: {employeeData.id_empleados} | DNI: {employeeData.dni} | Alta Sistema: {employeeData.fecha_hora_creacion_emp}
+                  </small>
                 </div>
-              ))}
+              </div>
 
-              <CButton color="outline-primary" size="sm" className="w-100 mt-2 py-2">
-                + Agregar Producto a este Menú
-              </CButton>
+              <CRow>
+                {/* COLUMNA IZQUIERDA: DATOS PERSONALES (TABLA EMPLEADOS) */}
+                <CCol md={6} className="border-end-md-custom mb-4 mb-md-0">
+                  <h5 className="text-primary fw-bold mb-3">Datos del Personal</h5>
+                  
+                  <div className="mb-3">
+                    <label className="form-label text-muted small fw-bold">Nombre (VARCHAR)</label>
+                    <CFormInput
+                      type="text"
+                      name="nombre"
+                      value={employeeData.nombre}
+                      disabled={!isEditing}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label text-muted small fw-bold">Apellido (VARCHAR)</label>
+                    <CFormInput
+                      type="text"
+                      name="apellido"
+                      value={employeeData.apellido}
+                      disabled={!isEditing}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label text-muted small fw-bold">DNI (INT - No Editable)</label>
+                    <CFormInput
+                      type="number"
+                      value={employeeData.dni}
+                      disabled
+                    />
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label text-muted small fw-bold">Teléfono (VARCHAR)</label>
+                    <CFormInput
+                      type="text"
+                      name="telefono"
+                      value={employeeData.telefono}
+                      disabled={!isEditing}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label text-muted small fw-bold">Domicilio (VARCHAR)</label>
+                    <CFormInput
+                      type="text"
+                      name="domicilio"
+                      value={employeeData.domicilio}
+                      disabled={!isEditing}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                </CCol>
+
+                {/* COLUMNA DERECHA: CREDENCIALES DE ACCESO (TABLA USUARIOS) */}
+                <CCol md={6}>
+                  <h5 className="text-danger fw-bold mb-3">Seguridad y Cuenta de Usuario</h5>
+
+                  <div className="mb-3">
+                    <label className="form-label text-muted small fw-bold">ID Usuario (PK INT)</label>
+                    <CFormInput
+                      type="text"
+                      value={employeeData.id_usuarios}
+                      disabled
+                    />
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label text-muted small fw-bold">Nombre de Usuario (VARCHAR)</label>
+                    <CFormInput
+                      type="text"
+                      name="usuario"
+                      value={employeeData.usuario}
+                      disabled={!isEditing}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label text-muted small fw-bold">Contraseña (VARCHAR)</label>
+                    <CFormInput
+                      type="password"
+                      name="password"
+                      value={employeeData.password}
+                      disabled={!isEditing}
+                      onChange={handleInputChange}
+                      placeholder="Nueva contraseña"
+                    />
+                  </div>
+
+                  <div className="p-3 bg-light rounded border mt-4">
+                    <div className="d-flex justify-content-between mb-2">
+                      <span className="text-muted small">Creación de Cuenta:</span>
+                      <span className="small fw-medium text-dark">{employeeData.fecha_hora_creacion_usr}</span>
+                    </div>
+                    <div className="d-flex justify-content-between">
+                      <span className="text-muted small">Última Modificación:</span>
+                      <span className="small fw-medium text-dark">{employeeData.fecha_hora_modificacion_usr}</span>
+                    </div>
+                  </div>
+                </CCol>
+              </CRow>
+
+              {/* Botones de Control de la Ficha */}
+              <div className="d-flex justify-content-end gap-2 pt-3 mt-4 border-top">
+                {isEditing ? (
+                  <>
+                    <CButton color="secondary" onClick={() => setIsEditing(false)}>
+                      Cancelar
+                    </CButton>
+                    <CButton color="success" className="text-white fw-medium" onClick={handleSave}>
+                      Guardar Cambios (Update)
+                    </CButton>
+                  </>
+                ) : (
+                  <CButton color="primary" className="px-4" onClick={() => setIsEditing(true)}>
+                    Editar Perfil
+                  </CButton>
+                )}
+              </div>
+
             </CCardBody>
           </CCard>
         </CCol>
       </CRow>
-
-      {/* Modal para simular la inserción en la tabla MENUS */}
-      <CModal visible={modalOpen} onClose={() => setModalOpen(false)}>
-        <CModalHeader>
-          <CModalTitle>Registrar Nuevo Menú</CModalTitle>
-        </CModalHeader>
-        <CModalBody>
-          <div className="mb-3">
-            <label className="form-label text-muted small fw-bold">Nombre del Menú (VARCHAR)</label>
-            <CFormInput type="text" placeholder="Ej: Combo Familiar Nocturno" />
-          </div>
-          <CRow>
-            <CCol md={6} className="mb-3">
-              <label className="form-label text-muted small fw-bold">Fecha/Hora Inicio</label>
-              <CFormInput type="datetime-local" />
-            </CCol>
-            <CCol md={6} className="mb-3">
-              <label className="form-label text-muted small fw-bold">Fecha/Hora Fin</label>
-              <CFormInput type="datetime-local" />
-            </CCol>
-          </CRow>
-          <div className="mb-3">
-            <label className="form-label text-muted small fw-bold">Estado Inicial</label>
-            <CFormSelect>
-              <option value="true">Activo (Visible en caja)</option>
-              <option value="false">Inactivo (Borrador)</option>
-            </CFormSelect>
-          </div>
-        </CModalBody>
-        <CModalFooter>
-          <CButton color="secondary" onClick={() => setModalOpen(false)}>
-            Cancelar
-          </CButton>
-          <CButton color="primary" onClick={() => setModalOpen(false)}>
-            Guardar Menú
-          </CButton>
-        </CModalFooter>
-      </CModal>
     </div>
   )
 }

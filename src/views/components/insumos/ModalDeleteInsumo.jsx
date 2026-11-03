@@ -7,27 +7,13 @@ import {
   CModalFooter,
   CButton,
   CForm,
-  CFormInput,
-  CFormTextarea,
-  CFormSelect,
   CRow,
-  CCol,
 } from '@coreui/react'
 import api from '../api/api'
 
 const ModalDeleteInsumo = ({ visible, onClose, insumo, onSuccess }) => {
-  // Inicializar el formulario según los atributos de la base de datos
-    // const [data, setData] = useState({
-    // categoria: 0,
-    // nombre: '',
-    // descripcion: '',
-    // unidad: '',
-    // stock_actual: 0,
-    // stock_minimo: 0,
-    // })
 
   const [loading, setLoading] = useState(false)
-
 
   const handleSubmit = async (e) => {
     e.preventDefault()

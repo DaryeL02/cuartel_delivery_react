@@ -49,6 +49,7 @@ const Tooltips = React.lazy(() => import('./views/components-ejemplos/tooltips/T
 const Productos = React.lazy(() => import('./views/components/productos/Productos'))
 const Insumos = React.lazy(() => import('./views/components/insumos/Insumos'))
 const Empleados = React.lazy(() => import('./views/components/empleados/Empleados'))
+const Perfil = React.lazy(() => import('./views/components/perfil/Perfil'))
 const Pedidos = React.lazy(() => import('./views/components/pedidos/Pedidos'))
 const Menus = React.lazy(() => import('./views/components/menus/Menus'))
 const AperturaCierre = React.lazy(() => import('./views/components/cajas/aperturaCierre/AperturaCierre.jsx'))
@@ -142,6 +143,7 @@ export const routes = [
   { path: '/pedidos', name: 'Pedidos', element: Pedidos },
   { path: '/menus', name: 'Menus', element: Menus },
   { path: '/cajas/aperturacierre', name: 'AperturaCierre', element: AperturaCierre },
+  { path: '/perfil/:id', name: 'Perfil', element: Perfil },
 ]
 
 export default routes

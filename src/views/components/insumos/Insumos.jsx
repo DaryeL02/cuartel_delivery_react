@@ -31,13 +31,12 @@ import ModalDeleteInsumo from './ModalDeleteInsumo'
 const Insumos = ({ onOpenModal }) => {
   
   const [insumos, setInsumos] = useState([])
-  const [searchTerm, setSearchTerm] = useState('')
+  const [categorias, setCategorias] = useState([])
+  const [proveedores, setProveedores] = useState([])
+  const [busqueda, setBusqueda] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [insumoAEditar, setInsumoAEditar] = useState(null)
-  const [categorias, setCategorias] = useState([])
-  const [proveedores, setProveedores] = useState([])
-  
 
   const cargarInsumos = async () => {
     try {
@@ -89,7 +88,7 @@ const Insumos = ({ onOpenModal }) => {
   }, [])
 
   const insumosFiltrados = insumos.filter((insumo) =>
-  insumo.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+  insumo.nombre.toLowerCase().includes(busqueda.toLowerCase())
   )
 
   return (
@@ -105,8 +104,8 @@ const Insumos = ({ onOpenModal }) => {
                 <CFormInput
                   type="text"
                   placeholder="Buscar por nombre..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  value={busqueda}
+                  onChange={(e) => setBusqueda(e.target.value)}
                   className="shadow-sm"
                 />
                 <CButton 
