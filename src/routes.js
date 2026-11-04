@@ -143,7 +143,7 @@ export const routes = [
   { path: '/pedidos', name: 'Pedidos', element: Pedidos },
   { path: '/menus', name: 'Menus', element: Menus },
   { path: '/cajas/aperturacierre', name: 'AperturaCierre', element: AperturaCierre },
-  { path: '/perfil/:id', name: 'Perfil', element: Perfil },
+  { path: '/perfil', name: 'Perfil', element: Perfil },
 ]
 
 export default routes

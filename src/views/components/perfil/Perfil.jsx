@@ -16,12 +16,13 @@ export default function Perfil() {
 
   const [empleado, setEmpleado] = useState(null)
   // const [isEditing, setIsEditing] = useState(false)
+  const [sinDatos, setSinDatos] = useState(null)
 
 
   const cargarEmpleado = async () => {
     try {
       const token = localStorage.getItem('token')
-      const respuesta = await api.get('/api/empleados/1/', {
+      const respuesta = await api.get('/api/empleados/me/', {
         headers: {
           'Authorization': `Token ${token}`
         }
@@ -29,6 +30,7 @@ export default function Perfil() {
       setEmpleado(respuesta.data)
     } catch (error) {
       console.error('Error al cargar empleado:', error)
+      setSinDatos(true)
     }
   }
 
@@ -56,9 +58,9 @@ export default function Perfil() {
           <CCard className="shadow-sm border-0">
             <CCardHeader className="bg-dark text-white py-3 fw-semibold d-flex justify-content-between align-items-center">
               <span>Ficha Técnica y Credenciales del Empleado</span>
-              {/* <CBadge color={empleado.estado ? 'success' : 'danger'} shape="rounded-pill">
+              <CBadge color={empleado.estado ? 'success' : 'danger'} shape="rounded-pill">
                 {empleado.estado ? 'EMPLEADO ACTIVO' : 'INACTIVO'}
-              </CBadge> */}
+              </CBadge>
             </CCardHeader>
             <CCardBody className="p-4">
               
@@ -152,7 +154,7 @@ export default function Perfil() {
                     <CFormInput
                       type="text"
                       name="usuario"
-                      value={empleado.usuario}
+                      value={empleado.usuario_detalle.usuario}
                       // disabled={!isEditing}
                       // onChange={handleInputChange}
                     />
@@ -204,6 +206,11 @@ export default function Perfil() {
           </CCard>
         </CCol>
       </CRow>
+      : sinDatos
+      ?
+      <div className="p-4 text-center" style={{ backgroundColor: '#f4f5f7', minHeight: '100vh' }}>
+        <p className="text-muted fw-bold">No hay empleado asignado a esta cuenta</p>
+      </div>
       :
       <div className="p-4 text-center" style={{ backgroundColor: '#f4f5f7', minHeight: '100vh' }}>
         <p className="text-muted fw-bold">Cargando datos del empleado...</p>

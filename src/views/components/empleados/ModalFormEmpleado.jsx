@@ -160,7 +160,7 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
           <CRow className="g-3 mb-3">
             <CCol md={6}>
                 <CFormInput
-                  type="text"
+                  type="email"
                   label="Correo electrónico"
                   name="email"
                   maxLength={50}

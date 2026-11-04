@@ -22,16 +22,19 @@ import { google } from 'src/assets/brand/google'
 import { logo } from 'src/assets/brand/logo'
 import { eye } from 'src/assets/icons/eye'
 import api from '../../components/api/api'
+import { toast } from 'react-toastify'
 
 
 
 const Login = () => {
+
 const [usuario, setUsuario] = useState('');
 const [password, setPassword] = useState('');
 const [error, setError] = useState('') // Estado para manejar mensajes de error
 const [loading, setLoading] = useState(false) // Estado para deshabilitar el botón mientras carga
 
 const navigate = useNavigate();
+const notify = (login) => (login ? toast("Logeo correctamente") : toast("Datos incorrectos"));
 
 const handleSubmit = async (e) => {
     e.preventDefault();
@@ -46,12 +49,17 @@ const handleSubmit = async (e) => {
     if (response.data && response.data.token) {
       
       localStorage.setItem('token', response.data.token)
+      notify(true)
       
       
       navigate('/dashboard')
     } else {
       setError('No se recibió un token válido del servidor.')
+      
     }
+  }catch (error) {
+    console.error('Error al logearte', error)
+    notify(false)
   }finally{
     setLoading(false)
   }

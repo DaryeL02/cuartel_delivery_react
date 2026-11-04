@@ -17,6 +17,7 @@
 import React, { Suspense, useEffect } from 'react'
 import { HashRouter, Route, Routes } from 'react-router-dom'
 import { useSelector } from 'react-redux'
+import { ToastContainer, toast } from 'react-toastify';
 
 import ProtectedRoute from './views/components/protectedRoute/ProtectedRoute'
 
@@ -25,6 +26,8 @@ import './scss/style.scss'
 
 // We use those styles to show code examples, you should remove them in your application.
 import './scss/examples.scss'
+
+import 'react-toastify/dist/ReactToastify.css'
 
 // Containers
 const DefaultLayout = React.lazy(() => import('./layout/DefaultLayout'))
@@ -87,6 +90,9 @@ const App = () => {
 
   return (
     <HashRouter>
+      <ToastContainer 
+      autoClose={2000}
+      />
       <Suspense
         fallback={
           <div className="pt-3 text-center">
@@ -116,7 +122,7 @@ const App = () => {
           />
           <Route
             exact
-            path="/authentication/change-password"
+            path="/authentication/change-password/:uid/:token"
             name="Change Password Page"
             element={<ChangePassword />}
           />

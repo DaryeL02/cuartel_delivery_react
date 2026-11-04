@@ -31,6 +31,8 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
   const [loading, setLoading] = useState(false)
   const modoEditar = !!insumo // Si viene un objeto insumo, es modo modificación
 
+  const unidades = ['kg','gr','l', 'ml']
+
   // Efecto para cargar los datos del insumo si estamos editando
     useEffect(() => {
     
@@ -72,7 +74,7 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setLoading(false)
+    setLoading(true)
     console.log(data)
     try {
       const token = localStorage.getItem('token')
@@ -80,7 +82,7 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
 
       if (modoEditar) {
         // Petición de Modificación (PUT)
-        const idInsumo = insumo.id_insumos || insumo.ID_insumos
+        const idInsumo = insumo.id_insumos
         await api.put(`/api/insumos/${idInsumo}/`, data, { headers })
       } else {
         // Petición de Alta (POST)
@@ -113,6 +115,7 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
                 label="Nombre del Insumo"
                 name="nombre"
                 maxLength={50}
+                minLength={5}
                 value={data.nombre}
                 onChange={handleChange}
                 required
@@ -145,6 +148,7 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
                 name="descripcion"
                 rows={2}
                 maxLength={200}
+                minLength={0}
                 value={data.descripcion}
                 onChange={handleChange}
                 placeholder="Detalles específicos del insumo..."
@@ -161,26 +165,30 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
               >
                 <option value="">Selecciona...</option>
                 {proveedores.map((pro) => (
-                  <option key={pro.id_proveedores} value={pro.id_proveedores}>
+                  <option value={pro.id_proveedores}>
                     {pro.nombre}
                   </option>
                 ))}
               </CFormSelect>
             </CCol>
 
-            {/* Unidad de Medida */}
             <CCol md={4}>
-              <CFormInput
-                type="text"
+              <CFormSelect
                 label="Unidad de Medida"
                 name="unidad"
-                maxLength={10}
                 value={data.unidad}
                 onChange={handleChange}
                 required
-                placeholder="Ej. Kg, Litros, Unidades"
-              />
+              >
+                <option value="">Selecciona...</option>
+                {unidades.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </CFormSelect>
             </CCol>
+
 
             {/* Stock Actual */}
             <CCol md={4}>
