@@ -10,15 +10,14 @@ const PasswordChanged = () => {
           <CCol md={6}>
             <CCard className="mx-4 text-center">
               <CCardBody className="p-4">
-                <h1>Your password has been changed</h1>
+                <h1>Contraseña actualizada</h1>
                 <p className="text-body-secondary">
-                  Your password has been successfully changed. You can now log in with your new
-                  password.
+                  La contraseña se cambió correctamente. Ya podés iniciar sesión con la nueva.
                 </p>
                 <div className="d-grid">
                   <Link to="/authentication/login">
                     <CButton color="primary" className="w-100">
-                      Back to Login
+                      Volver al inicio de sesión
                     </CButton>
                   </Link>
                 </div>
