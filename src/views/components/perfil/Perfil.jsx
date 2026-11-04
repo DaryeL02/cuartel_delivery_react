@@ -15,7 +15,7 @@ import api from '../api/api'
 export default function Perfil() {
 
   const [empleado, setEmpleado] = useState(null)
-  const [isEditing, setIsEditing] = useState(false)
+  // const [isEditing, setIsEditing] = useState(false)
 
 
   const cargarEmpleado = async () => {
@@ -32,33 +32,33 @@ export default function Perfil() {
     }
   }
 
-  const handleInputChange = (e) => {
-  const { name, value } = e.target
-  setEmpleado({ ...empleado, [name]: value })
-  }
+  // const handleInputChange = (e) => {
+  // const { name, value } = e.target
+  // setEmpleado({ ...empleado, [name]: value })
+  // }
 
-  const handleSave = () => {
-    setIsEditing(false)
-    alert('Datos del empleado y credenciales actualizados en el sistema.')
-  }
+  // const handleSave = () => {
+  //   setIsEditing(false)
+  //   alert('Datos del empleado y credenciales actualizados en el sistema.')
+  // }
 
   useEffect(() => {
     cargarEmpleado()
-    if (empleado){
-      console.log(empleado)
-    }
   }, [])
+
 
   return (
     <div className="p-4" style={{ backgroundColor: '#f4f5f7', minHeight: '100vh' }}>
+      {empleado 
+      ?
       <CRow className="justify-content-center">
-        {/* <CCol xs={12} lg={10}>
+        <CCol xs={12} lg={10}>
           <CCard className="shadow-sm border-0">
             <CCardHeader className="bg-dark text-white py-3 fw-semibold d-flex justify-content-between align-items-center">
               <span>Ficha Técnica y Credenciales del Empleado</span>
-              <CBadge color={empleado.estado ? 'success' : 'danger'} shape="rounded-pill">
+              {/* <CBadge color={empleado.estado ? 'success' : 'danger'} shape="rounded-pill">
                 {empleado.estado ? 'EMPLEADO ACTIVO' : 'INACTIVO'}
-              </CBadge>
+              </CBadge> */}
             </CCardHeader>
             <CCardBody className="p-4">
               
@@ -69,10 +69,10 @@ export default function Perfil() {
                 <div>
                   <h3 className="mb-1 fw-bold text-dark">{empleado.nombre} {empleado.apellido}</h3>
                   <p className="text-primary mb-1 fw-semibold">
-                    🏪 {empleado.local_nombre}
+                    🏪 {empleado.local_detalle.nombre}
                   </p>
                   <small className="text-muted d-block">
-                    ID Empleado: {empleado.id_empleados} | DNI: {empleado.dni} | Alta Sistema: {empleado.fecha_hora_creacion_emp}
+                    ID Empleado: {empleado.id_empleados} | DNI: {empleado.dni}
                   </small>
                 </div>
               </div>
@@ -87,8 +87,8 @@ export default function Perfil() {
                       type="text"
                       name="nombre"
                       value={empleado.nombre}
-                      disabled={!isEditing}
-                      onChange={handleInputChange}
+                      // disabled={!isEditing}
+                      // onChange={handleInputChange}
                     />
                   </div>
 
@@ -98,8 +98,8 @@ export default function Perfil() {
                       type="text"
                       name="apellido"
                       value={empleado.apellido}
-                      disabled={!isEditing}
-                      onChange={handleInputChange}
+                      // disabled={!isEditing}
+                      // onChange={handleInputChange}
                     />
                   </div>
 
@@ -118,8 +118,8 @@ export default function Perfil() {
                       type="text"
                       name="telefono"
                       value={empleado.telefono}
-                      disabled={!isEditing}
-                      onChange={handleInputChange}
+                      // disabled={!isEditing}
+                      // onChange={handleInputChange}
                     />
                   </div>
 
@@ -129,8 +129,8 @@ export default function Perfil() {
                       type="text"
                       name="domicilio"
                       value={empleado.domicilio}
-                      disabled={!isEditing}
-                      onChange={handleInputChange}
+                      // disabled={!isEditing}
+                      // onChange={handleInputChange}
                     />
                   </div>
                 </CCol>
@@ -142,7 +142,7 @@ export default function Perfil() {
                     <label className="form-label text-muted small fw-bold">ID Usuario (PK INT)</label>
                     <CFormInput
                       type="text"
-                      value={empleado.id_usuarios}
+                      value={empleado.usuario_detalle.id_usuarios}
                       disabled
                     />
                   </div>
@@ -153,8 +153,8 @@ export default function Perfil() {
                       type="text"
                       name="usuario"
                       value={empleado.usuario}
-                      disabled={!isEditing}
-                      onChange={handleInputChange}
+                      // disabled={!isEditing}
+                      // onChange={handleInputChange}
                     />
                   </div>
 
@@ -164,13 +164,13 @@ export default function Perfil() {
                       type="password"
                       name="password"
                       value={empleado.password}
-                      disabled={!isEditing}
-                      onChange={handleInputChange}
+                      // disabled={!isEditing}
+                      // onChange={handleInputChange}
                       placeholder="Nueva contraseña"
                     />
                   </div>
 
-                  <div className="p-3 bg-light rounded border mt-4">
+                  {/* <div className="p-3 bg-light rounded border mt-4">
                     <div className="d-flex justify-content-between mb-2">
                       <span className="text-muted small">Creación de Cuenta:</span>
                       <span className="small fw-medium text-dark">{empleado.fecha_hora_creacion_usr}</span>
@@ -179,11 +179,11 @@ export default function Perfil() {
                       <span className="text-muted small">Última Modificación:</span>
                       <span className="small fw-medium text-dark">{empleado.fecha_hora_modificacion_usr}</span>
                     </div>
-                  </div>
+                  </div> */}
                 </CCol>
               </CRow>
 
-              <div className="d-flex justify-content-end gap-2 pt-3 mt-4 border-top">
+              {/* <div className="d-flex justify-content-end gap-2 pt-3 mt-4 border-top">
                 {isEditing ? (
                   <>
                     <CButton color="secondary" onClick={() => setIsEditing(false)}>
@@ -198,12 +198,17 @@ export default function Perfil() {
                     Editar Perfil
                   </CButton>
                 )}
-              </div>
+              </div> */}
 
             </CCardBody>
           </CCard>
-        </CCol> */}
+        </CCol>
       </CRow>
+      :
+      <div className="p-4 text-center" style={{ backgroundColor: '#f4f5f7', minHeight: '100vh' }}>
+        <p className="text-muted fw-bold">Cargando datos del empleado...</p>
+      </div>
+    }
     </div>
   )
 }
