@@ -25,8 +25,6 @@ import { eye } from 'src/assets/icons/eye'
 import api from '../../components/api/api'
 import { toast } from 'react-toastify'
 
-
-
 const Login = () => {
 
 const [usuario, setUsuario] = useState('');
@@ -59,9 +57,10 @@ const handleSubmit = async (e) => {
       return
     }
     setLoading(true)
-    console.log('Datos enviados:', { usuario, password });
-    
-    try {const response = await api.post('/api/login/', {
+    console.log('Datos enviados:', { usuario, password })
+
+    try {
+      const response = await api.post('/api/login/', {
         usuario: usuario,
         password: password,
       })
@@ -85,8 +84,6 @@ const handleSubmit = async (e) => {
   }finally{
     setLoading(false)
   }
-};
-
   return (
     <div className="bg-body-tertiary min-vh-100 d-flex flex-row align-items-center">
       <CContainer>
@@ -98,7 +95,6 @@ const handleSubmit = async (e) => {
               </div>
               <CCard className="p-4">
                 <CCardBody className="d-flex flex-column gap-4">
-
                   {error && <CAlert color="danger">{error}</CAlert>}
 
                   <h2 className="h5 text-center mb-0">Accede a tu cuenta</h2>
@@ -133,7 +129,7 @@ const handleSubmit = async (e) => {
                       <CInputGroup className="has-validation">
                         <CFormInput
                           id="password"
-                          type="password"
+                          type={verPassword ? 'text' : 'password'}
                           placeholder="Introduce tu contraseña"
                           autoComplete="current-password"
                           value={password}
@@ -141,12 +137,13 @@ const handleSubmit = async (e) => {
                           invalid={!!passwordError}
                         />
                         <CInputGroupText>
-                          <CTooltip content="Show password">
+                          <CTooltip content="Mostrar Contraseña">
                             <CButton
                               type="button"
                               color="link"
                               className="p-0 link-secondary"
                               aria-label="Show password"
+                              onClick={() => setVerPassword(!verPassword)}
                             >
                               <CIcon icon={eye} size="sm" />
                             </CButton>
@@ -159,11 +156,11 @@ const handleSubmit = async (e) => {
                     </CCol>
 
                     <CCol xs={12}>
-                      <CButton 
-                      color="primary" 
-                      type="submit" 
-                      className="w-100"
-                      disabled={loading}
+                      <CButton
+                        color="primary"
+                        type="submit"
+                        className="w-100"
+                        disabled={loading}
                       >
                         {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
                       </CButton>
@@ -177,6 +174,7 @@ const handleSubmit = async (e) => {
       </CContainer>
     </div>
   )
+}
 }
 
 export default Login

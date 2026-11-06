@@ -54,6 +54,7 @@ const Pedidos = React.lazy(() => import('./views/components/pedidos/Pedidos'))
 const Menus = React.lazy(() => import('./views/components/menus/Menus'))
 const AperturaCierre = React.lazy(() => import('./views/components/cajas/aperturaCierre/AperturaCierre.jsx'))
 
+const Caja = React.lazy(() => import('./views/components/caja/Caja'))
 
 //Forms
 const ChecksRadios = React.lazy(() => import('./views/forms/checks-radios/ChecksRadios'))
@@ -144,6 +145,7 @@ export const routes = [
   { path: '/menus', name: 'Menus', element: Menus },
   { path: '/cajas/aperturacierre', name: 'AperturaCierre', element: AperturaCierre },
   { path: '/perfil', name: 'Perfil', element: Perfil },
+  { path: '/cajas/apertura-cierre', name: 'Apertura y cierre de caja', element: Caja },
 ]
 
 export default routes
