@@ -20,6 +20,7 @@ import { apple } from 'src/assets/brand/apple'
 import { google } from 'src/assets/brand/google'
 import { logo } from 'src/assets/brand/logo'
 import { eye } from 'src/assets/icons/eye'
+import {register, }
 
 const Register = () => {
   const navigate = useNavigate()
@@ -27,6 +28,7 @@ const Register = () => {
   const handleSubmit = (event) => {
     event.preventDefault()
     navigate('/authentication/check-email')
+  
   }
 
   return (
@@ -40,14 +42,14 @@ const Register = () => {
               </div>
               <CCard className="p-4">
                 <CCardBody className="d-flex flex-column gap-4">
-                  <h2 className="h5 text-center mb-0">Create new account</h2>
+                  <h2 className="h5 text-center mb-0">Crear una cuenta</h2>
                   <CForm className="row gy-3 text-start" onSubmit={handleSubmit}>
                     <CCol xs={12}>
                       <CFormLabel htmlFor="name">Name</CFormLabel>
                       <CFormInput id="name" placeholder="Your name" autoComplete="name" />
                     </CCol>
                     <CCol xs={12}>
-                      <CFormLabel htmlFor="email">Email address</CFormLabel>
+                      <CFormLabel htmlFor="email">Correo electronico</CFormLabel>
                       <CFormInput
                         id="email"
                         type="email"
@@ -56,7 +58,7 @@ const Register = () => {
                       />
                     </CCol>
                     <CCol xs={12}>
-                      <CFormLabel htmlFor="password">Password</CFormLabel>
+                      <CFormLabel htmlFor="password">Contraseña</CFormLabel>
                       <CInputGroup>
                         <CFormInput
                           id="password"

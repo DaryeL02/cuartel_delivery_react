@@ -93,7 +93,7 @@ const Login = () => {
                           onChange={(e) => setPassword(e.target.value)} // Actualiza el estado
                         />
                         <CInputGroupText>
-                          <CTooltip content="Show password">
+                          <CTooltip content="Mostrar Contraseña">
                             <CButton
                               type="button"
                               color="link"

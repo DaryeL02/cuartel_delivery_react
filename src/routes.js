@@ -50,7 +50,7 @@ const Productos = React.lazy(() => import('./views/components/productos/Producto
 const Insumos = React.lazy(() => import('./views/components/insumos/Insumos'))
 const Empleados = React.lazy(() => import('./views/components/empleados/Empleados'))
 const Pedidos = React.lazy(() => import('./views/components/pedidos/Pedidos'))
-
+const Caja = React.lazy(() => import('./views/components/caja/Caja'))
 
 //Forms
 const ChecksRadios = React.lazy(() => import('./views/forms/checks-radios/ChecksRadios'))
@@ -138,6 +138,7 @@ export const routes = [
   { path: '/productos', name: 'Productos', element: Productos },
   { path: '/empleados', name: 'Empleados', element: Empleados },
   { path: '/pedidos', name: 'Pedidos', element: Pedidos },
+  { path: '/cajas/apertura-cierre', name: 'Apertura y cierre de caja', element: Caja },
 ]
 
 export default routes
