@@ -1,35 +1,61 @@
-import React from 'react'
-import { useEffect, useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   CCard,
   CCardBody,
+  CCardHeader,
+  CCol,
+  CRow,
   CTable,
   CTableBody,
-  CTableDataCell,
   CTableHead,
   CTableHeaderCell,
   CTableRow,
+  CTableDataCell,
+  CButton,
+  CAvatar,
+  CDropdown,
+  CDropdownToggle,
+  CDropdownMenu,
+  CDropdownItem,
+  CPagination,
+  CPaginationItem,
+  CFormInput,
 } from '@coreui/react'
-
-// import ModalProductos from './ModalProductos'
+import CIcon from '@coreui/icons-react'
+import { cilPlus, cilOptions, cilPencil, cilTrash, cilFastfood } from '@coreui/icons'
 import api from '../api/api'
-import ModalFormPruducto from './ModalFormPruducto'
-import ModalDeletePruducto from './ModalDeletePruducto'
+// import ModalFormPruducto from './ModalFormPruducto'
+// import ModalDeletePruducto from './ModalDeletePruducto'
 
-const Productos = () => {
+
+const Productos = ({ onOpenModal }) => {
+  
   const [productos, setProductos] = useState([])
+  const [searchTerm, setSearchTerm] = useState('')
+
 
   const cargarProductos = async () => {
     try {
-      const respuesta = await api.get('/api/productos/')
+      const token = localStorage.getItem('token')
+      const respuesta = await api.get('/api/productos/', {
+        headers: {
+          'Authorization': `Token ${token}`
+        }
+    })  
       setProductos(respuesta.data)
     } catch (error) {
-      console.log(error.responae?.status, error.response?.data)
+      console.error('Error al cargar productos:', error)
     }
   }
+
   useEffect(() => {
     cargarProductos()
   }, [])
+
+  // Filtrar productos en tiempo real según el término ingresado
+  const productosFiltrados = productos.filter((producto) =>
+    producto.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
   return (
     <CRow>
