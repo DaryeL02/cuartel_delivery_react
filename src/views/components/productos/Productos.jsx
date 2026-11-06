@@ -11,10 +11,10 @@ import {
   CTableRow,
 } from '@coreui/react'
 
-import ModalProductos from './ModalProductos'
+// import ModalProductos from './ModalProductos'
 import api from '../api/api'
-// import ModalFormPruducto from './ModalFormPruducto'
-// import ModalDeletePruducto from './ModalDeletePruducto'
+import ModalFormPruducto from './ModalFormPruducto'
+import ModalDeletePruducto from './ModalDeletePruducto'
 
 const Productos = () => {
   const [productos, setProductos] = useState([])
