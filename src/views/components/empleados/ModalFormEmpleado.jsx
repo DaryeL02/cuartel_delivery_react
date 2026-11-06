@@ -13,12 +13,12 @@ import {
   CFormSwitch,
   CRow,
   CCol,
+  CFormFeedback,
 } from '@coreui/react'
 import api from '../api/api'
 
 const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSuccess }) => {
 
-  // Inicializar el formulario según los atributos de la base de datos
     const [data, setData] = useState({
     rol: '',
     local: '',
@@ -33,9 +33,10 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
     })
 
   const [loading, setLoading] = useState(false)
-  const modoEditar = !!empleado // Si viene un objeto empleado, es modo modificación
+  const [errors, setErrors] = useState({})
+  const modoEditar = !!empleado 
 
-  // Efecto para cargar los datos del empleado si estamos editando
+
     useEffect(() => {
     
     if (modoEditar && empleado) {
@@ -74,6 +75,25 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
+    
+    if (name === 'dni' || name === 'telefono') {
+      const soloNumeros = value.replace(/\D/g, '') // Elimina todo lo que NO sea un número
+      
+      setData((prev) => ({
+        ...prev,
+        [name]: soloNumeros,
+      }))
+
+      if (errors[name]) {
+        setErrors((prev) => ({ ...prev, [name]: null }))
+      }
+      return // Detiene la ejecución aquí para el DNI
+    }
+
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: null }))
+    }
+
     setData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
@@ -84,23 +104,36 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
     e.preventDefault()
     setLoading(false)
     console.log(data)
+    
+    if (data.dni.trim().length !== 8) {
+      setErrors({ dni: 'El DNI debe tener al menos 6 digitos.' })
+      return
+    }
+
     try {
       const token = localStorage.getItem('token')
       const headers = { Authorization: `Token ${token}` }
 
       if (modoEditar) {
-        // Petición de Modificación (PUT)
         const idEmpleado = empleado.id_empleados || empleado.ID_empleados
         await api.put(`/api/empleados/${idEmpleado}/`, data, { headers })
       } else {
-        // Petición de Alta (POST)
         await api.post('/api/empleados/', data, { headers })
       }
 
-      onSuccess() // Callback para recargar la tabla principal
-      onClose() // Cerrar el modal
+      onSuccess() 
+      onClose()
     } catch (error) {
+
       console.error('Error al guardar el empleado:', error)
+      
+      if (error.response && error.response.data) {
+        setErrors(error.response.data)
+      } else {
+        alert('Ocurrió un error inesperado de conexión con el servidor.')
+      }
+
+
     } finally {
       setLoading(false)
     }
@@ -225,14 +258,16 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
           <CRow className="g-3 mb-2">
             <CCol md={6}>
               <CFormInput
+                type="text"
                 label="DNI"
                 name="dni"
-                // rows={2}
-                maxLength={9}
+                maxLength={8}
                 value={data.dni}
                 onChange={handleChange}
                 placeholder="39472367"
+                invalid={!!errors.dni} 
               />
+              {errors.dni && <CFormFeedback invalid>{errors.dni}</CFormFeedback>}
             </CCol>
 
             {/* Telefono */}

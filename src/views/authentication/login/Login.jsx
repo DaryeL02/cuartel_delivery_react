@@ -15,6 +15,7 @@ import {
   CRow,
   CTooltip,
   CAlert,
+  CFormFeedback,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { apple } from 'src/assets/brand/apple'
@@ -32,13 +33,31 @@ const [usuario, setUsuario] = useState('');
 const [password, setPassword] = useState('');
 const [error, setError] = useState('') // Estado para manejar mensajes de error
 const [loading, setLoading] = useState(false) // Estado para deshabilitar el botón mientras carga
+const [usuarioError, setUsuarioError] = useState('')
+const [passwordError, setPasswordError] = useState('')
 
 const navigate = useNavigate();
-const notify = (login) => (login ? toast("Logeo correctamente") : toast("Datos incorrectos"));
+const notify = (login) => (login ? toast("Bienvenido/a") : toast("Datos incorrectos"));
 
 const handleSubmit = async (e) => {
     e.preventDefault();
     setError('')
+    setUsuarioError('')
+    setPasswordError('')
+    
+    let formularioValido = true
+    if (!usuario.trim()) {
+      setUsuarioError('Ingresa un usuario válido')
+      formularioValido = false
+    }
+    if (!password.trim()) {
+      setPasswordError('La contraseña no puede estar vacía')
+      formularioValido = false
+    }
+
+    if (!formularioValido) {
+      return
+    }
     setLoading(true)
     console.log('Datos enviados:', { usuario, password });
     
@@ -60,6 +79,9 @@ const handleSubmit = async (e) => {
   }catch (error) {
     console.error('Error al logearte', error)
     notify(false)
+
+    setUsuarioError('Ingresa un usuario válido')
+    setPasswordError('Contraseña incorrecta')
   }finally{
     setLoading(false)
   }
@@ -80,9 +102,11 @@ const handleSubmit = async (e) => {
                   {error && <CAlert color="danger">{error}</CAlert>}
 
                   <h2 className="h5 text-center mb-0">Accede a tu cuenta</h2>
+                  
                   <CForm 
                   className="row gy-3"
                   onSubmit={handleSubmit}
+                  noValidate
                   >
                     <CCol xs={12}>
                       <CFormLabel htmlFor="text">Usuario</CFormLabel>
@@ -91,23 +115,30 @@ const handleSubmit = async (e) => {
                         type="text"
                         placeholder="Introduce tu usuario"
                         autoComplete="current-usuario"
-                        value={usuario} // Vincula el valor
-                        onChange={(e) => setUsuario(e.target.value)} // Actualiza el estado
+                        value={usuario}
+                        onChange={(e) => setUsuario(e.target.value)}
+                        invalid={!!usuarioError}
                       />
+
+                      {usuarioError && (
+                        <CFormFeedback invalid>{usuarioError}</CFormFeedback>
+                      )}
                     </CCol>
+
                     <CCol xs={12}>
                       <div className="d-flex justify-content-between">
                         <CFormLabel htmlFor="password">Contraseña</CFormLabel>
                         <Link to="/authentication/reset-password">¿Olvidaste tu contraseña?</Link>
                       </div>
-                      <CInputGroup>
+                      <CInputGroup className="has-validation">
                         <CFormInput
                           id="password"
                           type="password"
                           placeholder="Introduce tu contraseña"
                           autoComplete="current-password"
-                          value={password} // Vincula el valor
-                          onChange={(e) => setPassword(e.target.value)} // Actualiza el estado
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          invalid={!!passwordError}
                         />
                         <CInputGroupText>
                           <CTooltip content="Show password">
@@ -121,8 +152,12 @@ const handleSubmit = async (e) => {
                             </CButton>
                           </CTooltip>
                         </CInputGroupText>
+                        {passwordError && (
+                          <CFormFeedback invalid>{passwordError}</CFormFeedback>
+                        )}
                       </CInputGroup>
                     </CCol>
+
                     <CCol xs={12}>
                       <CButton 
                       color="primary" 
