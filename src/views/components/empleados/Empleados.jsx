@@ -134,7 +134,8 @@ const Empleados = ({ onOpenModal }) => {
                       <CTableHeaderCell className="border-0" style={{ width: '20%' }}>Empleado</CTableHeaderCell>
                       <CTableHeaderCell className="border-0" style={{ width: '15%' }}>DNI</CTableHeaderCell>
                       <CTableHeaderCell className="border-0" style={{ width: '10%' }}>Teléfono</CTableHeaderCell>
-                      <CTableHeaderCell className="border-0" style={{ width: '30%' }}>Domicilio</CTableHeaderCell>
+                      <CTableHeaderCell className="border-0" style={{ width: '20%' }}>Domicilio</CTableHeaderCell>
+                      <CTableHeaderCell className="border-0" style={{ width: '10%' }}>Sucursal</CTableHeaderCell>
                       <CTableHeaderCell className="text-center border-0" style={{ width: '10%' }}>Estado</CTableHeaderCell>
                       <CTableHeaderCell className="text-center border-0" style={{ width: '10%' }}>Acciones</CTableHeaderCell>
                     </CTableRow>
@@ -153,7 +154,7 @@ const Empleados = ({ onOpenModal }) => {
                               <CAvatar color="light" text={empleado.nombre.charAt(0)} className="fw-semibold text-primary" />
                               <div>
                                 <div className="fw-semibold text-dark">{empleado.nombre} {empleado.apellido}</div>
-                                {/* <div className="small text-muted">{empleado.rol || 'Personal'}</div> */}
+                                <div className="small text-muted">{empleado.usuario_detalle?.roles_asignados[0].rol_detalle.nombre || 'Sin rol'}</div>
                               </div>
                             </div>
                           </CTableDataCell>
@@ -168,6 +169,10 @@ const Empleados = ({ onOpenModal }) => {
                           
                           <CTableDataCell className="text-secondary text-truncate" style={{ maxWidth: '200px' }}>
                             {empleado.domicilio}
+                          </CTableDataCell>
+
+                          <CTableDataCell className="text-secondary text-truncate" style={{ maxWidth: '200px' }}>
+                            {empleado.local_detalle.nombre}
                           </CTableDataCell>
                           
                           <CTableDataCell className="text-center">

@@ -20,19 +20,23 @@ import {
   CPagination,
   CPaginationItem,
   CFormInput,
+  CBadge,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilPlus, cilOptions, cilPencil, cilTrash, cilFastfood } from '@coreui/icons'
 import api from '../api/api'
-// import ModalFormPruducto from './ModalFormPruducto'
-// import ModalDeletePruducto from './ModalDeletePruducto'
+import ModalFormProducto from './ModalFormProducto'
+import ModalDeleteProducto from './ModalDeleteProducto'
 
 
 const Productos = ({ onOpenModal }) => {
   
   const [productos, setProductos] = useState([])
-  const [searchTerm, setSearchTerm] = useState('')
-
+  const [insumos, setInsumos] = useState([])
+  const [busqueda, setBusqueda] = useState('')
+  const [modalOpen, setModalOpen] = useState(false)
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [productoAEditar, setProductoAEditar] = useState(null)
 
   const cargarProductos = async () => {
     try {
@@ -48,16 +52,38 @@ const Productos = ({ onOpenModal }) => {
     }
   }
 
+  const cargarInsumos = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        const respuesta = await api.get('/api/insumos/', {
+          headers: {
+            'Authorization': `Token ${token}`
+          }
+      })  
+        setInsumos(respuesta.data)
+        
+      } catch (error) {
+        console.error('Error al cargar insumos:', error)
+      }
+    }
+
+  const getBadgeColor = (estado) => {
+    return estado ? 'success' : 'danger'
+  }
+
   useEffect(() => {
     cargarProductos()
+    cargarInsumos()
   }, [])
 
   // Filtrar productos en tiempo real según el término ingresado
   const productosFiltrados = productos.filter((producto) =>
-    producto.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+    producto.nombre.toLowerCase().includes(busqueda.toLowerCase())
   )
 
   return (
+
+    <div>
     <CRow>
       <CCol xs={12}>
         <CCard className="mb-4 shadow-sm">
@@ -70,14 +96,14 @@ const Productos = ({ onOpenModal }) => {
               <CFormInput
                 type="text"
                 placeholder="Buscar por nombre..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
                 className="shadow-sm"
               />
               <CButton 
                 color="primary" 
                 className="d-flex align-items-center gap-2 text-nowrap"
-                onClick={onOpenModal}
+                onClick={() => { setProductoAEditar(null); setModalOpen(true); }}
               >
                 <CIcon icon={cilPlus} />
                 Agregar producto
@@ -93,8 +119,9 @@ const Productos = ({ onOpenModal }) => {
                   <CTableRow>
                     <CTableHeaderCell className="text-center border-0" style={{ width: '5%' }}>N°</CTableHeaderCell>
                     <CTableHeaderCell className="border-0" style={{ width: '35%' }}>Producto</CTableHeaderCell>
-                    <CTableHeaderCell className="border-0" style={{ width: '40%' }}>Descripción</CTableHeaderCell>
+                    <CTableHeaderCell className="border-0" style={{ width: '30%' }}>Descripción</CTableHeaderCell>
                     <CTableHeaderCell className="text-end border-0" style={{ width: '10%' }}>Precio Unitario</CTableHeaderCell>
+                    <CTableHeaderCell className="text-center border-0" style={{ width: '10%' }}>Estado</CTableHeaderCell>
                     <CTableHeaderCell className="text-center border-0" style={{ width: '10%' }}>Acciones</CTableHeaderCell>
                   </CTableRow>
                 </CTableHead>
@@ -133,6 +160,12 @@ const Productos = ({ onOpenModal }) => {
                       <CTableDataCell className="text-end fw-semibold text-dark text-nowrap">
                         ${producto.precio_unitario}
                       </CTableDataCell>
+
+                      <CTableDataCell className="text-center">
+                        <CBadge color={getBadgeColor(producto.estado)} shape="rounded-pill">
+                          {producto.estado ? 'Activo' : 'Inactivo'}
+                        </CBadge>
+                      </CTableDataCell>
                       
                       {/* Menú de Acciones Dropdown */}
                       <CTableDataCell className="text-center">
@@ -142,14 +175,14 @@ const Productos = ({ onOpenModal }) => {
                           </CDropdownToggle>
                           <CDropdownMenu>
                             <CDropdownItem 
-                              onClick={() => console.log('Editar Producto ID:', producto.id_productos)}
+                              onClick={() => {setProductoAEditar(producto); setModalOpen(true);}}
                               className="d-flex align-items-center gap-2"
                             >
                               <CIcon icon={cilPencil} className="text-info" />
                               Editar
                             </CDropdownItem>
                             <CDropdownItem 
-                              onClick={() => console.log('Eliminar Producto ID:', producto.id_productos)}
+                              onClick={() => {setProductoAEditar(producto); setDeleteModalOpen(true);}}
                               className="d-flex align-items-center gap-2 text-danger"
                             >
                               <CIcon icon={cilTrash} />
@@ -186,6 +219,22 @@ const Productos = ({ onOpenModal }) => {
         </CCard>
       </CCol>
     </CRow>
+
+    <ModalFormProducto
+        visible={modalOpen} 
+        onClose={() => setModalOpen(false)} 
+        producto={productoAEditar}
+        insumos_lista={insumos}
+        onSuccess={cargarProductos} // Ejecuta la recarga automática al guardar
+      />
+      <ModalDeleteProducto
+        visible={deleteModalOpen} 
+        onClose={() => setDeleteModalOpen(false)}
+        producto={productoAEditar}
+        onSuccess={cargarProductos} // Ejecuta la recarga automática al guardar
+      />
+
+  </div>
   )
 }
 

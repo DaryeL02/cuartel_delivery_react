@@ -68,12 +68,12 @@ const AppHeaderDropdown = () => {
       </CDropdownToggle>
       <CDropdownMenu className="pt-0" placement="bottom-end">
         
-        <CDropdownHeader className="bg-body-secondary fw-semibold my-2">Settings</CDropdownHeader>
+        <CDropdownHeader className="bg-body-secondary fw-semibold my-2">Configuración</CDropdownHeader>
         <CDropdownItem onClick={handleNavigate} style={{ cursor: 'pointer' }}>
           <CIcon icon={cilUser} className="me-2" onClick={handleNavigate} />
           Perfil
         </CDropdownItem>
-        <CDropdownItem href="#">
+        {/* <CDropdownItem href="#">
           <CIcon icon={cilSettings} className="me-2" />
           Configuración
         </CDropdownItem>
@@ -90,7 +90,7 @@ const AppHeaderDropdown = () => {
           <CBadge color="primary" className="ms-2">
             42
           </CBadge>
-        </CDropdownItem>
+        </CDropdownItem> */}
 
         <CDropdownDivider />
 

@@ -95,12 +95,15 @@ const AppHeader = () => {
         >
           <CIcon icon={cilMenu} size="lg" />
         </CHeaderToggler>
-        <CSearchButton
+        
+        {/* <CSearchButton
           onTrigger={() => setSearchVisible(true)}
           aria-label="Open search dialog"
           aria-controls="app-header-search-modal"
-        />
-        <CModal
+        /> */}
+
+        
+        {/* <CModal
           id="app-header-search-modal"
           visible={searchVisible}
           onClose={() => setSearchVisible(false)}
@@ -147,7 +150,11 @@ const AppHeader = () => {
             </CListGroup>
           </CModalBody>
         </CModal>
-        <CHeaderNav className="ms-auto">
+         */}
+        
+        {/* Botones */}
+
+        {/* <CHeaderNav className="ms-auto">
           <CNavItem>
             <CNavLink href="#">
               <CIcon icon={cilBell} size="lg" />
@@ -163,12 +170,18 @@ const AppHeader = () => {
               <CIcon icon={cilEnvelopeOpen} size="lg" />
             </CNavLink>
           </CNavItem>
-        </CHeaderNav>
-        <CHeaderNav>
+        </CHeaderNav> */}
+
+        {/* Agregué la clase para que los botones se acomoden automaticamente */}
+        <CHeaderNav className="ms-auto"> 
           <li className="nav-item py-1">
             <div className="vr h-100 mx-2 text-body text-opacity-75"></div>
           </li>
+
+          {/* Dropdown para el modo oscuro y claro */}
+
           <CDropdown variant="nav-item" placement="bottom-end">
+
             <CDropdownToggle caret={false}>
               {colorMode === 'dark' ? (
                 <CIcon icon={cilMoon} size="lg" />
@@ -178,6 +191,7 @@ const AppHeader = () => {
                 <CIcon icon={cilSun} size="lg" />
               )}
             </CDropdownToggle>
+
             <CDropdownMenu>
               <CDropdownItem
                 active={colorMode === 'light'}
@@ -207,10 +221,13 @@ const AppHeader = () => {
                 <CIcon className="me-2" icon={cilContrast} size="lg" /> Auto
               </CDropdownItem>
             </CDropdownMenu>
+          
           </CDropdown>
+
           <li className="nav-item py-1">
             <div className="vr h-100 mx-2 text-body text-opacity-75"></div>
           </li>
+          
           <AppHeaderDropdown />
         </CHeaderNav>
       </CContainer>

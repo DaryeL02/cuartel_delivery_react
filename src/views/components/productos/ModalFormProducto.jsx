@@ -9,78 +9,101 @@ import {
   CForm,
   CFormInput,
   CFormTextarea,
-  CFormSelect,
+  CFormCheck,
   CRow,
   CCol,
+  CFormSwitch
 } from '@coreui/react'
 import api from '../api/api'
 
-const ModalFormInsumo = ({ visible, onClose, insumo, onSuccess }) => {
+const ModalFormProducto = ({ visible, onClose, producto, insumos_lista, onSuccess }) => {
   // Inicializar el formulario según los atributos de la base de datos
-    const [formData, setFormData] = useState({
-    categoria: 0,
+    const [data, setData] = useState({
     nombre: '',
     descripcion: '',
-    unidad: '',
-    stock_actual: 0,
-    stock_minimo: 0,
+    precio_unitario: 0,
+    estado: true,
+    insumos: []
     })
 
   const [loading, setLoading] = useState(false)
-  const isEditMode = !!insumo // Si viene un objeto insumo, es modo modificación
+  const modoEditar = !!producto // Si viene un objeto producto, es modo modificación
 
-  // Efecto para cargar los datos del insumo si estamos editando
+  // Efecto para cargar los datos del producto si estamos editando
     useEffect(() => {
-    if (isEditMode && insumo) {
-        setFormData({
-        categoria: insumo.id_categorias || 0,
-        nombre: insumo.nombre || '',
-        descripcion: insumo.descripcion || '',
-        unidad: insumo.unidad || '',
-        stock_actual: insumo.stock_actual || 0,
-        stock_minimo: insumo.stock_minimo || 0,
+    if (modoEditar && producto) {
+        setData({
+        nombre: producto.nombre || '',
+        descripcion: producto.descripcion || '',
+        precio_unitario: producto.precio_unitario || 0,
+        estado: producto.estado || true,
+        insumos: producto.insumos_asociados 
+        ? producto.insumos_asociados.map(item => item.insumo.id_insumos) 
+        : []
         })
     } else {
-        setFormData({
-        categoria: 0,
+        setData({
         nombre: '',
         descripcion: '',
-        unidad: '',
-        stock_actual: 0,
-        stock_minimo: 0,
+        precio_unitario: 0,
+        estado: true,
+        insumos: [],
         })
     }
-    }, [insumo, visible, isEditMode])
+    }, [producto, visible, modoEditar])
 
   const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({
+    const { name, value, type, checked } = e.target
+    
+    setData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: type === 'checkbox' ? checked : value,
     }))
+  }
+
+  // Manejo de cambios específico para la selección de múltiples insumos
+  const handleInsumoCheck = (idInsumo) => {
+    setData((prev) => {
+      const yaSeleccionado = prev.insumos.includes(idInsumo)
+      const nuevosInsumos = yaSeleccionado
+        ? prev.insumos.filter((id) => id !== idInsumo) // Quitar si ya estaba
+        : [...prev.insumos, idInsumo] // Agregar si no estaba
+
+      return {
+        ...prev,
+        insumos: nuevosInsumos
+      }
+    })
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setLoading(false)
-    console.log(formData)
+    setLoading(true)
+
+     // 1. Estructuramos el payload formateando la lista de insumos
+    const payload = {
+      ...data,
+      insumos: data.insumos.map(id => ({ id_insumos: id }))
+    }
+
+    console.log(payload)
     try {
       const token = localStorage.getItem('token')
       const headers = { Authorization: `Token ${token}` }
 
-      if (isEditMode) {
+      if (modoEditar) {
         // Petición de Modificación (PUT)
-        const idInsumo = insumo.id_insumos || insumo.ID_insumos
-        await api.put(`/api/insumos/${idInsumo}/`, formData, { headers })
+        const idProducto = producto.id_productos
+        await api.put(`/api/productos/${idProducto}/`, payload, { headers })
       } else {
         // Petición de Alta (POST)
-        await api.post('/api/insumos/', formData, { headers })
+        await api.post('/api/productos/', payload, { headers })
       }
 
       onSuccess() // Callback para recargar la tabla principal
       onClose() // Cerrar el modal
     } catch (error) {
-      console.error('Error al guardar el insumo:', error)
+      console.error('Error al guardar el producto:', error)
     } finally {
       setLoading(false)
     }
@@ -90,42 +113,39 @@ const ModalFormInsumo = ({ visible, onClose, insumo, onSuccess }) => {
     <CModal visible={visible} onClose={onClose} backdrop="static" size="lg">
       <CModalHeader>
         <CModalTitle className="fw-semibold">
-          {isEditMode ? 'Modificar Insumo' : 'Agregar Nuevo Insumo'}
+          {modoEditar ? 'Modificar Producto' : 'Agregar Nuevo Producto'}
         </CModalTitle>
       </CModalHeader>
       <CForm onSubmit={handleSubmit}>
         <CModalBody>
           <CRow className="g-3">
-            {/* Nombre del Insumo */}
+            {/* Nombre del Producto */}
             <CCol md={8}>
               <CFormInput
                 type="text"
-                label="Nombre del Insumo"
+                label="Nombre del Producto"
                 name="nombre"
                 maxLength={50}
-                value={formData.nombre}
+                value={data.nombre}
                 onChange={handleChange}
                 required
-                placeholder="Ej. Harina 000"
+                placeholder="Ej. Hamburguesa Completa"
               />
             </CCol>
 
-            {/* Categoría (Relación FK con la tabla CATEGORIAS) */}
+            {/* Precio Unitario */}
             <CCol md={4}>
-              <CFormSelect
-                label="Categoría"
-                name="categoria"
-                value={formData.categoria}
+              <CFormInput
+                type="number"
+                label="Precio Unitario ($)"
+                name="precio_unitario"
+                min={0}
+                step="0.01"
+                value={data.precio_unitario}
                 onChange={handleChange}
                 required
-              >
-                <option value="">{isEditMode ? categorias[insumo.categoria].nombre : "Selecciona..."}</option>
-                {categorias.map((cat) => (
-                  <option key={cat.id_categorias} value={cat.id_categorias}>
-                    {cat.nombre}
-                  </option>
-                ))}
-              </CFormSelect>
+                placeholder="0.00"
+              />
             </CCol>
 
             {/* Descripción */}
@@ -135,59 +155,60 @@ const ModalFormInsumo = ({ visible, onClose, insumo, onSuccess }) => {
                 name="descripcion"
                 rows={2}
                 maxLength={200}
-                value={formData.descripcion}
+                value={data.descripcion}
                 onChange={handleChange}
-                placeholder="Detalles específicos de la materia prima..."
+                placeholder="Detalles específicos del producto final..."
               />
             </CCol>
 
-            {/* Unidad de Medida */}
-            <CCol md={4}>
-              <CFormInput
-                type="text"
-                label="Unidad de Medida"
-                name="unidad"
-                maxLength={10}
-                value={formData.unidad}
-                onChange={handleChange}
-                required
-                placeholder="Ej. Kg, Litros, Unidades"
-              />
-            </CCol>
-
-            {/* Stock Actual */}
-            <CCol md={4}>
-              <CFormInput
-                type="number"
-                label="Stock Actual"
-                name="stock_actual"
-                min={0}
-                value={formData.stock_actual}
-                onChange={handleChange}
-                required
-              />
-            </CCol>
-
-            {/* Stock Mínimo */}
-            <CCol md={4}>
-              <CFormInput
-                type="number"
-                label="Stock Mínimo"
-                name="stock_minimo"
-                min={0}
-                value={formData.stock_minimo}
-                onChange={handleChange}
-                required
-              />
+            {/* Selección de Insumos Asociados (Muchos a Muchos) */}
+            <CCol md={12}>
+              <label className="form-label fw-medium text-secondary">Insumos del Producto</label>
+              <div 
+                className="border rounded p-3 bg-light" 
+                style={{ maxHeight: '180px', overflowY: 'auto' }}
+              >
+                {insumos_lista.length === 0 ? (
+                  <p className="text-muted small mb-0">No hay insumos disponibles para asociar.</p>
+                ) : (
+                  <CRow>
+                    {insumos_lista.map((insumo) => (
+                      <CCol xs={12} sm={6} key={insumo.id_insumos} className="mb-2">
+                        <CFormCheck
+                          id={`insumo-${insumo.id_insumos}`}
+                          label={insumo.nombre}
+                          checked={data.insumos.includes(insumo.id_insumos)}
+                          onChange={() => handleInsumoCheck(insumo.id_insumos)}
+                        />
+                      </CCol>
+                    ))}
+                  </CRow>
+                )}
+              </div>
+              <small className="text-muted mt-1 d-block">
+                Selecciona todos los insumos necesarios para la elaboración de este producto.
+              </small>
             </CCol>
           </CRow>
+          <CRow className="align-items-center">
+            <CCol xs="auto">
+              <CFormSwitch
+                label={data.estado ? "Producto Activo" : "Producto Inactivo"}
+                id="switchEstadoProducto"
+                name="estado"
+                checked={data.estado}
+                onChange={handleChange}
+                size="xl" // Hace que el switch se vea un poco más grande y claro
+              />
+            </CCol>
+        </CRow>
         </CModalBody>
         <CModalFooter>
           <CButton color="secondary" variant="ghost" onClick={onClose} disabled={loading}>
             Cancelar
           </CButton>
-          <CButton color={isEditMode ? 'info' : 'primary'} type="submit" disabled={loading}>
-            {loading ? 'Guardando...' : isEditMode ? 'Guardar Cambios' : 'Registrar Insumo'}
+          <CButton color={modoEditar ? 'info' : 'primary'} type="submit" disabled={loading}>
+            {loading ? 'Guardando...' : modoEditar ? 'Guardar Cambios' : 'Registrar Producto'}
           </CButton>
         </CModalFooter>
       </CForm>
@@ -195,4 +216,4 @@ const ModalFormInsumo = ({ visible, onClose, insumo, onSuccess }) => {
   )
 }
 
-export default ModalFormInsumo
+export default ModalFormProducto

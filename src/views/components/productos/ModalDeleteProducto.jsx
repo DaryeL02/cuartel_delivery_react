@@ -7,24 +7,11 @@ import {
   CModalFooter,
   CButton,
   CForm,
-  CFormInput,
-  CFormTextarea,
-  CFormSelect,
   CRow,
-  CCol,
 } from '@coreui/react'
 import api from '../api/api'
 
-const ModalDeleteInsumo = ({ visible, onClose, insumo, onSuccess }) => {
-  // Inicializar el formulario según los atributos de la base de datos
-    // const [data, setData] = useState({
-    // categoria: 0,
-    // nombre: '',
-    // descripcion: '',
-    // unidad: '',
-    // stock_actual: 0,
-    // stock_minimo: 0,
-    // })
+const ModalDeleteProducto = ({ visible, onClose, producto, onSuccess }) => {
 
   const [loading, setLoading] = useState(false)
 
@@ -35,13 +22,13 @@ const ModalDeleteInsumo = ({ visible, onClose, insumo, onSuccess }) => {
     try {
       const token = localStorage.getItem('token')
       const headers = { Authorization: `Token ${token}` }
-      console.log(insumo.id_insumos)
-      await api.delete(`/api/insumos/${insumo.id_insumos}/` , { headers })
+      console.log(producto.id_productos)
+      await api.delete(`/api/productos/${producto.id_productos}/` , { headers })
 
-      onSuccess() // Callback para recargar la tabla principal
-      onClose() // Cerrar el modal
+      onSuccess()
+      onClose()
     } catch (error) {
-      console.error('Error al eliminar el insumo:', error)
+      console.error('Error al eliminar el producto:', error)
     } finally {
       setLoading(false)
     }
@@ -51,13 +38,13 @@ const ModalDeleteInsumo = ({ visible, onClose, insumo, onSuccess }) => {
     <CModal visible={visible} onClose={onClose} backdrop="static" size="lg">
       <CModalHeader>
         <CModalTitle className="fw-semibold">
-          Eliminar insumo
+          Eliminar producto
         </CModalTitle>
       </CModalHeader>
       <CForm onSubmit={handleSubmit}>
         <CModalBody>
           <CRow className="g-3">
-            <p>¿Desea eliminar el insumo?</p>
+            <p>¿Desea eliminar el producto?</p>
           </CRow>
         </CModalBody>
         <CModalFooter>
@@ -73,4 +60,4 @@ const ModalDeleteInsumo = ({ visible, onClose, insumo, onSuccess }) => {
   )
 }
 
-export default ModalDeleteInsumo
+export default ModalDeleteProducto
