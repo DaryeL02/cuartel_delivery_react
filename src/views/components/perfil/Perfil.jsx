@@ -91,6 +91,7 @@ export default function Perfil() {
                       value={empleado.nombre}
                       // disabled={!isEditing}
                       // onChange={handleInputChange}
+                      disabled
                     />
                   </div>
 
@@ -102,6 +103,7 @@ export default function Perfil() {
                       value={empleado.apellido}
                       // disabled={!isEditing}
                       // onChange={handleInputChange}
+                      disabled
                     />
                   </div>
 
@@ -122,6 +124,7 @@ export default function Perfil() {
                       value={empleado.telefono}
                       // disabled={!isEditing}
                       // onChange={handleInputChange}
+                      disabled
                     />
                   </div>
 
@@ -133,6 +136,7 @@ export default function Perfil() {
                       value={empleado.domicilio}
                       // disabled={!isEditing}
                       // onChange={handleInputChange}
+                      disabled
                     />
                   </div>
                 </CCol>
@@ -156,6 +160,7 @@ export default function Perfil() {
                       name="usuario"
                       value={empleado.usuario_detalle.usuario}
                       // disabled={!isEditing}
+                      disabled
                       // onChange={handleInputChange}
                     />
                   </div>
@@ -168,6 +173,7 @@ export default function Perfil() {
                       value={empleado.password}
                       // disabled={!isEditing}
                       // onChange={handleInputChange}
+                      disabled
                       placeholder="Nueva contraseña"
                     />
                   </div>

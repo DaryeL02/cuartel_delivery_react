@@ -41,8 +41,8 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
     
     if (modoEditar && empleado) {
 
-        const RolId = empleado.usuario_detalle.roles_asignados && empleado.usuario_detalle.roles_asignados.length > 0
-        ? empleado.usuario_detalle.roles_asignados[0].rol_detalle?.id_roles
+        const RolId = empleado.usuario_detalle?.roles_asignados && empleado.usuario_detalle?.roles_asignados.length > 0
+        ? empleado.usuario_detalle?.roles_asignados[0].rol_detalle?.id_roles
         : '';
 
         setData({
@@ -180,7 +180,7 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
                   onChange={handleChange}
                   required
                 >
-                  <option value="">{modoEditar ? empleado.usuario_detalle.roles_asignados[0].rol_detalle?.nombre : "Selecciona..."}</option>
+                  <option value="">{modoEditar ? empleado.usuario_detalle?.roles_asignados ? empleado.usuario_detalle?.roles_asignados[0].rol_detalle?.nombre : "No hay rol asignado" : "Selecciona..."}</option>
                   {roles.map((item) => (
                     <option key={item.id_roles} value={item.id_roles}>
                       {item.nombre}
