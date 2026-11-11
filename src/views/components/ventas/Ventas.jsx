@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect  } from 'react'
 import {
   CCard,
   CCardBody,
@@ -34,8 +34,143 @@ import {
   cilPrint,
   cilWallet,
 } from '@coreui/icons'
+import api from '../api/api'
 
 const Ventas = () => {
+
+  const [cajas, setCajas] = useState([]);
+  const [cajaSeleccionada, setCajaSeleccionada] = useState(null);
+  const [pedidos, setPedidos] = useState([]);
+  const [nuevoPedido, setNuevoPedido] = useState({
+    cliente: '',
+    direccion: '',
+    detalles: [],
+  });
+  const [idSeleccionado, setIdSeleccionado] = useState("");
+  const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null);
+  const [productoSeleccionado, setProductoSeleccionado] = useState({
+    producto: '',
+    cantidad: ''
+  });
+  const [productos, setProductos] = useState([]);
+  const [metodos, setMetodos] = useState([]);
+
+
+
+  const cargarCajas = async () => {
+        try {
+          const token = localStorage.getItem('token')
+          const respuesta = await api.get('/api/cajas/?status=active', {
+            headers: {
+              'Authorization': `Token ${token}`
+            }
+        })  
+          setCajas(respuesta.data)
+          
+        } catch (error) {
+          console.error('Error al cargar cajas:', error)
+        }
+      }
+
+  const cargarPedidos = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        const respuesta = await api.get('/api/pedidos/?date=today', {
+          headers: {
+            'Authorization': `Token ${token}`
+          }
+      })  
+        setPedidos(respuesta.data)
+        
+      } catch (error) {
+        console.error('Error al cargar pedidos:', error)
+      }
+    }
+
+  const cargarProductos = async () => {
+        try {
+          const token = localStorage.getItem('token')
+          const respuesta = await api.get('/api/productos-listado/', {
+            headers: {
+              'Authorization': `Token ${token}`
+            }
+        })  
+          setProductos(respuesta.data)
+          
+        } catch (error) {
+          console.error('Error al cargar productos:', error)
+        }
+      }
+  const cargarMetodos = async () => {
+        try {
+          const token = localStorage.getItem('token')
+          const respuesta = await api.get('/api/metodos/', {
+            headers: {
+              'Authorization': `Token ${token}`
+            }
+        })  
+          setMetodos(respuesta.data)
+          
+        } catch (error) {
+          console.error('Error al cargar metodos:', error)
+        }
+      }
+  const handleCargarPedido = () => {
+    if (!idSeleccionado) return; // Evita ejecutar si no hay nada seleccionado
+
+    // Convertimos ambos a String o Number para asegurar que coincidan
+    if (idSeleccionado == 0){
+      console.log("Nuevo pedido")
+      setPedidoSeleccionado(null)
+    }
+    
+    const pedidoEncontrado = pedidos.find(
+      (item) => String(item.id_pedidos) === String(idSeleccionado)
+    );
+
+    if (pedidoEncontrado) {
+      setPedidoSeleccionado(pedidoEncontrado);
+    }
+    console.log(idSeleccionado)
+    console.log(pedidoSeleccionado)
+  };
+
+
+  const handleChange = (e) => {
+      const { name, value } = e.target
+
+      if (name === 'cantidad') {
+        const soloNumeros = value.replace(/\D/g, '') // Elimina todo lo que NO sea un número
+        setProductoSeleccionado((prev) => ({
+          ...prev,
+          [name]: soloNumeros,
+        }))
+      }
+
+      setProductoSeleccionado((prev) => ({
+        ...prev,
+        [name]: value,
+      }))
+    }
+
+  const handleAgregarProducto = () => {
+    console.log(productoSeleccionado)
+    setNuevoPedido((prev) => ({
+      ...prev,
+      detalles: [...prev.detalles, productoSeleccionado],
+    }))
+    setProductoSeleccionado({
+    producto: '',
+    cantidad: '',
+  });
+  }
+  useEffect(() => {
+        cargarCajas()
+        cargarPedidos()
+        cargarProductos()
+        cargarMetodos()
+      }, [])
+
   return (
     <CRow>
       {/* COLUMNA IZQUIERDA: Terminal de Venta / Caja */}
@@ -50,19 +185,14 @@ const Ventas = () => {
             {/* Dropdown de Caja (Relación CAJAS -> MOVIMIENTOS DE CAJA) */}
             <CDropdown variant="btn-group">
               <CDropdownToggle color="light" size="sm" className="text-primary fw-bold">
-                Caja #1 (Abierta)
+                {!!cajaSeleccionada ? 'Caja # ' + cajaSeleccionada.id_cajas + ' (Usuario # ' + cajaSeleccionada.usuario + ')': "Seleccione una caja..."}
               </CDropdownToggle>
               <CDropdownMenu placement="bottom-end">
-                <CDropdownItem component="button" type="button" active>
-                  Caja #1 (Abierta - Principal)
-                </CDropdownItem>
-                <CDropdownItem component="button" type="button">
-                  Caja #2 (Abierta - TakeAway)
-                </CDropdownItem>
-                <CDropdownDivider />
-                <CDropdownItem component="button" type="button" disabled>
-                  Caja #3 (Cerrada)
-                </CDropdownItem>
+              {cajas.map((item) => (
+                    <CDropdownItem component="button" type="button" onClick={() => {console.log(item); setCajaSeleccionada(item);}}>
+                      Caja # {item.id_cajas} (Usuario # {item.usuario})
+                    </CDropdownItem>
+                  ))}
               </CDropdownMenu>
             </CDropdown>
           </CCardHeader>
@@ -75,38 +205,28 @@ const Ventas = () => {
                   <CIcon icon={cilFindInPage} className="me-1" /> Importar Pedido Completado
                 </label>
                 <CInputGroup>
-                  <CFormSelect id="importarPedido">
+                  <CFormSelect 
+                  id="importarPedido"
+                  value={idSeleccionado}
+                  onChange={(e) => setIdSeleccionado(e.target.value)}
+                  >
                     <option value="">-- Seleccionar pedido para facturar --</option>
-                    <option value="501">Pedido #501 - Cliente: Juan Pérez ($5.800,00)</option>
-                    <option value="503">Pedido #503 - Cliente: Ana Gómez ($3.200,00)</option>
+                    <option value="0">-- Nuevo pedido --</option>
+                      {pedidos.map((item) => (
+                      <option key={item.id_pedidos} value={item.id_pedidos}>
+                        Pedido #{item.id_pedidos} - Cliente: {item.cliente} (${item.precio_total})
+                      </option>
+                    ))}
                   </CFormSelect>
-                  <CButton type="button" color="secondary" variant="outline">
-                    Cargar
+                  <CButton type="button" color="secondary" variant="outline" onClick={handleCargarPedido}>
+                    Seleccionar
                   </CButton>
                 </CInputGroup>
               </div>
 
               {/* Opción 2: Venta Directa por Mostrador (Agregar Ítems) */}
-              <CRow className="g-2 mb-3">
-                <CCol md={6}>
-                  <CFormSelect id="selectProducto" label="Producto Directo">
-                    <option value="">Seleccione producto...</option>
-                    <option value="1">Hamburguesa Doble ($2.500,00)</option>
-                    <option value="2">Papas Fritas Grandes ($1.200,00)</option>
-                    <option value="3">Gaseosa 500ml ($800,00)</option>
-                  </CFormSelect>
-                </CCol>
-                <CCol md={3}>
-                  <CFormInput type="number" id="cantidad" label="Cantidad" defaultValue={1} min={1} />
-                </CCol>
-                <CCol md={3} className="d-flex align-items-end">
-                  <CButton color="primary" className="w-100">
-                    <CIcon icon={cilPlus} /> Agregar
-                  </CButton>
-                </CCol>
-              </CRow>
-
-              {/* Detalle de la Venta (DETALLES DE VENTA) */}
+              { !!pedidoSeleccionado ?
+              <div>
               <h6 className="mt-4 mb-2 fw-bold text-dark">Detalle del Comprobante</h6>
               <CTable responsive align="middle" hover bordered>
                 <CTableHead color="light">
@@ -119,40 +239,125 @@ const Ventas = () => {
                   </CTableRow>
                 </CTableHead>
                 <CTableBody>
-                  <CTableRow>
-                    <CTableDataCell>Hamburguesa Doble</CTableDataCell>
-                    <CTableDataCell className="text-center">2</CTableDataCell>
-                    <CTableDataCell className="text-end">$2.500,00</CTableDataCell>
-                    <CTableDataCell className="text-end">$5.000,00</CTableDataCell>
-                    <CTableDataCell className="text-center">
-                      <CButton color="danger" variant="ghost" size="sm">
-                        <CIcon icon={cilTrash} />
-                      </CButton>
-                    </CTableDataCell>
-                  </CTableRow>
-                  <CTableRow>
-                    <CTableDataCell>Gaseosa 500ml</CTableDataCell>
-                    <CTableDataCell className="text-center">1</CTableDataCell>
-                    <CTableDataCell className="text-end">$800,00</CTableDataCell>
-                    <CTableDataCell className="text-end">$800,00</CTableDataCell>
-                    <CTableDataCell className="text-center">
-                      <CButton color="danger" variant="ghost" size="sm">
-                        <CIcon icon={cilTrash} />
-                      </CButton>
-                    </CTableDataCell>
-                  </CTableRow>
+                    {
+                      pedidoSeleccionado?.pedido_detalle?.map((item) => (
+                        <CTableRow key={item.id_detalles_pedidos}>
+                        <CTableDataCell>{item.producto.nombre}</CTableDataCell>
+                        <CTableDataCell className="text-center">{item.cantidad}</CTableDataCell>
+                        <CTableDataCell className="text-end">{item.producto.precio_unitario}</CTableDataCell>
+                        <CTableDataCell className="text-end">{item.subtotal}</CTableDataCell>
+                        <CTableDataCell className="text-center">
+                          <CButton color="danger" variant="ghost" size="sm">
+                            <CIcon icon={cilTrash} />
+                          </CButton>
+                        </CTableDataCell>
+                        </CTableRow>
+                      ))
+                    }
                 </CTableBody>
               </CTable>
+              </div>
+                :
+                <div>
+                <CRow className="g-2 mb-3">
+                  <CCol md={6}>
+                    <CFormSelect
+                    name="producto" 
+                    label="Producto Directo"
+                    value={productoSeleccionado.producto}
+                    onChange={handleChange}
+                  >
+                      {productos.map((item) => (
+                      <option key={item.id_productos} value={item.id_productos}>
+                        {item.nombre} (${item.precio_unitario})
+                      </option>
+                    ))}
+                    </CFormSelect>
+                  </CCol>
+                  <CCol md={3}>
+                    <CFormInput 
+                    type="text"
+                    name="cantidad" 
+                    label="Cantidad" 
+                    // defaultValue={1} 
+                    min={1} 
+                    value={productoSeleccionado.cantidad}
+                    onChange={handleChange}
+                    
+                    />
+                  </CCol>
+                  <CCol md={3} className="d-flex align-items-end">
+                    <CButton color="primary" className="w-100" onClick={handleAgregarProducto}>
+                      <CIcon icon={cilPlus} /> Agregar
+                    </CButton>
+                  </CCol>
+                </CRow>
+                <CTable responsive align="middle" hover bordered>
+                <CTableHead color="light">
+                  <CTableRow>
+                    <CTableHeaderCell>Producto</CTableHeaderCell>
+                    <CTableHeaderCell className="text-center">Cant.</CTableHeaderCell>
+                    <CTableHeaderCell className="text-end">Precio U.</CTableHeaderCell>
+                    <CTableHeaderCell className="text-end">Subtotal</CTableHeaderCell>
+                    <CTableHeaderCell className="text-center">Acción</CTableHeaderCell>
+                  </CTableRow>
+                </CTableHead>
+                <CTableBody>
+                    {
+                      nuevoPedido?.detalles?.map((item) => (
+                        <CTableRow key={item.id_detalles_pedidos}>
+                        <CTableDataCell>{item.producto.nombre}</CTableDataCell>
+                        <CTableDataCell className="text-center">{item.cantidad}</CTableDataCell>
+                        <CTableDataCell className="text-end">{item.producto.precio_unitario}</CTableDataCell>
+                        <CTableDataCell className="text-end">{item.subtotal}</CTableDataCell>
+                        <CTableDataCell className="text-center">
+                          <CButton color="danger" variant="ghost" size="sm">
+                            <CIcon icon={cilTrash} />
+                          </CButton>
+                        </CTableDataCell>
+                        </CTableRow>
+                      ))
+                    }
+                </CTableBody>
+              </CTable>
+              </div>
+              }
 
               {/* Selección de Método de Pago y Total (METODOS DE PAGO / VENTAS) */}
+              
               <div className="p-3 border rounded bg-light mt-4">
+                {!!pedidoSeleccionado == false && 
+                  <CRow className="g-2 mb-3">
+                <CCol md={6}>
+                  <CFormInput
+                    type="text"
+                    label="Nombre del cliente"
+                    name="cliente"
+                    maxLength={50}
+                    onChange={handleChange}
+                    required
+                  />
+                </CCol>
+                <CCol md={6}>
+                  <CFormInput
+                    type="text"
+                    label="Dirección"
+                    name="direccion"
+                    maxLength={200}
+                    onChange={handleChange}
+                  />
+                </CCol>
+                  </CRow>
+                }
+                
                 <CRow className="align-items-center">
                   <CCol md={6}>
                     <CFormSelect id="selectMetodoPago" label="Método de Pago" className="fw-bold">
-                      <option value="1">Efectivo</option>
-                      <option value="2">Tarjeta de Débito</option>
-                      <option value="3">Tarjeta de Crédito</option>
-                      <option value="4">Transferencia MP</option>
+                      {metodos.map((item) => (
+                      <option key={item.id_metodos} value={item.id_metodos}>
+                        {item.nombre}
+                      </option>
+                    ))}
                     </CFormSelect>
                   </CCol>
                   <CCol md={6} className="text-end">

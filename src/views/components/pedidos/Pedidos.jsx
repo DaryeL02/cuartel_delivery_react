@@ -32,7 +32,6 @@ import {
   cilFastfood,
   cilUser,
   cilLocationPin,
-  cilEye,
 } from '@coreui/icons'
 
 const Pedidos = () => {
@@ -114,7 +113,7 @@ const Pedidos = () => {
                       onClick={() => handleVerDetalle({ id: 501, cliente: 'Juan Pérez', ubicacion: 'Mesa 4', estado: 'En Proceso', total: '$5.800,00' })}
                       title="Ver Detalle"
                     >
-                      <CIcon icon={cilEye} className="me-1" /> Detalle
+                      <CIcon icon={cilTrash} className="me-1" /> Detalle
                     </CButton>
                     <CButton color="success" size="sm" variant="outline">
                       <CIcon icon={cilCheckCircle} className="me-1" /> Completar
@@ -143,7 +142,7 @@ const Pedidos = () => {
                       onClick={() => handleVerDetalle({ id: 502, cliente: 'Sofía Martínez', ubicacion: 'Delivery', estado: 'Generado', total: '$4.200,00' })}
                       title="Ver Detalle"
                     >
-                      <CIcon icon={cilEye} className="me-1" /> Detalle
+                      <CIcon icon={cilTrash} className="me-1" /> Detalle
                     </CButton>
                     <CButton color="success" size="sm" variant="outline">
                       <CIcon icon={cilCheckCircle} className="me-1" /> Completar
@@ -235,7 +234,7 @@ const Pedidos = () => {
       <CModal visible={modalDetalle} onClose={() => setModalDetalle(false)} size="lg">
         <CModalHeader className="bg-light">
           <CModalTitle className="fw-bold">
-            <CIcon icon={cilEye} className="me-2 text-info" />
+            <CIcon icon={cilTrash} className="me-2 text-info" />
             Detalle del Pedido #{pedidoSeleccionado?.id}
           </CModalTitle>
         </CModalHeader>
