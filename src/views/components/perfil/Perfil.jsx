@@ -50,7 +50,7 @@ export default function Perfil() {
 
 
   return (
-    <div className="p-4" style={{ backgroundColor: '#f4f5f7', minHeight: '100vh' }}>
+    <div className="p-4 bg-body-tertiary" style={{ minHeight: '100vh' }}>
       {empleado 
       ?
       <CRow className="justify-content-center">
@@ -69,11 +69,11 @@ export default function Perfil() {
                   {empleado.nombre.charAt(0)}{empleado.apellido.charAt(0)}
                 </CAvatar>
                 <div>
-                  <h3 className="mb-1 fw-bold text-dark">{empleado.nombre} {empleado.apellido}</h3>
+                  <h3 className="mb-1 fw-bold text-body">{empleado.nombre} {empleado.apellido}</h3>
                   <p className="text-primary mb-1 fw-semibold">
                     🏪 {empleado.local_detalle.nombre}
                   </p>
-                  <small className="text-muted d-block">
+                  <small className="text-body-secondary d-block">
                     ID Empleado: {empleado.id_empleados} | DNI: {empleado.dni}
                   </small>
                 </div>
@@ -84,7 +84,7 @@ export default function Perfil() {
                   <h5 className="text-primary fw-bold mb-3">Datos del Personal</h5>
                   
                   <div className="mb-3">
-                    <label className="form-label text-muted small fw-bold">Nombre (VARCHAR)</label>
+                    <label className="form-label text-body-secondary small fw-bold">Nombre (VARCHAR)</label>
                     <CFormInput
                       type="text"
                       name="nombre"
@@ -96,7 +96,7 @@ export default function Perfil() {
                   </div>
 
                   <div className="mb-3">
-                    <label className="form-label text-muted small fw-bold">Apellido (VARCHAR)</label>
+                    <label className="form-label text-body-secondary small fw-bold">Apellido (VARCHAR)</label>
                     <CFormInput
                       type="text"
                       name="apellido"
@@ -108,7 +108,7 @@ export default function Perfil() {
                   </div>
 
                   <div className="mb-3">
-                    <label className="form-label text-muted small fw-bold">DNI (INT - No Editable)</label>
+                    <label className="form-label text-body-secondary small fw-bold">DNI (INT - No Editable)</label>
                     <CFormInput
                       type="number"
                       value={empleado.dni}
@@ -117,7 +117,7 @@ export default function Perfil() {
                   </div>
 
                   <div className="mb-3">
-                    <label className="form-label text-muted small fw-bold">Teléfono (VARCHAR)</label>
+                    <label className="form-label text-body-secondary small fw-bold">Teléfono (VARCHAR)</label>
                     <CFormInput
                       type="text"
                       name="telefono"
@@ -129,7 +129,7 @@ export default function Perfil() {
                   </div>
 
                   <div className="mb-3">
-                    <label className="form-label text-muted small fw-bold">Domicilio (VARCHAR)</label>
+                    <label className="form-label text-body-secondary small fw-bold">Domicilio (VARCHAR)</label>
                     <CFormInput
                       type="text"
                       name="domicilio"
@@ -145,7 +145,7 @@ export default function Perfil() {
                   <h5 className="text-danger fw-bold mb-3">Seguridad y Cuenta de Usuario</h5>
 
                   <div className="mb-3">
-                    <label className="form-label text-muted small fw-bold">ID Usuario (PK INT)</label>
+                    <label className="form-label text-body-secondary small fw-bold">ID Usuario (PK INT)</label>
                     <CFormInput
                       type="text"
                       value={empleado.usuario_detalle.id_usuarios}
@@ -154,7 +154,7 @@ export default function Perfil() {
                   </div>
 
                   <div className="mb-3">
-                    <label className="form-label text-muted small fw-bold">Nombre de Usuario (VARCHAR)</label>
+                    <label className="form-label text-body-secondary small fw-bold">Nombre de Usuario (VARCHAR)</label>
                     <CFormInput
                       type="text"
                       name="usuario"
@@ -166,7 +166,7 @@ export default function Perfil() {
                   </div>
 
                   <div className="mb-3">
-                    <label className="form-label text-muted small fw-bold">Contraseña (VARCHAR)</label>
+                    <label className="form-label text-body-secondary small fw-bold">Contraseña (VARCHAR)</label>
                     <CFormInput
                       type="password"
                       name="password"
@@ -180,12 +180,12 @@ export default function Perfil() {
 
                   {/* <div className="p-3 bg-light rounded border mt-4">
                     <div className="d-flex justify-content-between mb-2">
-                      <span className="text-muted small">Creación de Cuenta:</span>
-                      <span className="small fw-medium text-dark">{empleado.fecha_hora_creacion_usr}</span>
+                      <span className="text-body-secondary small">Creación de Cuenta:</span>
+                      <span className="small fw-medium text-body">{empleado.fecha_hora_creacion_usr}</span>
                     </div>
                     <div className="d-flex justify-content-between">
-                      <span className="text-muted small">Última Modificación:</span>
-                      <span className="small fw-medium text-dark">{empleado.fecha_hora_modificacion_usr}</span>
+                      <span className="text-body-secondary small">Última Modificación:</span>
+                      <span className="small fw-medium text-body">{empleado.fecha_hora_modificacion_usr}</span>
                     </div>
                   </div> */}
                 </CCol>
@@ -214,12 +214,12 @@ export default function Perfil() {
       </CRow>
       : sinDatos
       ?
-      <div className="p-4 text-center" style={{ backgroundColor: '#f4f5f7', minHeight: '100vh' }}>
-        <p className="text-muted fw-bold">No hay empleado asignado a esta cuenta</p>
+      <div className="p-4 text-center bg-body-tertiary" style={{ minHeight: '100vh' }}>
+        <p className="text-body-secondary fw-bold">No hay empleado asignado a esta cuenta</p>
       </div>
       :
-      <div className="p-4 text-center" style={{ backgroundColor: '#f4f5f7', minHeight: '100vh' }}>
-        <p className="text-muted fw-bold">Cargando datos del empleado...</p>
+      <div className="p-4 text-center bg-body-tertiary" style={{ minHeight: '100vh' }}>
+        <p className="text-body-secondary fw-bold">Cargando datos del empleado...</p>
       </div>
     }
     </div>

@@ -14,11 +14,11 @@ import {
   CCol,
 } from '@coreui/react'
 import api from '../api/api'
+import { toast } from 'react-toastify'
 
 const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, onSuccess }) => {
 
-  // Inicializar el formulario según los atributos de la base de datos
-    const [data, setData] = useState({
+  const [data, setData] = useState({
     categoria: '',
     proveedor: '',
     nombre: '',
@@ -26,23 +26,37 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
     unidad: '',
     stock_actual: 0,
     stock_minimo: 0,
-    })
+  })
 
   const [loading, setLoading] = useState(false)
-  const modoEditar = !!insumo // Si viene un objeto insumo, es modo modificación
+  const modoEditar = !!insumo
 
-  const unidades = ['kg','gr','l', 'ml']
+  const unidades = ['kg', 'gr', 'l', 'ml']
 
-  // Efecto para cargar los datos del insumo si estamos editando
-    useEffect(() => {
-    
+  const notificar = (tipo, mensaje) => {
+    switch (tipo) {
+      case 'exito':
+        toast.success(mensaje)
+        break
+      case 'error':
+        toast.error(mensaje)
+        break
+      case 'advertencia':
+        toast.warning(mensaje)
+        break
+      default:
+        toast(mensaje)
+    }
+  }
+
+  useEffect(() => {
     if (modoEditar && insumo) {
+      const ProveedorId =
+        insumo.proveedores_asociados && insumo.proveedores_asociados.length > 0
+          ? insumo.proveedores_asociados[0].proveedor?.id_proveedores
+          : ''
 
-        const ProveedorId = insumo.proveedores_asociados && insumo.proveedores_asociados.length > 0
-        ? insumo.proveedores_asociados[0].proveedor?.id_proveedores
-        : '';
-
-        setData({
+      setData({
         categoria: insumo.categoria_detalle?.id_categorias || '',
         proveedor: ProveedorId,
         nombre: insumo.nombre || '',
@@ -50,19 +64,19 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
         unidad: insumo.unidad || '',
         stock_actual: insumo.stock_actual || 0,
         stock_minimo: insumo.stock_minimo || 0,
-        })
+      })
     } else {
-        setData({
-        categoria: 0,
-        proveedor: 0,
+      setData({
+        categoria: '',
+        proveedor: '',
         nombre: '',
         descripcion: '',
         unidad: '',
         stock_actual: 0,
         stock_minimo: 0,
-        })
+      })
     }
-    }, [insumo, visible, modoEditar])
+  }, [insumo, visible, modoEditar])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -74,25 +88,52 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    if (!data.nombre.trim()) {
+      notificar('advertencia', 'Por favor, ingresa el nombre del insumo.')
+      return
+    }
+    if (!data.categoria) {
+      notificar('advertencia', 'Por favor, selecciona una categoría.')
+      return
+    }
+    if (!data.proveedor) {
+      notificar('advertencia', 'Por favor, selecciona un proveedor.')
+      return
+    }
+    if (!data.unidad) {
+      notificar('advertencia', 'Por favor, selecciona una unidad de medida.')
+      return
+    }
+    if (Number(data.stock_actual) < 0 || Number(data.stock_minimo) < 0) {
+      notificar('advertencia', 'Los valores de stock no pueden ser negativos.')
+      return
+    }
+
     setLoading(true)
-    console.log(data)
     try {
       const token = localStorage.getItem('token')
       const headers = { Authorization: `Token ${token}` }
 
       if (modoEditar) {
-        // Petición de Modificación (PUT)
         const idInsumo = insumo.id_insumos
         await api.put(`/api/insumos/${idInsumo}/`, data, { headers })
+        notificar('exito', 'Insumo actualizado con éxito.')
       } else {
-        // Petición de Alta (POST)
         await api.post('/api/insumos/', data, { headers })
+        notificar('exito', 'Insumo registrado con éxito.')
       }
 
-      onSuccess() // Callback para recargar la tabla principal
-      onClose() // Cerrar el modal
+      onSuccess()
+      onClose()
     } catch (error) {
       console.error('Error al guardar el insumo:', error)
+      notificar(
+        'error',
+        modoEditar
+          ? 'No se pudo actualizar el insumo. Intenta nuevamente.'
+          : 'No se pudo registrar el insumo. Intenta nuevamente.'
+      )
     } finally {
       setLoading(false)
     }
@@ -123,7 +164,7 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
               />
             </CCol>
 
-            {/* Categoría (Relación FK con la tabla CATEGORIAS) */}
+            {/* Categoría */}
             <CCol md={4}>
               <CFormSelect
                 label="Categoría"
@@ -132,7 +173,9 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
                 onChange={handleChange}
                 required
               >
-                <option value="">{modoEditar ? insumo.categoria_detalle.nombre : "Selecciona..."}</option>
+                <option value="">
+                  {modoEditar ? insumo.categoria_detalle?.nombre : 'Selecciona...'}
+                </option>
                 {categorias.map((cat) => (
                   <option key={cat.id_categorias} value={cat.id_categorias}>
                     {cat.nombre}
@@ -165,7 +208,7 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
               >
                 <option value="">Selecciona...</option>
                 {proveedores.map((pro) => (
-                  <option value={pro.id_proveedores}>
+                  <option key={pro.id_proveedores} value={pro.id_proveedores}>
                     {pro.nombre}
                   </option>
                 ))}
@@ -188,7 +231,6 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
                 ))}
               </CFormSelect>
             </CCol>
-
 
             {/* Stock Actual */}
             <CCol md={4}>

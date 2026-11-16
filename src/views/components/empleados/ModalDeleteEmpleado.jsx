@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import {
   CModal,
   CModalHeader,
@@ -10,24 +10,43 @@ import {
   CRow,
 } from '@coreui/react'
 import api from '../api/api'
+import { toast } from 'react-toastify'
 
 const ModalDeleteEmpleado = ({ visible, onClose, empleado, onSuccess }) => {
-
   const [loading, setLoading] = useState(false)
+
+  const notificar = (tipo, mensaje) => {
+    switch (tipo) {
+      case 'exito':
+        toast.success(mensaje)
+        break
+      case 'error':
+        toast.error(mensaje)
+        break
+      case 'advertencia':
+        toast.warning(mensaje)
+        break
+      default:
+        toast(mensaje)
+    }
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (!empleado) return
+
     setLoading(true)
     try {
       const token = localStorage.getItem('token')
       const headers = { Authorization: `Token ${token}` }
-      console.log(empleado.id_empleados)
-      await api.delete(`/api/empleados/${empleado.id_empleados}/` , { headers })
+      await api.delete(`/api/empleados/${empleado.id_empleados}/`, { headers })
 
+      notificar('exito', 'Empleado eliminado con éxito.')
       onSuccess()
-      onClose() 
+      onClose()
     } catch (error) {
       console.error('Error al eliminar el empleado:', error)
+      notificar('error', 'No se pudo eliminar el empleado. Intenta nuevamente.')
     } finally {
       setLoading(false)
     }
@@ -36,9 +55,7 @@ const ModalDeleteEmpleado = ({ visible, onClose, empleado, onSuccess }) => {
   return (
     <CModal visible={visible} onClose={onClose} backdrop="static" size="lg">
       <CModalHeader>
-        <CModalTitle className="fw-semibold">
-          Eliminar empleado
-        </CModalTitle>
+        <CModalTitle className="fw-semibold">Eliminar empleado</CModalTitle>
       </CModalHeader>
       <CForm onSubmit={handleSubmit}>
         <CModalBody>
@@ -50,8 +67,8 @@ const ModalDeleteEmpleado = ({ visible, onClose, empleado, onSuccess }) => {
           <CButton color="secondary" variant="ghost" onClick={onClose} disabled={loading}>
             Cancelar
           </CButton>
-          <CButton color={'primary'} type="submit" disabled={loading}>
-            {loading ? 'Aceptar...' :  'Aceptar'}
+          <CButton color="primary" type="submit" disabled={loading}>
+            {loading ? 'Eliminando...' : 'Aceptar'}
           </CButton>
         </CModalFooter>
       </CForm>

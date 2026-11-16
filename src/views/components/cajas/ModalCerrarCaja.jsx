@@ -3,7 +3,6 @@ import {
   CButton,
   CForm,
   CFormInput,
-  CFormSelect,
   CFormLabel,
   CRow,
   CCol,
@@ -11,22 +10,36 @@ import {
   CModalHeader,
   CModalTitle,
   CModalBody,
-  CModalFooter
+  CModalFooter,
 } from '@coreui/react';
+import { toast } from 'react-toastify';
 import api from '../api/api';
 
 export default function CerrarCaja({ visible, onClose, caja, onSuccess }) {
-  
   const [data, setData] = useState({
     caja: '',
     monto_cierre: '',
     estado: false,
   });
 
-  const [loading, setLoading] = useState(false)
-  const [errors, setErrors] = useState({})
+  const [loading, setLoading] = useState(false);
 
-  
+  const notificar = (tipo, mensaje) => {
+    switch (tipo) {
+      case 'exito':
+        toast.success(mensaje);
+        break;
+      case 'error':
+        toast.error(mensaje);
+        break;
+      case 'advertencia':
+        toast.warning(mensaje);
+        break;
+      default:
+        toast(mensaje);
+    }
+  };
+
   const handleChange = (e) => {
     const { id, value } = e.target;
     setData((prevData) => ({
@@ -36,57 +49,50 @@ export default function CerrarCaja({ visible, onClose, caja, onSuccess }) {
   };
 
   useEffect(() => {
-    if (!!caja){
-        setData((prev) => ({
-        ...prev,
-        caja: caja,
-      }))
+    if (visible) {
+      setData({
+        caja: caja || '',
+        monto_cierre: '',
+        estado: false,
+      });
     }
+  }, [caja, visible]);
 
-  }, [caja, visible])
-
-
-  
-  // Función para procesar y enviar el formulario
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(false)
-    console.log(data)
+
+    if (data.monto_cierre === '' || Number(data.monto_cierre) < 0) {
+      notificar('advertencia', 'Ingresa un monto de cierre válido igual o mayor a 0.');
+      return;
+    }
+
+    setLoading(true);
 
     try {
-      const token = localStorage.getItem('token')
-      const headers = { Authorization: `Token ${token}` }
-      
-      console.log('Datos enviados:', data);
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Token ${token}` };
 
+      await api.patch(`/api/cajas/${caja}/`, data, { headers });
 
-      await api.put(`/api/cajas/${caja}/`, data, { headers })
-      
+      notificar('exito', `Caja #${caja} cerrada correctamente.`);
       onSuccess();
       onClose();
     } catch (error) {
-      console.error('Error al abrir la caja:', error);
-      if (error.response && error.response.data) {
-        setErrors(error.response.data)
-      } else {
-        alert('Ocurrió un error inesperado de conexión con el servidor.')
-      }
+      console.error('Error al cerrar la caja:', error);
+      notificar('error', 'No se pudo cerrar la caja. Verifica los datos e intenta nuevamente.');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   };
 
-
-
   return (
-    <CModal visible={visible} onClose={onClose}>
+    <CModal visible={visible} onClose={onClose} backdrop="static">
       <CModalHeader>
-        <CModalTitle>Abrir Nueva Caja</CModalTitle>
+        <CModalTitle>Cerrar Caja #{caja}</CModalTitle>
       </CModalHeader>
-      <CForm onSubmit={handleSubmit}>
+      <CForm onSubmit={handleSubmit} noValidate>
         <CModalBody>
           <CRow className="g-3">
-
             {/* Campo: Monto de Cierre */}
             <CCol md={12}>
               <CFormLabel htmlFor="monto_cierre">Asignar Monto Final en Efectivo</CFormLabel>
@@ -104,11 +110,11 @@ export default function CerrarCaja({ visible, onClose, caja, onSuccess }) {
           </CRow>
         </CModalBody>
         <CModalFooter>
-          <CButton color="secondary" type="button" onClick={onClose}>
+          <CButton color="secondary" type="button" onClick={onClose} disabled={loading}>
             Cancelar
           </CButton>
-          <CButton color="success" type="submit">
-            Cerrar Caja
+          <CButton color="success" type="submit" disabled={loading}>
+            {loading ? 'Cerrando...' : 'Cerrar Caja'}
           </CButton>
         </CModalFooter>
       </CForm>

@@ -30,6 +30,8 @@ import {
   cilFindInPage,
 } from '@coreui/icons'
 import api from '../api/api'
+import { toast } from 'react-toastify'
+
 
 const Ventas = () => {
   const [cajas, setCajas] = useState([])
@@ -42,6 +44,7 @@ const Ventas = () => {
   })
   const [idSeleccionado, setIdSeleccionado] = useState('')
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null)
+  const [modoVenta, setModoVenta] = useState(null) // null | 'nuevo' | 'importado'
   const [productoSeleccionado, setProductoSeleccionado] = useState({
     producto: '',
     cantidad: '',
@@ -49,6 +52,25 @@ const Ventas = () => {
   const [productos, setProductos] = useState([])
   const [metodos, setMetodos] = useState([])
   const [metodoSeleccionado, setMetodoSeleccionado] = useState('')
+
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const notificar = (tipo, mensaje) => {
+    switch (tipo) {
+      case 'exito':
+        toast.success(mensaje)
+        break
+      case 'error':
+        toast.error(mensaje)
+        break
+      case 'advertencia':
+        toast.warning(mensaje)
+        break
+      default:
+        toast(mensaje)
+    }
+  }
 
   const getAuthConfig = () => {
     const token = localStorage.getItem('token')
@@ -96,10 +118,16 @@ const Ventas = () => {
   }
 
   const handleCargarPedido = () => {
-    if (!idSeleccionado) return
+    if (!idSeleccionado) {
+      notificar('advertencia', 'Por favor, selecciona un pedido pendiente o elige crear uno nuevo.')
+      setPedidoSeleccionado(null)
+      setModoVenta(null)
+      return
+    }
 
     if (idSeleccionado === '0') {
       setPedidoSeleccionado(null)
+      setModoVenta('nuevo')
       return
     }
 
@@ -109,6 +137,7 @@ const Ventas = () => {
 
     if (pedidoEncontrado) {
       setPedidoSeleccionado(pedidoEncontrado)
+      setModoVenta('importado')
     }
   }
 
@@ -131,12 +160,17 @@ const Ventas = () => {
   }
 
   const handleAgregarProducto = () => {
+    if (modoVenta !== 'nuevo') {
+      notificar('advertencia', 'Primero selecciona "-- Nuevo pedido --" y presiona Seleccionar.')
+      return
+    }
+
     if (
       !productoSeleccionado.producto ||
       !productoSeleccionado.cantidad ||
       Number(productoSeleccionado.cantidad) <= 0
     ) {
-      alert('Por favor, selecciona un producto y una cantidad mayor a 0.')
+      notificar('advertencia', 'Por favor, selecciona un producto y una cantidad mayor a 0.')
       return
     }
 
@@ -186,27 +220,43 @@ const Ventas = () => {
   }
 
   const handleProcesarVenta = async () => {
+    setError('')
+
     if (!cajaSeleccionada) {
-      alert('Por favor, selecciona una caja antes de procesar la venta.')
+      notificar('advertencia', 'Por favor, selecciona una caja antes de procesar la venta.')
+      return
+    }
+    if (!idSeleccionado) {
+      notificar('advertencia', 'Por favor, selecciona un pedido pendiente o elige crear uno nuevo.')
+      return
+    }
+    if (!modoVenta) {
+      notificar('advertencia', 'Presiona el botón "Seleccionar" para confirmar la operación.')
+      return
+    }
+    if (modoVenta === 'importado' && String(pedidoSeleccionado?.id_pedidos) !== String(idSeleccionado)) {
+      notificar('advertencia', 'Presiona el botón "Seleccionar" para cargar el pedido elegido.')
+      return
+    }
+    if (modoVenta === 'nuevo' && nuevoPedido.detalles.length === 0) {
+      notificar('advertencia', 'Agrega al menos un producto al pedido.')
+      return
+    }
+    if (modoVenta === 'nuevo' && !nuevoPedido.cliente.trim()) {
+      notificar('advertencia', 'Ingresa el nombre del cliente para el nuevo pedido.')
       return
     }
     if (!metodoSeleccionado) {
-      alert('Por favor, selecciona un método de pago.')
+      notificar('advertencia', 'Por favor, selecciona un método de pago.')
       return
     }
-    if (!pedidoSeleccionado && nuevoPedido.detalles.length === 0) {
-      alert('Agrega al menos un producto al pedido.')
-      return
-    }
-    if (!pedidoSeleccionado && !nuevoPedido.cliente.trim()) {
-      alert('Ingresa el nombre del cliente para el nuevo pedido.')
-      return
-    }
+
+    setLoading(true)
 
     try {
       const config = getAuthConfig()
 
-      const listaOrigen = pedidoSeleccionado
+      const listaOrigen = modoVenta === 'importado'
         ? pedidoSeleccionado.pedido_detalle
         : nuevoPedido.detalles
 
@@ -221,12 +271,12 @@ const Ventas = () => {
         cajaSeleccionada?.usuario
 
       if (!idEmpleado) {
-        alert('La caja seleccionada no tiene un empleado asignado.')
+        notificar('error', 'La caja seleccionada no tiene un empleado asignado.')
         return
       }
 
       // 1. Si es un PEDIDO NUEVO, lo creamos ya marcado como pagado: true
-      if (!pedidoSeleccionado) {
+      if (modoVenta === 'nuevo') {
         const payloadPedido = {
           empleado: Number(idEmpleado),
           cliente: nuevoPedido.cliente,
@@ -249,7 +299,7 @@ const Ventas = () => {
       await api.post('/api/ventas/', datosVenta, config)
 
       // 3. Si es un PEDIDO IMPORTADO, actualizamos pagado: true sin tocar su estado de preparación
-      if (pedidoSeleccionado) {
+      if (modoVenta === 'importado') {
         await api.patch(
           `/api/pedidos/${pedidoSeleccionado.id_pedidos}/`,
           { pagado: true },
@@ -257,17 +307,21 @@ const Ventas = () => {
         )
       }
 
-      alert('¡Venta procesada con éxito!')
+      notificar('exito', 'Venta registrada con éxito')
 
       // 4. Limpiamos el formulario y recargamos los pedidos pendientes de pago
       setPedidoSeleccionado(null)
+      setModoVenta(null)
       setIdSeleccionado('')
       setMetodoSeleccionado('')
       setNuevoPedido({ cliente: '', direccion: '', detalles: [] })
       cargarPedidos()
     } catch (error) {
       console.error('Error al procesar la venta:', error.response?.data || error)
-      alert('Ocurrió un error al procesar la venta. Revisa la consola para más detalles.')
+
+      notificar('error', 'No se pudo registrar la venta. Por favor, intenta nuevamente.')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -278,9 +332,11 @@ const Ventas = () => {
     cargarMetodos()
   }, [])
 
-  const totalACobrar = pedidoSeleccionado
+  const totalACobrar = modoVenta === 'importado' && pedidoSeleccionado
     ? Number(pedidoSeleccionado.precio_total || 0)
-    : nuevoPedido.detalles.reduce((acumulador, item) => acumulador + Number(item.subtotal), 0)
+    : modoVenta === 'nuevo'
+      ? nuevoPedido.detalles.reduce((acumulador, item) => acumulador + Number(item.subtotal), 0)
+      : 0
 
   const formatearMoneda = (valor) => {
     return Number(valor || 0).toLocaleString('es-AR', {
@@ -336,15 +392,22 @@ const Ventas = () => {
           <CCardBody>
             <CForm>
               {/* Opción 1: Cargar Pedido pendiente de pago */}
-              <div className="p-3 mb-3 bg-light border rounded">
-                <label htmlFor="importarPedido" className="form-label fw-bold text-secondary">
+              <div className="p-3 mb-3 bg-body-secondary border rounded">
+                <label htmlFor="importarPedido" className="form-label fw-bold text-body-secondary">
                   <CIcon icon={cilFindInPage} className="me-1" /> Importar Pedido Pendiente de Cobro
                 </label>
                 <CInputGroup>
                   <CFormSelect
                     id="importarPedido"
                     value={idSeleccionado}
-                    onChange={(e) => setIdSeleccionado(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setIdSeleccionado(val)
+                      if (!val) {
+                        setModoVenta(null)
+                        setPedidoSeleccionado(null)
+                      }
+                    }}
                   >
                     <option value="">-- Seleccionar pedido para facturar --</option>
                     <option value="0">-- Nuevo pedido --</option>
@@ -366,15 +429,15 @@ const Ventas = () => {
                 </CInputGroup>
               </div>
 
-              {/* Opción 2: Detalle del Comprobante o Venta Directa */}
-              {pedidoSeleccionado ? (
+              {/* Opción 2: Detalle del Comprobante o Venta Directa (solo visible tras elegir modo) */}
+              {modoVenta === 'importado' && pedidoSeleccionado && (
                 <div>
-                  <h6 className="mt-4 mb-2 fw-bold text-dark">
+                  <h6 className="mt-4 mb-2 fw-bold text-body">
                     Detalle del Comprobante (Pedido #{pedidoSeleccionado.id_pedidos} -{' '}
                     {pedidoSeleccionado.cliente})
                   </h6>
                   <CTable responsive align="middle" hover bordered>
-                    <CTableHead color="light">
+                    <CTableHead className="table-theme-header">
                       <CTableRow>
                         <CTableHeaderCell>Producto</CTableHeaderCell>
                         <CTableHeaderCell className="text-center">Cant.</CTableHeaderCell>
@@ -398,7 +461,9 @@ const Ventas = () => {
                     </CTableBody>
                   </CTable>
                 </div>
-              ) : (
+              )}
+
+              {modoVenta === 'nuevo' && (
                 <div>
                   <CRow className="g-2 mb-3">
                     <CCol md={6}>
@@ -432,7 +497,7 @@ const Ventas = () => {
                     </CCol>
                   </CRow>
                   <CTable responsive align="middle" hover bordered>
-                    <CTableHead color="light">
+                    <CTableHead className="table-theme-header">
                       <CTableRow>
                         <CTableHeaderCell>Producto</CTableHeaderCell>
                         <CTableHeaderCell className="text-center">Cant.</CTableHeaderCell>
@@ -471,8 +536,8 @@ const Ventas = () => {
               )}
 
               {/* Selección de Método de Pago y Total */}
-              <div className="p-3 border rounded bg-light mt-4">
-                {!pedidoSeleccionado && (
+              <div className="p-3 border rounded bg-body-secondary mt-4">
+                {modoVenta === 'nuevo' && (
                   <CRow className="g-2 mb-3">
                     <CCol md={6}>
                       <CFormInput
@@ -516,7 +581,7 @@ const Ventas = () => {
                     </CFormSelect>
                   </CCol>
                   <CCol md={6} className="text-end">
-                    <span className="d-block text-muted small uppercase fw-bold">
+                    <span className="d-block text-body-secondary small uppercase fw-bold">
                       Total a Cobrar
                     </span>
                     <h2 className="text-success fw-bolder mb-0">
@@ -534,9 +599,10 @@ const Ventas = () => {
                   size="lg"
                   className="text-white py-3 fw-bold"
                   onClick={handleProcesarVenta}
+                  disabled={loading}
                 >
                   <CIcon icon={cilDollar} className="me-2" />
-                  Procesar Venta e Imprimir Ticket
+                  {loading ? 'Procesando Venta...' : 'Procesar Venta'}
                 </CButton>
               </div>
             </CForm>

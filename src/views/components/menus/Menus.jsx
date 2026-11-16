@@ -108,17 +108,17 @@ export default function Menus() {
         {/* Panel Principal Izquierdo: Control de comandas entregadas por cobrar */}
         <CCol xs={12} lg={7} className="mb-4">
           <CCard className="h-100">
-            <CCardHeader className="bg-light fw-bold text-uppercase">
+            <CCardHeader className="bg-body-secondary fw-bold text-uppercase">
               📥 Pedidos Entregados Pendientes de Cobro
             </CCardHeader>
             <CCardBody>
               {pendingOrders.length === 0 ? (
-                <div className="text-center py-4 text-muted">
+                <div className="text-center py-4 text-body-secondary">
                   No hay pedidos pendientes de facturación en este momento.
                 </div>
               ) : (
                 <CTable align="middle" responsive hover>
-                  <CTableHead className="bg-light">
+                  <CTableHead className="table-theme-header">
                     <CTableRow>
                       <CTableHeaderCell style={{ width: '10%' }}>Pedido</CTableHeaderCell>
                       <CTableHeaderCell style={{ width: '40%' }}>Detalle / Cliente</CTableHeaderCell>
@@ -131,7 +131,7 @@ export default function Menus() {
                       <CTableRow key={order.id}>
                         <CTableDataCell><span className="fw-semibold">#{order.id}</span></CTableDataCell>
                         <CTableDataCell>
-                          <div className="small text-muted mb-1">{order.cliente}</div>
+                          <div className="small text-body-secondary mb-1">{order.cliente}</div>
                           <div className="fw-normal">{order.productos}</div>
                           <div className="mt-1 fw-bold text-success">${order.total.toLocaleString('es-AR')}</div>
                         </CTableDataCell>
@@ -164,15 +164,15 @@ export default function Menus() {
         {/* Panel Secundario Derecho: Historial de auditoría rápida de ventas del día */}
         <CCol xs={12} lg={5} className="mb-4">
           <CCard className="h-100">
-            <CCardHeader className="bg-light fw-bold text-uppercase">
+            <CCardHeader className="bg-body-secondary fw-bold text-uppercase">
               📋 Historial de Ventas del Turno
             </CCardHeader>
             <CCardBody>
               {salesHistory.length === 0 ? (
-                <div className="text-center py-4 text-muted">Aún no se han registrado transacciones.</div>
+                <div className="text-center py-4 text-body-secondary">Aún no se han registrado transacciones.</div>
               ) : (
                 <CTable align="middle" responsive hover>
-                  <CTableHead className="bg-light">
+                  <CTableHead className="table-theme-header">
                     <CTableRow>
                       <CTableHeaderCell>Comprobante</CTableHeaderCell>
                       <CTableHeaderCell>Cliente / Hora</CTableHeaderCell>
@@ -185,18 +185,18 @@ export default function Menus() {
                       <CTableRow key={sale.id}>
                         <CTableDataCell>
                           <div className="fw-semibold text-primary">{sale.id}</div>
-                          <div className="small text-muted">Pedido #{sale.pedidoId}</div>
+                          <div className="small text-body-secondary">Pedido #{sale.pedidoId}</div>
                         </CTableDataCell>
                         <CTableDataCell>
                           <div>{sale.cliente}</div>
-                          <div className="small text-muted">{sale.hora} hs</div>
+                          <div className="small text-body-secondary">{sale.hora} hs</div>
                         </CTableDataCell>
                         <CTableDataCell>
                           <CBadge color={sale.metodoPago === 'Efectivo' ? 'success' : sale.metodoPago === 'Transferencia' ? 'info' : 'primary'}>
                             {sale.metodoPago}
                           </CBadge>
                         </CTableDataCell>
-                        <CTableDataCell className="text-end fw-bold text-dark">${sale.total.toLocaleString('es-AR')}</CTableDataCell>
+                        <CTableDataCell className="text-end fw-bold text-body">${sale.total.toLocaleString('es-AR')}</CTableDataCell>
                       </CTableRow>
                     ))}
                   </CTableBody>

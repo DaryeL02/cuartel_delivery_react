@@ -118,9 +118,9 @@ const Insumos = ({ onOpenModal }) => {
       <CRow>
         <CCol xs={12}>
           <CCard className="mb-4 shadow-sm">
-            <CCardHeader className="d-flex justify-content-between align-items-center bg-white py-3">
+            <CCardHeader className="d-flex justify-content-between align-items-center bg-body py-3">
               <div>
-                <h5 className="mb-0 text-dark fw-semibold">Control de Insumos</h5>
+                <h5 className="mb-0 text-body fw-semibold">Control de Insumos</h5>
               </div>
               <div className="d-flex align-items-center gap-3" style={{ maxWidth: '450px', width: '100%' }}>
                 <CFormInput
@@ -144,7 +144,7 @@ const Insumos = ({ onOpenModal }) => {
             <CCardBody className="px-0 py-0">
               <div className="table-responsive">
                 <CTable align="middle" className="mb-0 border-0" hover responsive>
-                  <CTableHead className="text-nowrap bg-light text-muted fw-bold">
+                  <CTableHead className="table-theme-header text-nowrap fw-bold">
                     <CTableRow>
                       <CTableHeaderCell className="text-center border-0" style={{ width: '5%' }}>N°</CTableHeaderCell>
                       <CTableHeaderCell className="border-0" style={{ width: '25%' }}>Insumo</CTableHeaderCell>
@@ -164,7 +164,7 @@ const Insumos = ({ onOpenModal }) => {
                         {insumosPaginados.map((insumo, index) => (
                           <CTableRow key={insumo.id_insumos} style={{ height: '57px' }}>
                             {/* N° correlativo continuo basado en la paginación */}
-                            <CTableDataCell className="text-center text-muted fw-medium">
+                            <CTableDataCell className="text-center text-body-secondary fw-medium">
                               {indexOfFirstItem + index + 1}
                             </CTableDataCell>
                             
@@ -173,13 +173,13 @@ const Insumos = ({ onOpenModal }) => {
                                 <CAvatar color="warning" className="bg-opacity-10 text-warning fw-semibold">
                                   <CIcon icon={cilLayers} size="sm" />
                                 </CAvatar>
-                                <div className="fw-semibold text-dark">{insumo.nombre}</div>
+                                <div className="fw-semibold text-body">{insumo.nombre}</div>
                               </div>
                             </CTableDataCell>
                             
                             <CTableDataCell>
                               <div 
-                                className="text-secondary text-truncate" 
+                                className="text-body-secondary text-truncate"
                                 style={{ maxWidth: '380px' }}
                                 title={insumo.descripcion}
                               >
@@ -187,11 +187,11 @@ const Insumos = ({ onOpenModal }) => {
                               </div>
                             </CTableDataCell>
                             
-                            <CTableDataCell className="text-secondary text-truncate">
+                            <CTableDataCell className="text-body-secondary text-truncate">
                               {insumo.categoria_detalle.nombre}
                             </CTableDataCell>
 
-                            <CTableDataCell className="text-secondary text-truncate">
+                            <CTableDataCell className="text-body-secondary text-truncate">
                               {insumo.proveedores_asociados && insumo.proveedores_asociados.length > 0 ? (
                                 insumo.proveedores_asociados.map((item) => (
                                   <div key={item.id_proveedores_insumos}>
@@ -203,18 +203,18 @@ const Insumos = ({ onOpenModal }) => {
                               )}
                             </CTableDataCell>
 
-                            <CTableDataCell className="text-end fw-semibold text-dark text-nowrap">
+                            <CTableDataCell className="text-end fw-semibold text-body text-nowrap">
                               {insumo.stock_actual}
                             </CTableDataCell>
 
-                            <CTableDataCell className="text-end fw-semibold text-dark text-nowrap">
+                            <CTableDataCell className="text-end fw-semibold text-body text-nowrap">
                               {insumo.stock_minimo}
                             </CTableDataCell>
                             
                             <CTableDataCell className="text-center">
                               <CDropdown alignment="end">
                                 <CDropdownToggle color="transparent" caret={false} className="p-0 border-0 shadow-none">
-                                  <CIcon icon={cilOptions} className="text-muted" size="lg" />
+                                  <CIcon icon={cilOptions} className="text-body-secondary" size="lg" />
                                 </CDropdownToggle>
                                 <CDropdownMenu>
                                   <CDropdownItem 
@@ -248,7 +248,7 @@ const Insumos = ({ onOpenModal }) => {
                       // Si no hay ningún resultado que coincida en absoluto con el filtro
                       <>
                         <CTableRow>
-                          <CTableDataCell colSpan="8" className="text-center py-4 text-muted" style={{ height: '57px' }}>
+                          <CTableDataCell colSpan="8" className="text-center py-4 text-body-secondary" style={{ height: '57px' }}>
                             No se encontraron insumos que coincidan con la búsqueda.
                           </CTableDataCell>
                         </CTableRow>
@@ -266,8 +266,8 @@ const Insumos = ({ onOpenModal }) => {
             </CCardBody>
             
             {/* Footer de Paginación totalmente dinámico */}
-            <div className="d-flex justify-content-between align-items-center px-4 py-3 bg-white border-top">
-              <span className="small text-muted">
+            <div className="d-flex justify-content-between align-items-center px-4 py-3 bg-body border-top">
+              <span className="small text-body-secondary">
                 Mostrando {Math.min(indexOfFirstItem + 1, insumosFiltrados.length)} al {Math.min(indexOfLastItem, insumosFiltrados.length)} de {insumosFiltrados.length} insumos registrados
               </span>
               <CPagination className="mb-0" aria-label="Navegación de insumos">

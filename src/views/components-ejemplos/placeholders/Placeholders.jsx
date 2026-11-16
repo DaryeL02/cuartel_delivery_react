@@ -11,6 +11,7 @@ import {
   CPlaceholder,
   CRow,
 } from '@coreui/react'
+import logo from '../../../assets/brand/logo.svg' // Ajusta '../' según qué tan anidado esté este archivo
 import { DocsComponents, DocsExample } from 'src/components'
 
 import ReactImg from 'src/assets/images/react.jpg'
@@ -46,19 +47,12 @@ const Placeholders = () => {
                   </CCardBody>
                 </CCard>
                 <CCard style={{ width: '18rem' }}>
-                  <svg
-                    className="card-img-top"
-                    width="100%"
-                    height="180"
-                    xmlns="http://www.w3.org/2000/svg"
-                    role="img"
-                    aria-label="Placeholder"
-                    preserveAspectRatio="xMidYMid slice"
-                    focusable="false"
-                  >
-                    <title>Placeholder</title>
-                    <rect width="100%" height="100%" fill="#868e96"></rect>
-                  </svg>
+                  <CCardImage 
+                      orientation="top" 
+                      src={miImagen} 
+                      height={180} 
+                      style={{ objectFit: 'cover' }} 
+                    />
                   <CCardBody>
                     <CPlaceholder as={CCardTitle} animation="glow" xs={7}>
                       <CPlaceholder xs={6} />

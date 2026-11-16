@@ -7,7 +7,6 @@ import {
   CCol,
   CContainer,
   CForm,
-  CFormCheck,
   CFormInput,
   CFormLabel,
   CInputGroup,
@@ -18,33 +17,45 @@ import {
   CFormFeedback,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
-import { apple } from 'src/assets/brand/apple'
-import { google } from 'src/assets/brand/google'
-import { logo } from 'src/assets/brand/logo'
+// import { logo } from 'src/assets/brand/logo'
+import miLogo from '../../../assets/brand/logo-cuartel.svg'
 import { eye } from 'src/assets/icons/eye'
 import api from '../../components/api/api'
 import { toast } from 'react-toastify'
 
-
-
 const Login = () => {
+  const [usuario, setUsuario] = useState('')
+  const [password, setPassword] = useState('')
+  const [mostrarPassword, setMostrarPassword] = useState(false)
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [usuarioError, setUsuarioError] = useState('')
+  const [passwordError, setPasswordError] = useState('')
 
-const [usuario, setUsuario] = useState('');
-const [password, setPassword] = useState('');
-const [error, setError] = useState('') // Estado para manejar mensajes de error
-const [loading, setLoading] = useState(false) // Estado para deshabilitar el botón mientras carga
-const [usuarioError, setUsuarioError] = useState('')
-const [passwordError, setPasswordError] = useState('')
+  const navigate = useNavigate()
 
-const navigate = useNavigate();
-const notify = (login) => (login ? toast("Bienvenido/a") : toast("Datos incorrectos"));
+  const notificar = (tipo, mensaje) => {
+    switch (tipo) {
+      case 'exito':
+        toast.success(mensaje)
+        break
+      case 'error':
+        toast.error(mensaje)
+        break
+      case 'advertencia':
+        toast.warning(mensaje)
+        break
+      default:
+        toast(mensaje)
+    }
+  }
 
-const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault()
     setError('')
     setUsuarioError('')
     setPasswordError('')
-    
+
     let formularioValido = true
     if (!usuario.trim()) {
       setUsuarioError('Ingresa un usuario válido')
@@ -56,36 +67,37 @@ const handleSubmit = async (e) => {
     }
 
     if (!formularioValido) {
+      notificar('advertencia', 'Por favor, completa todos los campos obligatorios.')
       return
     }
+
     setLoading(true)
-    console.log('Datos enviados:', { usuario, password });
-    
-    try {const response = await api.post('/api/login/', {
+
+    try {
+      const response = await api.post('/api/login/', {
         usuario: usuario,
         password: password,
       })
-    if (response.data && response.data.token) {
-      
-      localStorage.setItem('token', response.data.token)
-      notify(true)
-      
-      
-      navigate('/dashboard')
-    } else {
-      setError('No se recibió un token válido del servidor.')
-      
-    }
-  }catch (error) {
-    console.error('Error al logearte', error)
-    notify(false)
 
-    setUsuarioError('Ingresa un usuario válido')
-    setPasswordError('Contraseña incorrecta')
-  }finally{
-    setLoading(false)
+      if (response.data && response.data.token) {
+        localStorage.setItem('token', response.data.token)
+        notificar('exito', 'Bienvenido/a')
+        navigate('/dashboard')
+      } else {
+        const msgError = 'No se recibió un token válido del servidor.'
+        setError(msgError)
+        notificar('error', msgError)
+      }
+    } catch (error) {
+      console.error('Error al logearte', error)
+      notificar('error', 'Datos incorrectos. Verifica tu usuario y contraseña.')
+
+      setUsuarioError('Ingresa un usuario válido')
+      setPasswordError('Contraseña incorrecta')
+    } finally {
+      setLoading(false)
+    }
   }
-};
 
   return (
     <div className="bg-body-tertiary min-vh-100 d-flex flex-row align-items-center">
@@ -94,20 +106,20 @@ const handleSubmit = async (e) => {
           <CCol md={8} lg={6} xl={5}>
             <div className="d-flex flex-column gap-4">
               <div className="text-center">
-                <CIcon icon={logo} height={48} />
+                <img 
+                  className="sidebar-brand-full" 
+                  src={miLogo} 
+                  style={{ height: '80px', width: 'auto', maxWidth: '100%' }} 
+                  alt="El Cuartel Gestión" 
+                />
               </div>
               <CCard className="p-4">
                 <CCardBody className="d-flex flex-column gap-4">
-
                   {error && <CAlert color="danger">{error}</CAlert>}
 
                   <h2 className="h5 text-center mb-0">Accede a tu cuenta</h2>
-                  
-                  <CForm 
-                  className="row gy-3"
-                  onSubmit={handleSubmit}
-                  noValidate
-                  >
+
+                  <CForm className="row gy-3" onSubmit={handleSubmit} noValidate>
                     <CCol xs={12}>
                       <CFormLabel htmlFor="text">Usuario</CFormLabel>
                       <CFormInput
@@ -133,25 +145,30 @@ const handleSubmit = async (e) => {
                       <CInputGroup className="has-validation">
                         <CFormInput
                           id="password"
-                          type="password"
+                          type={mostrarPassword ? 'text' : 'password'}
                           placeholder="Introduce tu contraseña"
                           autoComplete="current-password"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           invalid={!!passwordError}
                         />
-                        <CInputGroupText>
-                          <CTooltip content="Show password">
-                            <CButton
-                              type="button"
-                              color="link"
-                              className="p-0 link-secondary"
-                              aria-label="Show password"
-                            >
-                              <CIcon icon={eye} size="sm" />
-                            </CButton>
-                          </CTooltip>
-                        </CInputGroupText>
+                        <CTooltip content={mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
+                          <CInputGroupText
+                            role="button"
+                            tabIndex={0}
+                            style={{ cursor: 'pointer' }}
+                            aria-label={mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                            onClick={() => setMostrarPassword(!mostrarPassword)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault()
+                                setMostrarPassword(!mostrarPassword)
+                              }
+                            }}
+                          >
+                            <CIcon icon={eye} size="sm" />
+                          </CInputGroupText>
+                        </CTooltip>
                         {passwordError && (
                           <CFormFeedback invalid>{passwordError}</CFormFeedback>
                         )}
@@ -159,11 +176,11 @@ const handleSubmit = async (e) => {
                     </CCol>
 
                     <CCol xs={12}>
-                      <CButton 
-                      color="primary" 
-                      type="submit" 
-                      className="w-100"
-                      disabled={loading}
+                      <CButton
+                        color="primary"
+                        type="submit"
+                        className="w-100"
+                        disabled={loading}
                       >
                         {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
                       </CButton>

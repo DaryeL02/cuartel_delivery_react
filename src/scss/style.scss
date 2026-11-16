@@ -8,6 +8,12 @@ body {
   background-color: var(--cui-tertiary-bg);
 }
 
+.table-theme-header {
+  --cui-table-color: var(--cui-body-color);
+  --cui-table-bg: var(--cui-secondary-bg);
+  --cui-table-border-color: var(--cui-border-color);
+}
+
 .wrapper {
   width: 100%;
   padding-inline: var(--cui-sidebar-occupy-start, 0) var(--cui-sidebar-occupy-end, 0);

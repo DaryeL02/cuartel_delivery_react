@@ -11,12 +11,12 @@ import {
   CModalHeader,
   CModalTitle,
   CModalBody,
-  CModalFooter
+  CModalFooter,
 } from '@coreui/react';
+import { toast } from 'react-toastify';
 import api from '../api/api';
 
 export default function NuevaCaja({ visible, onClose, usuarios, locales, onSuccess }) {
-  
   const [data, setData] = useState({
     usuario: '',
     local: '',
@@ -24,10 +24,35 @@ export default function NuevaCaja({ visible, onClose, usuarios, locales, onSucce
     estado: true,
   });
 
-  const [loading, setLoading] = useState(false)
-  const [errors, setErrors] = useState({})
+  const [loading, setLoading] = useState(false);
 
-  
+  const notificar = (tipo, mensaje) => {
+    switch (tipo) {
+      case 'exito':
+        toast.success(mensaje);
+        break;
+      case 'error':
+        toast.error(mensaje);
+        break;
+      case 'advertencia':
+        toast.warning(mensaje);
+        break;
+      default:
+        toast(mensaje);
+    }
+  };
+
+  useEffect(() => {
+    if (visible) {
+      setData({
+        usuario: '',
+        local: '',
+        monto_apertura: '',
+        estado: true,
+      });
+    }
+  }, [visible]);
+
   const handleChange = (e) => {
     const { id, value } = e.target;
     setData((prevData) => ({
@@ -36,78 +61,84 @@ export default function NuevaCaja({ visible, onClose, usuarios, locales, onSucce
     }));
   };
 
-  // Función para procesar y enviar el formulario
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(false)
-    console.log(data)
+
+    if (!data.usuario) {
+      notificar('advertencia', 'Selecciona un usuario para el cajero.');
+      return;
+    }
+    if (!data.local) {
+      notificar('advertencia', 'Selecciona un local o sucursal.');
+      return;
+    }
+    if (data.monto_apertura === '' || Number(data.monto_apertura) < 0) {
+      notificar('advertencia', 'Ingresa un monto inicial válido igual o mayor a 0.');
+      return;
+    }
+
+    setLoading(true);
 
     try {
-      const token = localStorage.getItem('token')
-      const headers = { Authorization: `Token ${token}` }
-      
-      console.log('Datos enviados:', data);
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Token ${token}` };
 
-      await api.post('/api/cajas/', data, { headers })
-      
+      await api.post('/api/cajas/', data, { headers });
+
+      notificar('exito', 'Caja abierta correctamente.');
       onSuccess();
       onClose();
     } catch (error) {
       console.error('Error al abrir la caja:', error);
-      if (error.response && error.response.data) {
-        setErrors(error.response.data)
-      } else {
-        alert('Ocurrió un error inesperado de conexión con el servidor.')
-      }
+      notificar('error', 'No se pudo abrir la caja. Verifica los datos e intenta nuevamente.');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   };
 
   return (
-    <CModal visible={visible} onClose={onClose}>
+    <CModal visible={visible} onClose={onClose} backdrop="static">
       <CModalHeader>
         <CModalTitle>Abrir Nueva Caja</CModalTitle>
       </CModalHeader>
-      <CForm onSubmit={handleSubmit}>
+      <CForm onSubmit={handleSubmit} noValidate>
         <CModalBody>
           <CRow className="g-3">
-            <CCol md={6}>
             {/* Campo: Usuario */}
-                <CFormLabel htmlFor="local">Usuario del cajero</CFormLabel>
-                <CFormSelect
-                    name="usuario"
-                    id="usuario"
-                    // placeholder="Usuario del cajero"
-                    value={data.usuario}
-                    onChange={handleChange}
-                    required
-                    >
-                    <option value="">Seleccionar usuario...</option>
-                    {usuarios.map((item) => (
-                        <option key={item.id_usuarios} value={item.id_usuarios}>
-                            {item.usuario}
-                        </option>
-                    ))}
-                </CFormSelect>
+            <CCol md={6}>
+              <CFormLabel htmlFor="usuario">Usuario del cajero</CFormLabel>
+              <CFormSelect
+                name="usuario"
+                id="usuario"
+                value={data.usuario}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Seleccionar usuario...</option>
+                {usuarios.map((item) => (
+                  <option key={item.id_usuarios} value={item.id_usuarios}>
+                    {item.usuario}
+                  </option>
+                ))}
+              </CFormSelect>
             </CCol>
 
             {/* Campo: Local (Select) */}
             <CCol md={6}>
               <CFormLabel htmlFor="local">Local / Sucursal</CFormLabel>
-              <CFormSelect 
+              <CFormSelect
                 id="local"
-                name="local" 
-                value={data.local} 
+                name="local"
+                value={data.local}
                 onChange={handleChange}
                 required
               >
                 <option value="">Seleccionar local...</option>
                 {locales.map((item) => (
-                        <option key={item.id_locales} value={item.id_locales}>
-                            {item.nombre}
-                        </option>
-                    ))}
+                  <option key={item.id_locales} value={item.id_locales}>
+                    {item.nombre}
+                  </option>
+                ))}
               </CFormSelect>
             </CCol>
 
@@ -128,11 +159,11 @@ export default function NuevaCaja({ visible, onClose, usuarios, locales, onSucce
           </CRow>
         </CModalBody>
         <CModalFooter>
-          <CButton color="secondary" type="button" onClick={onClose}>
+          <CButton color="secondary" type="button" onClick={onClose} disabled={loading}>
             Cancelar
           </CButton>
-          <CButton color="success" type="submit">
-            Inicializar Apertura
+          <CButton color="success" type="submit" disabled={loading}>
+            {loading ? 'Abriendo...' : 'Inicializar Apertura'}
           </CButton>
         </CModalFooter>
       </CForm>

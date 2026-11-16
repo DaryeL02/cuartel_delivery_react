@@ -91,7 +91,7 @@ const App = () => {
   return (
     <HashRouter>
       <ToastContainer 
-      autoClose={2000}
+      autoClose={4000}
       />
       <Suspense
         fallback={

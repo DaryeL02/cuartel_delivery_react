@@ -12,98 +12,126 @@ import {
   CFormCheck,
   CRow,
   CCol,
-  CFormSwitch
+  CFormSwitch,
 } from '@coreui/react'
+import { toast } from 'react-toastify'
 import api from '../api/api'
 
 const ModalFormProducto = ({ visible, onClose, producto, insumos_lista, onSuccess }) => {
-  // Inicializar el formulario según los atributos de la base de datos
-    const [data, setData] = useState({
+  const [data, setData] = useState({
     nombre: '',
     descripcion: '',
     precio_unitario: 0,
     estado: true,
-    insumos: []
-    })
+    insumos: [],
+  })
 
   const [loading, setLoading] = useState(false)
-  const modoEditar = !!producto // Si viene un objeto producto, es modo modificación
+  const modoEditar = !!producto
 
-  // Efecto para cargar los datos del producto si estamos editando
-    useEffect(() => {
+  const notificar = (tipo, mensaje) => {
+    switch (tipo) {
+      case 'exito':
+        toast.success(mensaje)
+        break
+      case 'error':
+        toast.error(mensaje)
+        break
+      case 'advertencia':
+        toast.warning(mensaje)
+        break
+      default:
+        toast(mensaje)
+    }
+  }
+
+  useEffect(() => {
     if (modoEditar && producto) {
-        setData({
+      setData({
         nombre: producto.nombre || '',
         descripcion: producto.descripcion || '',
         precio_unitario: producto.precio_unitario || 0,
-        estado: producto.estado || true,
-        insumos: producto.insumos_asociados 
-        ? producto.insumos_asociados.map(item => item.insumo.id_insumos) 
-        : []
-        })
+        estado: producto.estado ?? true,
+        insumos: producto.insumos_asociados
+          ? producto.insumos_asociados.map((item) => item.insumo.id_insumos)
+          : [],
+      })
     } else {
-        setData({
+      setData({
         nombre: '',
         descripcion: '',
         precio_unitario: 0,
         estado: true,
         insumos: [],
-        })
+      })
     }
-    }, [producto, visible, modoEditar])
+  }, [producto, visible, modoEditar])
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
-    
+
     setData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }))
   }
 
-  // Manejo de cambios específico para la selección de múltiples insumos
   const handleInsumoCheck = (idInsumo) => {
     setData((prev) => {
       const yaSeleccionado = prev.insumos.includes(idInsumo)
       const nuevosInsumos = yaSeleccionado
-        ? prev.insumos.filter((id) => id !== idInsumo) // Quitar si ya estaba
-        : [...prev.insumos, idInsumo] // Agregar si no estaba
+        ? prev.insumos.filter((id) => id !== idInsumo)
+        : [...prev.insumos, idInsumo]
 
       return {
         ...prev,
-        insumos: nuevosInsumos
+        insumos: nuevosInsumos,
       }
     })
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setLoading(true)
 
-     // 1. Estructuramos el payload formateando la lista de insumos
-    const payload = {
-      ...data,
-      insumos: data.insumos.map(id => ({ id_insumos: id }))
+    if (!data.nombre.trim()) {
+      notificar('advertencia', 'Ingresa el nombre del producto.')
+      return
+    }
+    if (data.precio_unitario === '' || Number(data.precio_unitario) <= 0) {
+      notificar('advertencia', 'Ingresa un precio unitario mayor a 0.')
+      return
     }
 
-    console.log(payload)
+    setLoading(true)
+
+    const payload = {
+      ...data,
+      insumos: data.insumos.map((id) => ({ id_insumos: id })),
+    }
+
     try {
       const token = localStorage.getItem('token')
       const headers = { Authorization: `Token ${token}` }
 
       if (modoEditar) {
-        // Petición de Modificación (PUT)
         const idProducto = producto.id_productos
         await api.put(`/api/productos/${idProducto}/`, payload, { headers })
+        notificar('exito', 'Producto actualizado con éxito.')
       } else {
-        // Petición de Alta (POST)
         await api.post('/api/productos/', payload, { headers })
+        notificar('exito', 'Producto registrado con éxito.')
       }
 
-      onSuccess() // Callback para recargar la tabla principal
-      onClose() // Cerrar el modal
+      onSuccess()
+      onClose()
     } catch (error) {
       console.error('Error al guardar el producto:', error)
+      notificar(
+        'error',
+        modoEditar
+          ? 'No se pudo actualizar el producto. Por favor, intenta nuevamente.'
+          : 'No se pudo registrar el producto. Por favor, intenta nuevamente.'
+      )
     } finally {
       setLoading(false)
     }
@@ -116,7 +144,7 @@ const ModalFormProducto = ({ visible, onClose, producto, insumos_lista, onSucces
           {modoEditar ? 'Modificar Producto' : 'Agregar Nuevo Producto'}
         </CModalTitle>
       </CModalHeader>
-      <CForm onSubmit={handleSubmit}>
+      <CForm onSubmit={handleSubmit} noValidate>
         <CModalBody>
           <CRow className="g-3">
             {/* Nombre del Producto */}
@@ -128,7 +156,6 @@ const ModalFormProducto = ({ visible, onClose, producto, insumos_lista, onSucces
                 maxLength={50}
                 value={data.nombre}
                 onChange={handleChange}
-                required
                 placeholder="Ej. Hamburguesa Completa"
               />
             </CCol>
@@ -143,7 +170,6 @@ const ModalFormProducto = ({ visible, onClose, producto, insumos_lista, onSucces
                 step="0.01"
                 value={data.precio_unitario}
                 onChange={handleChange}
-                required
                 placeholder="0.00"
               />
             </CCol>
@@ -161,15 +187,15 @@ const ModalFormProducto = ({ visible, onClose, producto, insumos_lista, onSucces
               />
             </CCol>
 
-            {/* Selección de Insumos Asociados (Muchos a Muchos) */}
+            {/* Selección de Insumos Asociados */}
             <CCol md={12}>
-              <label className="form-label fw-medium text-secondary">Insumos del Producto</label>
-              <div 
-                className="border rounded p-3 bg-light" 
+              <label className="form-label fw-medium text-body-secondary">Insumos del Producto</label>
+              <div
+                className="border rounded p-3 bg-body-secondary"
                 style={{ maxHeight: '180px', overflowY: 'auto' }}
               >
                 {insumos_lista.length === 0 ? (
-                  <p className="text-muted small mb-0">No hay insumos disponibles para asociar.</p>
+                  <p className="text-body-secondary small mb-0">No hay insumos disponibles para asociar.</p>
                 ) : (
                   <CRow>
                     {insumos_lista.map((insumo) => (
@@ -185,23 +211,23 @@ const ModalFormProducto = ({ visible, onClose, producto, insumos_lista, onSucces
                   </CRow>
                 )}
               </div>
-              <small className="text-muted mt-1 d-block">
+              <small className="text-body-secondary mt-1 d-block">
                 Selecciona todos los insumos necesarios para la elaboración de este producto.
               </small>
             </CCol>
           </CRow>
-          <CRow className="align-items-center">
+          <CRow className="align-items-center mt-2">
             <CCol xs="auto">
               <CFormSwitch
-                label={data.estado ? "Producto Activo" : "Producto Inactivo"}
+                label={data.estado ? 'Producto Activo' : 'Producto Inactivo'}
                 id="switchEstadoProducto"
                 name="estado"
                 checked={data.estado}
                 onChange={handleChange}
-                size="xl" // Hace que el switch se vea un poco más grande y claro
+                size="xl"
               />
             </CCol>
-        </CRow>
+          </CRow>
         </CModalBody>
         <CModalFooter>
           <CButton color="secondary" variant="ghost" onClick={onClose} disabled={loading}>
