@@ -11,9 +11,9 @@ import {
   CFormTextarea,
   CFormSelect,
   CFormSwitch,
+  CFormText,
   CRow,
   CCol,
-  CFormFeedback,
 } from '@coreui/react'
 import api from '../api/api'
 import { toast } from 'react-toastify'
@@ -55,23 +55,23 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
   useEffect(() => {
     setErrors({})
     if (modoEditar && empleado) {
-      const RolId =
+      const rolId =
         empleado.usuario_detalle?.roles_asignados &&
         empleado.usuario_detalle?.roles_asignados.length > 0
-          ? empleado.usuario_detalle?.roles_asignados[0].rol_detalle?.id_roles
+          ? empleado.usuario_detalle.roles_asignados[0].rol_detalle?.id_roles
           : ''
 
       setData({
-        rol: RolId,
+        rol: rolId || '',
         local: empleado.local_detalle?.id_locales || '',
         usuario: empleado.usuario_detalle?.usuario || '',
-        nombre: empleado.nombre || '',
         email: empleado.usuario_detalle?.email || '',
+        nombre: empleado.nombre || '',
         apellido: empleado.apellido || '',
-        dni: empleado.dni || '',
+        dni: empleado.dni != null ? String(empleado.dni) : '',
         telefono: empleado.telefono || '',
         domicilio: empleado.domicilio || '',
-        estado: empleado.estado || false,
+        estado: empleado.estado ?? true,
       })
     } else {
       setData({
@@ -91,51 +91,123 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
+    let nuevoValor = type === 'checkbox' ? checked : value
 
-    if (name === 'dni' || name === 'telefono') {
-      const soloNumeros = value.replace(/\D/g, '')
-
-      setData((prev) => ({
-        ...prev,
-        [name]: soloNumeros,
-      }))
-
-      if (errors[name]) {
-        setErrors((prev) => ({ ...prev, [name]: null }))
-      }
-      return
-    }
-
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: null }))
+    if (name === 'usuario') {
+      nuevoValor = value.replace(/\s/g, '').replace(/[^a-zA-Z0-9._-]/g, '')
+    } else if (name === 'nombre' || name === 'apellido') {
+      nuevoValor = value.replace(/[^a-zA-ZÀ-ÿ\s']/g, '')
+    } else if (name === 'dni' || name === 'telefono') {
+      nuevoValor = value.replace(/\D/g, '')
     }
 
     setData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: nuevoValor,
     }))
+
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: null }))
+    }
+  }
+
+  const validarFormulario = () => {
+    const nuevosErrores = {}
+    const usuarioLimpio = data.usuario.trim()
+    const emailLimpio = data.email.trim()
+    const nombreLimpio = data.nombre.trim()
+    const apellidoLimpio = data.apellido.trim()
+    const dniLimpio = data.dni.trim()
+    const telefonoLimpio = data.telefono.trim()
+
+    if (!usuarioLimpio) {
+      nuevosErrores.usuario = 'El nombre de usuario es obligatorio.'
+    } else if (usuarioLimpio.length < 4) {
+      nuevosErrores.usuario = 'El usuario debe tener al menos 4 caracteres.'
+    } else if (!/^[a-zA-Z0-9._-]+$/.test(usuarioLimpio)) {
+      nuevosErrores.usuario = 'Solo se permiten letras, números, puntos y guiones.'
+    }
+
+    if (!data.rol) {
+      nuevosErrores.rol = 'Debes seleccionar un rol para el usuario.'
+    }
+
+    const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailLimpio) {
+      nuevosErrores.email = 'El correo electrónico es obligatorio.'
+    } else if (!regexEmail.test(emailLimpio)) {
+      nuevosErrores.email = 'Ingresa un correo electrónico válido.'
+    }
+
+    if (!data.local) {
+      nuevosErrores.local = 'Debes seleccionar una sucursal.'
+    }
+
+    if (!nombreLimpio) {
+      nuevosErrores.nombre = 'El nombre es obligatorio.'
+    } else if (nombreLimpio.length < 2) {
+      nuevosErrores.nombre = 'El nombre debe tener al menos 2 caracteres.'
+    }
+
+    if (!apellidoLimpio) {
+      nuevosErrores.apellido = 'El apellido es obligatorio.'
+    } else if (apellidoLimpio.length < 2) {
+      nuevosErrores.apellido = 'El apellido debe tener al menos 2 caracteres.'
+    }
+
+    if (!dniLimpio) {
+      nuevosErrores.dni = 'El DNI es obligatorio.'
+    } else if (dniLimpio.length < 7 || dniLimpio.length > 8) {
+      nuevosErrores.dni = 'El DNI debe tener entre 7 y 8 dígitos.'
+    }
+
+    if (telefonoLimpio && telefonoLimpio.length < 8) {
+      nuevosErrores.telefono = 'El teléfono debe tener al menos 8 dígitos.'
+    }
+
+    setErrors(nuevosErrores)
+    return Object.keys(nuevosErrores).length === 0
+  }
+
+  const normalizarErroresBackend = (errorData) => {
+    const erroresMapeados = {}
+    if (!errorData || typeof errorData !== 'object') return erroresMapeados
+
+    Object.entries(errorData).forEach(([clave, valor]) => {
+      if (clave === 'usuario_detalle' && typeof valor === 'object' && valor !== null) {
+        Object.entries(valor).forEach(([subClave, subValor]) => {
+          erroresMapeados[subClave] = Array.isArray(subValor) ? subValor[0] : String(subValor)
+        })
+      } else {
+        erroresMapeados[clave] = Array.isArray(valor) ? valor[0] : String(valor)
+      }
+    })
+
+    return erroresMapeados
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    if (!data.usuario.trim() || !data.rol || !data.email.trim() || !data.local) {
-      notificar('advertencia', 'Completa todos los datos de acceso y configuración.')
-      return
-    }
-
-    if (!data.nombre.trim() || !data.apellido.trim()) {
-      notificar('advertencia', 'Ingresa el nombre y apellido del empleado.')
-      return
-    }
-
-    if (data.dni.trim().length !== 8) {
-      setErrors({ dni: 'El DNI debe tener 8 dígitos.' })
-      notificar('advertencia', 'El DNI debe tener exactamente 8 dígitos.')
+    if (!validarFormulario()) {
+      notificar('advertencia', 'Por favor, corrige los campos marcados antes de guardar.')
       return
     }
 
     setLoading(true)
+
+    const payload = {
+      rol: data.rol,
+      local: data.local,
+      usuario: data.usuario.trim(),
+      email: data.email.trim(),
+      nombre: data.nombre.trim(),
+      apellido: data.apellido.trim(),
+      dni: data.dni.trim(),
+      telefono: data.telefono.trim(),
+      domicilio: data.domicilio.trim(),
+      estado: data.estado,
+    }
 
     try {
       const token = localStorage.getItem('token')
@@ -143,10 +215,10 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
 
       if (modoEditar) {
         const idEmpleado = empleado.id_empleados || empleado.ID_empleados
-        await api.put(`/api/empleados/${idEmpleado}/`, data, { headers })
+        await api.put(`/api/empleados/${idEmpleado}/`, payload, { headers })
         notificar('exito', 'Empleado actualizado con éxito.')
       } else {
-        await api.post('/api/empleados/', data, { headers })
+        await api.post('/api/empleados/', payload, { headers })
         notificar('exito', 'Empleado registrado correctamente.')
       }
 
@@ -156,13 +228,15 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
       console.error('Error al guardar el empleado:', error)
 
       if (error.response && error.response.data) {
-        setErrors(error.response.data)
-        notificar(
-          'error',
-          modoEditar
+        const erroresBackend = normalizarErroresBackend(error.response.data)
+        setErrors(erroresBackend)
+        const mensajePrincipal =
+          erroresBackend.detail ||
+          erroresBackend.non_field_errors ||
+          (modoEditar
             ? 'No se pudieron guardar los cambios. Revisa los datos ingresados.'
-            : 'No se pudo registrar el empleado. Revisa los datos ingresados.'
-        )
+            : 'No se pudo registrar el empleado. Revisa los datos ingresados.')
+        notificar('error', mensajePrincipal)
       } else {
         notificar('error', 'Ocurrió un error inesperado de conexión con el servidor.')
       }
@@ -170,6 +244,10 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
       setLoading(false)
     }
   }
+
+  const rolesDisponibles = roles.filter(
+    (item) => item.estado !== false || String(item.id_roles) === String(data.rol)
+  )
 
   return (
     <CModal visible={visible} onClose={onClose} backdrop="static" size="lg">
@@ -179,10 +257,10 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
         </CModalTitle>
       </CModalHeader>
 
-      <CForm onSubmit={handleSubmit}>
+      <CForm onSubmit={handleSubmit} noValidate>
         <CModalBody>
           {/* DATOS DE ACCESO Y CONFIGURACIÓN */}
-          <div className="mb-4">
+          <div className="mb-3">
             <h5
               className="text-body-secondary fw-semibold border-bottom pb-2 mb-3"
               style={{ fontSize: '0.95rem', letterSpacing: '0.5px' }}
@@ -199,7 +277,8 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
                 maxLength={30}
                 value={data.usuario}
                 onChange={handleChange}
-                required
+                invalid={!!errors.usuario}
+                feedbackInvalid={errors.usuario}
                 placeholder="Cadete1"
               />
             </CCol>
@@ -209,25 +288,20 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
                 name="rol"
                 value={data.rol}
                 onChange={handleChange}
-                required
+                invalid={!!errors.rol}
+                feedbackInvalid={errors.rol}
               >
-                <option value="">
-                  {modoEditar
-                    ? empleado.usuario_detalle?.roles_asignados &&
-                      empleado.usuario_detalle?.roles_asignados.length > 0
-                      ? empleado.usuario_detalle?.roles_asignados[0].rol_detalle?.nombre
-                      : 'No hay rol asignado'
-                    : 'Selecciona...'}
-                </option>
-                {roles.map((item) => (
+                <option value="">Selecciona...</option>
+                {rolesDisponibles.map((item) => (
                   <option key={item.id_roles} value={item.id_roles}>
                     {item.nombre}
+                    {item.estado === false ? ' (Inactivo)' : ''}
                   </option>
                 ))}
               </CFormSelect>
             </CCol>
           </CRow>
-          <CRow className="g-3 mb-3">
+          <CRow className="g-3 mb-4">
             <CCol md={6}>
               <CFormInput
                 type="email"
@@ -236,7 +310,8 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
                 maxLength={50}
                 value={data.email}
                 onChange={handleChange}
-                required
+                invalid={!!errors.email}
+                feedbackInvalid={errors.email}
                 placeholder="correo@gmail.com"
               />
             </CCol>
@@ -246,11 +321,10 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
                 name="local"
                 value={data.local}
                 onChange={handleChange}
-                required
+                invalid={!!errors.local}
+                feedbackInvalid={errors.local}
               >
-                <option value="">
-                  {modoEditar ? empleado.local_detalle?.nombre : 'Selecciona...'}
-                </option>
+                <option value="">Selecciona...</option>
                 {locales.map((item) => (
                   <option key={item.id_locales} value={item.id_locales}>
                     {item.nombre}
@@ -261,7 +335,7 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
           </CRow>
 
           {/* INFORMACIÓN PERSONAL */}
-          <div className="mb-4">
+          <div className="mb-3">
             <h5
               className="text-body-secondary fw-semibold border-bottom pb-2 mb-3"
               style={{ fontSize: '0.95rem', letterSpacing: '0.5px' }}
@@ -269,7 +343,7 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
               INFORMACIÓN PERSONAL
             </h5>
           </div>
-          <CRow className="g-3 mb-2">
+          <CRow className="g-3 mb-3">
             <CCol md={6}>
               <CFormInput
                 type="text"
@@ -278,7 +352,8 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
                 maxLength={50}
                 value={data.nombre}
                 onChange={handleChange}
-                required
+                invalid={!!errors.nombre}
+                feedbackInvalid={errors.nombre}
                 placeholder="Matías"
               />
             </CCol>
@@ -290,48 +365,59 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
                 maxLength={50}
                 value={data.apellido}
                 onChange={handleChange}
-                required
+                invalid={!!errors.apellido}
+                feedbackInvalid={errors.apellido}
                 placeholder="Velazquez"
               />
             </CCol>
           </CRow>
-          <CRow className="g-3 mb-2">
+          <CRow className="g-3 mb-3">
             <CCol md={6}>
               <CFormInput
                 type="text"
+                inputMode="numeric"
                 label="DNI"
                 name="dni"
                 maxLength={8}
                 value={data.dni}
                 onChange={handleChange}
-                placeholder="39472367"
                 invalid={!!errors.dni}
+                feedbackInvalid={errors.dni}
+                placeholder="39472367"
               />
-              {errors.dni && <CFormFeedback invalid>{errors.dni}</CFormFeedback>}
             </CCol>
 
-            {/* Telefono */}
             <CCol md={6}>
               <CFormInput
+                type="text"
+                inputMode="tel"
                 label="Teléfono de Contacto"
                 name="telefono"
                 maxLength={20}
                 value={data.telefono}
                 onChange={handleChange}
+                invalid={!!errors.telefono}
+                feedbackInvalid={errors.telefono}
                 placeholder="3875411270"
               />
             </CCol>
           </CRow>
-          <CRow className="g-3 mb-3">
+          <CRow className="g-3 mb-4">
             <CCol md={12}>
               <CFormTextarea
                 label="Domicilio"
                 name="domicilio"
+                rows={2}
                 maxLength={200}
                 value={data.domicilio}
                 onChange={handleChange}
+                invalid={!!errors.domicilio}
+                feedbackInvalid={errors.domicilio}
                 placeholder="Av. San Martín 260"
               />
+              <div className="d-flex justify-content-end">
+                <CFormText>{data.domicilio.length}/200</CFormText>
+              </div>
             </CCol>
           </CRow>
 

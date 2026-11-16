@@ -13,6 +13,7 @@ import {
   CTableDataCell,
   CButton,
   CAvatar,
+  CBadge,
   CDropdown,
   CDropdownToggle,
   CDropdownMenu,
@@ -117,7 +118,7 @@ const Insumos = ({ onOpenModal }) => {
           Authorization: `Token ${token}`,
         },
       })
-      setCategorias(respuesta.data)
+      setCategorias(Array.isArray(respuesta.data) ? respuesta.data : respuesta.data.results || [])
     } catch (error) {
       console.error('Error al cargar categorías:', error)
       notificar('error', 'No se pudieron cargar las categorías.')
@@ -132,7 +133,7 @@ const Insumos = ({ onOpenModal }) => {
           Authorization: `Token ${token}`,
         },
       })
-      setProveedores(respuesta.data)
+      setProveedores(Array.isArray(respuesta.data) ? respuesta.data : respuesta.data.results || [])
     } catch (error) {
       console.error('Error al cargar proveedores:', error)
       notificar('error', 'No se pudieron cargar los proveedores.')
@@ -147,6 +148,14 @@ const Insumos = ({ onOpenModal }) => {
     cargarCategorias()
     cargarProveedores()
   }, [])
+
+  const getStockBadgeColor = (stockActual, stockMinimo) => {
+    const actual = Number(stockActual)
+    const minimo = Number(stockMinimo)
+    if (actual <= 0) return 'danger'
+    if (actual <= minimo) return 'warning'
+    return 'success'
+  }
 
   const totalPaginas = Math.max(1, Math.ceil(totalRegistros / PAGE_SIZE))
   const filasVacias = Math.max(0, PAGE_SIZE - insumos.length)
@@ -200,15 +209,15 @@ const Insumos = ({ onOpenModal }) => {
                         Descripción
                       </CTableHeaderCell>
                       <CTableHeaderCell className="border-0" style={{ width: '10%' }}>
-                        Categoria
+                        Categoría
                       </CTableHeaderCell>
                       <CTableHeaderCell className="border-0" style={{ width: '10%' }}>
                         Proveedor
                       </CTableHeaderCell>
-                      <CTableHeaderCell className="border-0" style={{ width: '5%' }}>
+                      <CTableHeaderCell className="text-end border-0" style={{ width: '5%' }}>
                         Stock Actual
                       </CTableHeaderCell>
-                      <CTableHeaderCell className="border-0" style={{ width: '5%' }}>
+                      <CTableHeaderCell className="text-end border-0" style={{ width: '5%' }}>
                         Stock mínimo
                       </CTableHeaderCell>
                       <CTableHeaderCell className="text-center border-0" style={{ width: '10%' }}>
@@ -321,12 +330,17 @@ const Insumos = ({ onOpenModal }) => {
                               )}
                             </CTableDataCell>
 
-                            <CTableDataCell className="text-end fw-semibold text-body text-nowrap">
-                              {insumo.stock_actual}
+                            <CTableDataCell className="text-end fw-semibold text-nowrap">
+                              <CBadge
+                                color={getStockBadgeColor(insumo.stock_actual, insumo.stock_minimo)}
+                                shape="rounded-pill"
+                              >
+                                {insumo.stock_actual} {insumo.unidad}
+                              </CBadge>
                             </CTableDataCell>
 
                             <CTableDataCell className="text-end fw-semibold text-body text-nowrap">
-                              {insumo.stock_minimo}
+                              {insumo.stock_minimo} {insumo.unidad}
                             </CTableDataCell>
 
                             <CTableDataCell className="text-center">

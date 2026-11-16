@@ -7,7 +7,7 @@ import {
   CModalFooter,
   CButton,
   CForm,
-  CRow,
+  CAlert,
 } from '@coreui/react'
 import api from '../api/api'
 import { toast } from 'react-toastify'
@@ -39,14 +39,22 @@ const ModalDeleteEmpleado = ({ visible, onClose, empleado, onSuccess }) => {
     try {
       const token = localStorage.getItem('token')
       const headers = { Authorization: `Token ${token}` }
-      await api.delete(`/api/empleados/${empleado.id_empleados}/`, { headers })
+      const idEmpleado = empleado.id_empleados || empleado.ID_empleados
+      await api.delete(`/api/empleados/${idEmpleado}/`, { headers })
 
       notificar('exito', 'Empleado eliminado con éxito.')
       onSuccess()
       onClose()
     } catch (error) {
       console.error('Error al eliminar el empleado:', error)
-      notificar('error', 'No se pudo eliminar el empleado. Intenta nuevamente.')
+      const status = error.response?.status
+      const mensajeBackend =
+        error.response?.data?.detail ||
+        error.response?.data?.error ||
+        (status === 400 || status === 409
+          ? 'No se puede eliminar este empleado porque tiene registros o cajas asociadas. Puedes desactivarlo desde Editar.'
+          : 'No se pudo eliminar el empleado. Intenta nuevamente.')
+      notificar('error', mensajeBackend)
     } finally {
       setLoading(false)
     }
@@ -59,16 +67,25 @@ const ModalDeleteEmpleado = ({ visible, onClose, empleado, onSuccess }) => {
       </CModalHeader>
       <CForm onSubmit={handleSubmit}>
         <CModalBody>
-          <CRow className="g-3">
-            <p>¿Desea eliminar el empleado?</p>
-          </CRow>
+          <p className="mb-3">
+            ¿Desea eliminar al empleado{' '}
+            <strong>
+              {empleado?.nombre} {empleado?.apellido}
+            </strong>
+            ?
+          </p>
+          <CAlert color="warning" className="mb-0">
+            Esta acción eliminará el registro y revocará el acceso al sistema del usuario asociado.
+            Si el empleado tiene historial operativo, se recomienda cambiar su estado a{' '}
+            <strong>Inactivo</strong>.
+          </CAlert>
         </CModalBody>
         <CModalFooter>
           <CButton color="secondary" variant="ghost" onClick={onClose} disabled={loading}>
             Cancelar
           </CButton>
-          <CButton color="primary" type="submit" disabled={loading}>
-            {loading ? 'Eliminando...' : 'Aceptar'}
+          <CButton color="danger" className="text-white" type="submit" disabled={loading}>
+            {loading ? 'Eliminando...' : 'Eliminar'}
           </CButton>
         </CModalFooter>
       </CForm>

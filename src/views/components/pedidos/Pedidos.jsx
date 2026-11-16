@@ -13,6 +13,14 @@ import {
   CTableDataCell,
   CButton,
   CBadge,
+  CFormInput,
+  CFormSelect,
+  CPlaceholder,
+  CModal,
+  CModalHeader,
+  CModalTitle,
+  CModalBody,
+  CModalFooter,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import {
@@ -33,10 +41,20 @@ const Pedidos = () => {
   const [pedidos, setPedidos] = useState([])
   const [productos, setProductos] = useState([])
   const [cajas, setCajas] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  // Estados para control del Modal
+  // Filtros en tabla
+  const [busqueda, setBusqueda] = useState('')
+  const [filtroEstado, setFiltroEstado] = useState('Todos')
+
+  // Estados para control del Modal de formulario
   const [modalOpen, setModalOpen] = useState(false)
   const [pedidoAEditar, setPedidoAEditar] = useState(null)
+
+  // Estados para confirmación de Finalizar Pedido
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false)
+  const [pedidoACompletar, setPedidoACompletar] = useState(null)
+  const [completando, setCompletando] = useState(false)
 
   const notificar = (tipo, mensaje) => {
     switch (tipo) {
@@ -65,18 +83,22 @@ const Pedidos = () => {
   }
 
   const cargarPedidos = async () => {
+    setLoading(true)
     try {
       const respuesta = await api.get('/api/pedidos/?date=today', getAuthConfig())
-      setPedidos(respuesta.data)
+      setPedidos(Array.isArray(respuesta.data) ? respuesta.data : respuesta.data.results || [])
     } catch (error) {
       console.error('Error al cargar pedidos:', error)
+      notificar('error', 'No se pudieron cargar los pedidos del día.')
+    } finally {
+      setLoading(false)
     }
   }
 
   const cargarProductos = async () => {
     try {
       const respuesta = await api.get('/api/productos-listado/', getAuthConfig())
-      setProductos(respuesta.data)
+      setProductos(Array.isArray(respuesta.data) ? respuesta.data : respuesta.data.results || [])
     } catch (error) {
       console.error('Error al cargar productos:', error)
     }
@@ -85,7 +107,7 @@ const Pedidos = () => {
   const cargarCajas = async () => {
     try {
       const respuesta = await api.get('/api/cajas/?status=active', getAuthConfig())
-      setCajas(respuesta.data)
+      setCajas(Array.isArray(respuesta.data) ? respuesta.data : respuesta.data.results || [])
     } catch (error) {
       console.error('Error al cargar cajas:', error)
     }
@@ -104,21 +126,27 @@ const Pedidos = () => {
     })
   }
 
-  // Acción rápida en tabla para marcar como Finalizado
-  const handleCompletarRapido = async (pedido) => {
+  // Confirmar y marcar pedido como Finalizado
+  const confirmarCompletarPedido = async () => {
+    if (!pedidoACompletar) return
+    setCompletando(true)
     try {
       await api.patch(
-        `/api/pedidos/${pedido.id_pedidos}/`,
+        `/api/pedidos/${pedidoACompletar.id_pedidos}/`,
         {
           estado: 'Finalizado',
         },
         getAuthConfig()
       )
-      notificar('exito', `Pedido #${pedido.id_pedidos} marcado como Finalizado.`)
+      notificar('exito', `Pedido #${pedidoACompletar.id_pedidos} marcado como Finalizado.`)
+      setConfirmModalOpen(false)
+      setPedidoACompletar(null)
       cargarPedidos()
     } catch (error) {
       console.error('Error al finalizar pedido:', error.response?.data || error)
       notificar('error', 'No se pudo cambiar el estado del pedido.')
+    } finally {
+      setCompletando(false)
     }
   }
 
@@ -131,6 +159,21 @@ const Pedidos = () => {
     if (est.includes('cancelado')) return 'danger'
     return 'info'
   }
+
+  const pedidosFiltrados = pedidos.filter((pedido) => {
+    const coincideEstado =
+      filtroEstado === 'Todos' ||
+      (pedido.estado || '').toLowerCase() === filtroEstado.toLowerCase()
+
+    const termino = busqueda.trim().toLowerCase()
+    const coincideTexto =
+      !termino ||
+      (pedido.cliente || '').toLowerCase().includes(termino) ||
+      (pedido.direccion || '').toLowerCase().includes(termino) ||
+      String(pedido.id_pedidos).includes(termino)
+
+    return coincideEstado && coincideTexto
+  })
 
   return (
     <div>
@@ -162,7 +205,29 @@ const Pedidos = () => {
         {/* SECCIÓN PRINCIPAL: Tabla de Pedidos */}
         <CCol xs={12}>
           <CCard className="mb-4 shadow-sm">
-            <CCardHeader className="bg-body-secondary fw-bold">Listado de Pedidos del Día</CCardHeader>
+            <CCardHeader className="bg-body-secondary d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
+              <span className="fw-bold">Listado de Pedidos del Día</span>
+              <div className="d-flex align-items-center gap-2" style={{ maxWidth: '450px', width: '100%' }}>
+                <CFormInput
+                  type="text"
+                  size="sm"
+                  placeholder="Buscar por cliente, mesa o #ID..."
+                  value={busqueda}
+                  onChange={(e) => setBusqueda(e.target.value)}
+                />
+                <CFormSelect
+                  size="sm"
+                  style={{ maxWidth: '160px' }}
+                  value={filtroEstado}
+                  onChange={(e) => setFiltroEstado(e.target.value)}
+                >
+                  <option value="Todos">Todos</option>
+                  <option value="En proceso">En proceso</option>
+                  <option value="Finalizado">Finalizado</option>
+                  <option value="Cancelado">Cancelado</option>
+                </CFormSelect>
+              </div>
+            </CCardHeader>
             <CCardBody>
               <CTable align="middle" responsive hover bordered>
                 <CTableHead className="table-theme-header">
@@ -182,14 +247,61 @@ const Pedidos = () => {
                   </CTableRow>
                 </CTableHead>
                 <CTableBody>
-                  {pedidos.length === 0 ? (
+                  {loading ? (
+                    Array.from({ length: 5 }).map((_, idx) => (
+                      <CTableRow key={idx}>
+                        <CTableDataCell>
+                          <CPlaceholder animation="glow">
+                            <CPlaceholder xs={6} />
+                          </CPlaceholder>
+                        </CTableDataCell>
+                        <CTableDataCell>
+                          <CPlaceholder animation="glow">
+                            <CPlaceholder xs={8} />
+                          </CPlaceholder>
+                        </CTableDataCell>
+                        <CTableDataCell>
+                          <CPlaceholder animation="glow">
+                            <CPlaceholder xs={8} />
+                          </CPlaceholder>
+                        </CTableDataCell>
+                        <CTableDataCell>
+                          <CPlaceholder animation="glow">
+                            <CPlaceholder xs={10} />
+                          </CPlaceholder>
+                        </CTableDataCell>
+                        <CTableDataCell className="text-end">
+                          <CPlaceholder animation="glow">
+                            <CPlaceholder xs={6} />
+                          </CPlaceholder>
+                        </CTableDataCell>
+                        <CTableDataCell className="text-center">
+                          <CPlaceholder animation="glow">
+                            <CPlaceholder xs={7} className="rounded-pill" />
+                          </CPlaceholder>
+                        </CTableDataCell>
+                        <CTableDataCell className="text-center">
+                          <CPlaceholder animation="glow">
+                            <CPlaceholder xs={8} className="rounded-pill" />
+                          </CPlaceholder>
+                        </CTableDataCell>
+                        <CTableDataCell className="text-center">
+                          <CPlaceholder animation="glow">
+                            <CPlaceholder xs={8} />
+                          </CPlaceholder>
+                        </CTableDataCell>
+                      </CTableRow>
+                    ))
+                  ) : pedidosFiltrados.length === 0 ? (
                     <CTableRow>
                       <CTableDataCell colSpan={8} className="text-center text-body-secondary py-4">
-                        No hay pedidos registrados hoy.
+                        {pedidos.length === 0
+                          ? 'No hay pedidos registrados hoy.'
+                          : 'No se encontraron pedidos con los filtros seleccionados.'}
                       </CTableDataCell>
                     </CTableRow>
                   ) : (
-                    pedidos.map((pedido) => {
+                    pedidosFiltrados.map((pedido) => {
                       const detalles = pedido.pedido_detalle || []
                       const resumenItems =
                         detalles.length > 0
@@ -197,6 +309,10 @@ const Pedidos = () => {
                               .map((d) => `${d.cantidad}x ${d.producto?.nombre}`)
                               .join(', ')}`
                           : 'Sin detalles'
+
+                      const esCancelado = (pedido.estado || '').toLowerCase() === 'cancelado'
+                      const esFinalizado = (pedido.estado || '').toLowerCase() === 'finalizado'
+                      const bloquearEdicion = esCancelado || (esFinalizado && pedido.pagado)
 
                       return (
                         <CTableRow key={pedido.id_pedidos}>
@@ -225,20 +341,28 @@ const Pedidos = () => {
                               size="sm"
                               variant="outline"
                               className="me-1"
+                              disabled={bloquearEdicion}
                               onClick={() => {
                                 setPedidoAEditar(pedido)
                                 setModalOpen(true)
                               }}
-                              title="Ver y Modificar Pedido"
+                              title={
+                                bloquearEdicion
+                                  ? 'No se puede modificar un pedido cancelado o finalizado y pagado'
+                                  : 'Ver y Modificar Pedido'
+                              }
                             >
                               <CIcon icon={cilPencil} className="me-1" /> Editar
                             </CButton>
-                            {pedido.estado !== 'Finalizado' && (
+                            {!esFinalizado && !esCancelado && (
                               <CButton
                                 color="success"
                                 size="sm"
                                 variant="outline"
-                                onClick={() => handleCompletarRapido(pedido)}
+                                onClick={() => {
+                                  setPedidoACompletar(pedido)
+                                  setConfirmModalOpen(true)
+                                }}
                               >
                                 <CIcon icon={cilCheckCircle} className="me-1" /> Completar
                               </CButton>
@@ -264,6 +388,39 @@ const Pedidos = () => {
         cajas={cajas}
         onSuccess={cargarPedidos}
       />
+
+      {/* MODAL DE CONFIRMACIÓN PARA COMPLETAR PEDIDO */}
+      <CModal
+        visible={confirmModalOpen}
+        onClose={() => !completando && setConfirmModalOpen(false)}
+        backdrop="static"
+      >
+        <CModalHeader>
+          <CModalTitle className="fw-semibold">Confirmar Finalización</CModalTitle>
+        </CModalHeader>
+        <CModalBody>
+          ¿Deseas marcar el pedido <strong>#{pedidoACompletar?.id_pedidos}</strong> de{' '}
+          <strong>{pedidoACompletar?.cliente}</strong> como <strong>Finalizado</strong>?
+        </CModalBody>
+        <CModalFooter>
+          <CButton
+            color="secondary"
+            variant="ghost"
+            onClick={() => setConfirmModalOpen(false)}
+            disabled={completando}
+          >
+            Cancelar
+          </CButton>
+          <CButton
+            color="success"
+            className="text-white"
+            onClick={confirmarCompletarPedido}
+            disabled={completando}
+          >
+            {completando ? 'Finalizando...' : 'Confirmar'}
+          </CButton>
+        </CModalFooter>
+      </CModal>
     </div>
   )
 }

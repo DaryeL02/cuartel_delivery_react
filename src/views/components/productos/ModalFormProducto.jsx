@@ -17,15 +17,18 @@ import {
 import { toast } from 'react-toastify'
 import api from '../api/api'
 
+const MAX_PRECIO = 9999999.99 // Límite exacto para DECIMAL(9,2)
+
 const ModalFormProducto = ({ visible, onClose, producto, insumos_lista, onSuccess }) => {
   const [data, setData] = useState({
     nombre: '',
     descripcion: '',
-    precio_unitario: 0,
+    precio_unitario: '',
     estado: true,
     insumos: [],
   })
 
+  const [errores, setErrores] = useState({})
   const [loading, setLoading] = useState(false)
   const modoEditar = !!producto
 
@@ -46,11 +49,12 @@ const ModalFormProducto = ({ visible, onClose, producto, insumos_lista, onSucces
   }
 
   useEffect(() => {
+    setErrores({})
     if (modoEditar && producto) {
       setData({
         nombre: producto.nombre || '',
         descripcion: producto.descripcion || '',
-        precio_unitario: producto.precio_unitario || 0,
+        precio_unitario: producto.precio_unitario !== undefined && producto.precio_unitario !== null ? String(producto.precio_unitario) : '',
         estado: producto.estado ?? true,
         insumos: producto.insumos_asociados
           ? producto.insumos_asociados.map((item) => item.insumo.id_insumos)
@@ -60,7 +64,7 @@ const ModalFormProducto = ({ visible, onClose, producto, insumos_lista, onSucces
       setData({
         nombre: '',
         descripcion: '',
-        precio_unitario: 0,
+        precio_unitario: '',
         estado: true,
         insumos: [],
       })
@@ -70,10 +74,71 @@ const ModalFormProducto = ({ visible, onClose, producto, insumos_lista, onSucces
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
 
+    if (name === 'precio_unitario') {
+      // Normaliza coma a punto si el usuario escribe coma decimal
+      const valorNormalizado = value.replace(',', '.')
+      // Solo permite dígitos (máximo 7) y un punto opcional con máximo 2 decimales
+      const regexDecimal92 = /^\d{0,7}(\.\d{0,2})?$/
+      if (valorNormalizado !== '' && !regexDecimal92.test(valorNormalizado)) {
+        return
+      }
+      setData((prev) => ({
+        ...prev,
+        precio_unitario: valorNormalizado,
+      }))
+      if (errores.precio_unitario) {
+        setErrores((prev) => ({ ...prev, precio_unitario: null }))
+      }
+      return
+    }
+
     setData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }))
+
+    if (errores[name]) {
+      setErrores((prev) => ({ ...prev, [name]: null }))
+    }
+  }
+
+  const handleKeyDownPrecio = (e) => {
+    const teclasPermitidas = [
+      'Backspace',
+      'Delete',
+      'Tab',
+      'Escape',
+      'Enter',
+      'ArrowLeft',
+      'ArrowRight',
+      'ArrowUp',
+      'ArrowDown',
+      'Home',
+      'End',
+    ]
+
+    if (teclasPermitidas.includes(e.key) || e.ctrlKey || e.metaKey) {
+      return
+    }
+
+    // Permite dígitos del 0 al 9 y un único punto o coma decimal
+    if (/^[0-9]$/.test(e.key)) {
+      return
+    }
+
+    if ((e.key === '.' || e.key === ',') && !String(data.precio_unitario).includes('.')) {
+      return
+    }
+
+    e.preventDefault()
+  }
+
+  const handlePastePrecio = (e) => {
+    const textoPegado = e.clipboardData.getData('text').replace(',', '.').trim()
+    const regexDecimal92 = /^\d{1,7}(\.\d{1,2})?$/
+    if (!regexDecimal92.test(textoPegado)) {
+      e.preventDefault()
+    }
   }
 
   const handleInsumoCheck = (idInsumo) => {
@@ -88,24 +153,54 @@ const ModalFormProducto = ({ visible, onClose, producto, insumos_lista, onSucces
         insumos: nuevosInsumos,
       }
     })
+
+    if (errores.insumos) {
+      setErrores((prev) => ({ ...prev, insumos: null }))
+    }
+  }
+
+  const validarFormulario = () => {
+    const nuevosErrores = {}
+    const nombreLimpio = data.nombre.trim()
+    const precioNum = Number(data.precio_unitario)
+
+    if (!nombreLimpio) {
+      nuevosErrores.nombre = 'El nombre del producto es obligatorio.'
+    } else if (nombreLimpio.length < 3) {
+      nuevosErrores.nombre = 'El nombre debe tener al menos 3 caracteres.'
+    } else if (!/[a-zA-ZÀ-ÿ]/.test(nombreLimpio)) {
+      nuevosErrores.nombre = 'El nombre debe contener al menos una letra.'
+    }
+
+    if (data.precio_unitario === '' || isNaN(precioNum) || precioNum <= 0) {
+      nuevosErrores.precio_unitario = 'Ingresa un precio mayor a $0.00.'
+    } else if (precioNum > MAX_PRECIO) {
+      nuevosErrores.precio_unitario = `El precio no puede superar $${MAX_PRECIO.toLocaleString('es-AR')}.`
+    }
+
+    if (data.insumos.length === 0) {
+      nuevosErrores.insumos = 'Debes seleccionar al menos un insumo para el producto.'
+    }
+
+    setErrores(nuevosErrores)
+    return Object.keys(nuevosErrores).length === 0
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    if (!data.nombre.trim()) {
-      notificar('advertencia', 'Ingresa el nombre del producto.')
-      return
-    }
-    if (data.precio_unitario === '' || Number(data.precio_unitario) <= 0) {
-      notificar('advertencia', 'Ingresa un precio unitario mayor a 0.')
+    if (!validarFormulario()) {
+      notificar('advertencia', 'Por favor, corrige los campos marcados antes de guardar.')
       return
     }
 
     setLoading(true)
 
     const payload = {
-      ...data,
+      nombre: data.nombre.trim(),
+      descripcion: data.descripcion.trim(),
+      precio_unitario: Number(data.precio_unitario).toFixed(2),
+      estado: data.estado,
       insumos: data.insumos.map((id) => ({ id_insumos: id })),
     }
 
@@ -126,12 +221,13 @@ const ModalFormProducto = ({ visible, onClose, producto, insumos_lista, onSucces
       onClose()
     } catch (error) {
       console.error('Error al guardar el producto:', error)
-      notificar(
-        'error',
-        modoEditar
+      const mensajeBackend =
+        error.response?.data?.nombre?.[0] ||
+        error.response?.data?.detail ||
+        (modoEditar
           ? 'No se pudo actualizar el producto. Por favor, intenta nuevamente.'
-          : 'No se pudo registrar el producto. Por favor, intenta nuevamente.'
-      )
+          : 'No se pudo registrar el producto. Por favor, intenta nuevamente.')
+      notificar('error', mensajeBackend)
     } finally {
       setLoading(false)
     }
@@ -147,34 +243,39 @@ const ModalFormProducto = ({ visible, onClose, producto, insumos_lista, onSucces
       <CForm onSubmit={handleSubmit} noValidate>
         <CModalBody>
           <CRow className="g-3">
-            {/* Nombre del Producto */}
+            {/* Nombre del Producto - VARCHAR(100) */}
             <CCol md={8}>
               <CFormInput
                 type="text"
                 label="Nombre del Producto"
                 name="nombre"
-                maxLength={50}
+                maxLength={100}
                 value={data.nombre}
                 onChange={handleChange}
+                invalid={!!errores.nombre}
+                feedbackInvalid={errores.nombre}
                 placeholder="Ej. Hamburguesa Completa"
               />
             </CCol>
 
-            {/* Precio Unitario */}
+            {/* Precio Unitario - DECIMAL(9,2) */}
             <CCol md={4}>
               <CFormInput
-                type="number"
+                type="text"
+                inputMode="decimal"
                 label="Precio Unitario ($)"
                 name="precio_unitario"
-                min={0}
-                step="0.01"
                 value={data.precio_unitario}
+                onKeyDown={handleKeyDownPrecio}
+                onPaste={handlePastePrecio}
                 onChange={handleChange}
+                invalid={!!errores.precio_unitario}
+                feedbackInvalid={errores.precio_unitario}
                 placeholder="0.00"
               />
             </CCol>
 
-            {/* Descripción */}
+            {/* Descripción - VARCHAR(200) */}
             <CCol md={12}>
               <CFormTextarea
                 label="Descripción"
@@ -185,17 +286,24 @@ const ModalFormProducto = ({ visible, onClose, producto, insumos_lista, onSucces
                 onChange={handleChange}
                 placeholder="Detalles específicos del producto final..."
               />
+              <div className="d-flex justify-content-end">
+                <small className="text-body-secondary">{data.descripcion.length}/200</small>
+              </div>
             </CCol>
 
             {/* Selección de Insumos Asociados */}
             <CCol md={12}>
               <label className="form-label fw-medium text-body-secondary">Insumos del Producto</label>
               <div
-                className="border rounded p-3 bg-body-secondary"
+                className={`border rounded p-3 bg-body-secondary ${
+                  errores.insumos ? 'border-danger' : ''
+                }`}
                 style={{ maxHeight: '180px', overflowY: 'auto' }}
               >
                 {insumos_lista.length === 0 ? (
-                  <p className="text-body-secondary small mb-0">No hay insumos disponibles para asociar.</p>
+                  <p className="text-body-secondary small mb-0">
+                    No hay insumos disponibles para asociar.
+                  </p>
                 ) : (
                   <CRow>
                     {insumos_lista.map((insumo) => (
@@ -211,9 +319,13 @@ const ModalFormProducto = ({ visible, onClose, producto, insumos_lista, onSucces
                   </CRow>
                 )}
               </div>
-              <small className="text-body-secondary mt-1 d-block">
-                Selecciona todos los insumos necesarios para la elaboración de este producto.
-              </small>
+              {errores.insumos ? (
+                <div className="text-danger small mt-1">{errores.insumos}</div>
+              ) : (
+                <small className="text-body-secondary mt-1 d-block">
+                  Selecciona todos los insumos necesarios para la elaboración de este producto.
+                </small>
+              )}
             </CCol>
           </CRow>
           <CRow className="align-items-center mt-2">

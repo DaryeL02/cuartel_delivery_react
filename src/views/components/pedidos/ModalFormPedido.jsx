@@ -9,6 +9,8 @@ import {
   CForm,
   CFormSelect,
   CFormInput,
+  CFormText,
+  CAlert,
   CTable,
   CTableHead,
   CTableRow,
@@ -19,9 +21,12 @@ import {
   CCol,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
-import { cilFastfood, cilPencil, cilPlus, cilTrash } from '@coreui/icons'
+import { cilFastfood, cilPencil, cilPlus, cilMinus, cilTrash, cilWarning } from '@coreui/icons'
 import api from '../api/api'
 import { toast } from 'react-toastify'
+
+const MAX_DECIMAL_9_2 = 9999999.99
+const MAX_CANTIDAD_ITEM = 999
 
 const ModalFormPedido = ({ visible, onClose, pedido, productos, cajas, onSuccess }) => {
   const modoEditar = !!pedido
@@ -39,6 +44,8 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, cajas, onSuccess
     cantidad: '',
   })
 
+  const [errores, setErrores] = useState({})
+  const [erroresItem, setErroresItem] = useState({})
   const [loading, setLoading] = useState(false)
 
   const notificar = (tipo, mensaje) => {
@@ -57,8 +64,19 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, cajas, onSuccess
     }
   }
 
+  const cajasActivas = Array.isArray(cajas)
+    ? cajas.filter((c) => c.empleado_detalle && c.estado !== false)
+    : []
+
+  const productosActivos = Array.isArray(productos)
+    ? productos.filter((p) => p.estado !== false)
+    : []
+
   useEffect(() => {
     if (!visible) return
+
+    setErrores({})
+    setErroresItem({})
 
     if (modoEditar && pedido) {
       setData({
@@ -74,7 +92,7 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, cajas, onSuccess
         })),
       })
     } else {
-      const cajaConEmpleado = cajas.find((c) => c.empleado_detalle?.id_empleados)
+      const cajaConEmpleado = cajasActivas[0]
       setData({
         empleado: cajaConEmpleado ? cajaConEmpleado.empleado_detalle.id_empleados : '',
         cliente: '',
@@ -100,25 +118,55 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, cajas, onSuccess
       ...prev,
       [name]: value,
     }))
+
+    if (errores[name]) {
+      setErrores((prev) => ({ ...prev, [name]: null }))
+    }
+  }
+
+  const handleKeyDownCantidad = (e) => {
+    const teclasPermitidas = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Home', 'End']
+    if (teclasPermitidas.includes(e.key) || e.ctrlKey || e.metaKey) return
+    if (!/^[0-9]$/.test(e.key)) {
+      e.preventDefault()
+    }
   }
 
   const handleProductoChange = (e) => {
     const { name, value } = e.target
     if (name === 'cantidad') {
-      const soloNumeros = value.replace(/\D/g, '')
-      setProductoSeleccionado((prev) => ({ ...prev, cantidad: soloNumeros }))
+      const soloNumerosSinCeroInicial = value.replace(/\D/g, '').replace(/^0+/, '')
+      if (soloNumerosSinCeroInicial !== '' && Number(soloNumerosSinCeroInicial) > MAX_CANTIDAD_ITEM) {
+        return
+      }
+      setProductoSeleccionado((prev) => ({ ...prev, cantidad: soloNumerosSinCeroInicial }))
+      if (erroresItem.cantidad) {
+        setErroresItem((prev) => ({ ...prev, cantidad: null }))
+      }
       return
     }
+
     setProductoSeleccionado((prev) => ({ ...prev, [name]: value }))
+    if (erroresItem[name]) {
+      setErroresItem((prev) => ({ ...prev, [name]: null }))
+    }
   }
 
   const handleAgregarProducto = () => {
-    if (
-      !productoSeleccionado.producto ||
-      !productoSeleccionado.cantidad ||
-      Number(productoSeleccionado.cantidad) <= 0
-    ) {
-      notificar('advertencia', 'Selecciona un producto y una cantidad mayor a 0.')
+    const nuevosErroresItem = {}
+
+    if (!productoSeleccionado.producto) {
+      nuevosErroresItem.producto = 'Selecciona un producto.'
+    }
+    const cantidadNum = Number(productoSeleccionado.cantidad)
+    if (!productoSeleccionado.cantidad || isNaN(cantidadNum) || cantidadNum <= 0) {
+      nuevosErroresItem.cantidad = 'Ingresa una cantidad mayor a 0.'
+    } else if (cantidadNum > MAX_CANTIDAD_ITEM) {
+      nuevosErroresItem.cantidad = `Máximo ${MAX_CANTIDAD_ITEM} unidades.`
+    }
+
+    if (Object.keys(nuevosErroresItem).length > 0) {
+      setErroresItem(nuevosErroresItem)
       return
     }
 
@@ -127,26 +175,114 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, cajas, onSuccess
     )
     if (!productoCompleto) return
 
-    const cantidadNum = Number(productoSeleccionado.cantidad)
     const precioUnitario = Number(productoCompleto.precio_unitario)
-    const subtotal = cantidadNum * precioUnitario
+    const indiceExistente = data.detalles.findIndex(
+      (item) => String(item.producto?.id_productos) === String(productoCompleto.id_productos)
+    )
 
-    const nuevoDetalle = {
-      id_temporal: Date.now() + Math.random(),
-      producto: {
-        id_productos: productoCompleto.id_productos,
-        nombre: productoCompleto.nombre,
-        precio_unitario: precioUnitario,
-      },
-      cantidad: cantidadNum,
-      subtotal: subtotal,
+    if (indiceExistente !== -1) {
+      const itemActual = data.detalles[indiceExistente]
+      const nuevaCantidad = itemActual.cantidad + cantidadNum
+      if (nuevaCantidad > MAX_CANTIDAD_ITEM) {
+        notificar('advertencia', `La cantidad máxima por producto es ${MAX_CANTIDAD_ITEM} unidades.`)
+        return
+      }
+
+      const nuevoSubtotal = Number((nuevaCantidad * precioUnitario).toFixed(2))
+      if (nuevoSubtotal > MAX_DECIMAL_9_2) {
+        notificar('advertencia', 'El subtotal excede el límite máximo permitido.')
+        return
+      }
+
+      const totalProyectado =
+        data.detalles.reduce((acc, it, idx) => (idx === indiceExistente ? acc : acc + Number(it.subtotal)), 0) +
+        nuevoSubtotal
+
+      if (totalProyectado > MAX_DECIMAL_9_2) {
+        notificar('advertencia', 'El total del pedido excede el límite máximo permitido.')
+        return
+      }
+
+      const detallesActualizados = [...data.detalles]
+      detallesActualizados[indiceExistente] = {
+        ...itemActual,
+        cantidad: nuevaCantidad,
+        subtotal: nuevoSubtotal,
+      }
+
+      setData((prev) => ({ ...prev, detalles: detallesActualizados }))
+    } else {
+      const subtotal = Number((cantidadNum * precioUnitario).toFixed(2))
+      if (subtotal > MAX_DECIMAL_9_2) {
+        notificar('advertencia', 'El subtotal excede el límite máximo permitido.')
+        return
+      }
+
+      const totalProyectado =
+        data.detalles.reduce((acc, item) => acc + Number(item.subtotal), 0) + subtotal
+
+      if (totalProyectado > MAX_DECIMAL_9_2) {
+        notificar('advertencia', 'El total del pedido excede el límite máximo permitido.')
+        return
+      }
+
+      const nuevoDetalle = {
+        id_temporal: Date.now() + Math.random(),
+        producto: {
+          id_productos: productoCompleto.id_productos,
+          nombre: productoCompleto.nombre,
+          precio_unitario: precioUnitario,
+        },
+        cantidad: cantidadNum,
+        subtotal,
+      }
+
+      setData((prev) => ({
+        ...prev,
+        detalles: [...prev.detalles, nuevoDetalle],
+      }))
     }
 
-    setData((prev) => ({
-      ...prev,
-      detalles: [...prev.detalles, nuevoDetalle],
-    }))
     setProductoSeleccionado({ producto: '', cantidad: '' })
+    setErroresItem({})
+    if (errores.detalles) {
+      setErrores((prev) => ({ ...prev, detalles: null }))
+    }
+  }
+
+  const handleActualizarCantidadTabla = (idTemporal, delta) => {
+    setData((prev) => {
+      const nuevosDetalles = prev.detalles
+        .map((item) => {
+          if (item.id_temporal !== idTemporal) return item
+          const nuevaCantidad = item.cantidad + delta
+          if (nuevaCantidad <= 0) return null
+          if (nuevaCantidad > MAX_CANTIDAD_ITEM) {
+            notificar('advertencia', `Máximo ${MAX_CANTIDAD_ITEM} unidades por ítem.`)
+            return item
+          }
+          const precioUnitario = Number(item.producto?.precio_unitario || 0)
+          const nuevoSubtotal = Number((nuevaCantidad * precioUnitario).toFixed(2))
+          if (nuevoSubtotal > MAX_DECIMAL_9_2) {
+            notificar('advertencia', 'El subtotal excede el límite máximo permitido.')
+            return item
+          }
+          return {
+            ...item,
+            cantidad: nuevaCantidad,
+            subtotal: nuevoSubtotal,
+          }
+        })
+        .filter(Boolean)
+
+      const totalCheck = nuevosDetalles.reduce((acc, it) => acc + Number(it.subtotal), 0)
+      if (totalCheck > MAX_DECIMAL_9_2) {
+        notificar('advertencia', 'El total del pedido excede el límite máximo permitido.')
+        return prev
+      }
+
+      return { ...prev, detalles: nuevosDetalles }
+    })
   }
 
   const handleEliminarProducto = (idTemporal) => {
@@ -156,24 +292,40 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, cajas, onSuccess
     }))
   }
 
+  const validarFormulario = () => {
+    const nuevosErrores = {}
+    const clienteLimpio = data.cliente.trim()
+
+    if (!modoEditar && !data.empleado) {
+      nuevosErrores.empleado = 'Selecciona un empleado con caja activa.'
+    }
+
+    if (!clienteLimpio) {
+      nuevosErrores.cliente = 'El nombre del cliente es obligatorio.'
+    } else if (clienteLimpio.length < 2) {
+      nuevosErrores.cliente = 'El nombre debe tener al menos 2 caracteres.'
+    } else if (!/[a-zA-ZÀ-ÿ]/.test(clienteLimpio)) {
+      nuevosErrores.cliente = 'Ingresa un nombre válido (debe incluir al menos una letra).'
+    }
+
+    if (data.detalles.length === 0) {
+      nuevosErrores.detalles = 'Debes agregar al menos un producto al pedido.'
+    }
+
+    const totalCalculado = data.detalles.reduce((acc, item) => acc + Number(item.subtotal), 0)
+    if (totalCalculado > MAX_DECIMAL_9_2) {
+      nuevosErrores.detalles = 'El total del pedido supera el límite permitido por el sistema.'
+    }
+
+    setErrores(nuevosErrores)
+    return Object.keys(nuevosErrores).length === 0
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    if (!modoEditar && !data.empleado) {
-      notificar('advertencia', 'Selecciona un empleado/caja responsable.')
-      return
-    }
-    if (!data.cliente.trim()) {
-      notificar('advertencia', 'Ingresa el nombre del cliente.')
-      return
-    }
-    if (data.detalles.length === 0) {
-      notificar(
-        'advertencia',
-        modoEditar
-          ? 'El pedido debe tener al menos un producto.'
-          : 'Agrega al menos un producto al pedido.'
-      )
+    if (!validarFormulario()) {
+      notificar('advertencia', 'Por favor, revisa los campos marcados antes de guardar.')
       return
     }
 
@@ -189,8 +341,8 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, cajas, onSuccess
     try {
       if (modoEditar) {
         const payloadActualizacion = {
-          cliente: data.cliente,
-          direccion: data.direccion,
+          cliente: data.cliente.trim(),
+          direccion: data.direccion.trim(),
           estado: data.estado,
           detalles: detallesPayload,
         }
@@ -199,8 +351,8 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, cajas, onSuccess
       } else {
         const payloadNuevo = {
           empleado: Number(data.empleado),
-          cliente: data.cliente,
-          direccion: data.direccion,
+          cliente: data.cliente.trim(),
+          direccion: data.direccion.trim(),
           estado: 'En proceso',
           detalles: detallesPayload,
         }
@@ -215,18 +367,20 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, cajas, onSuccess
         modoEditar ? 'Error al actualizar pedido:' : 'Error al crear pedido:',
         error.response?.data || error
       )
-      notificar(
-        'error',
-        modoEditar
+      const mensajeError =
+        error.response?.data?.detail ||
+        error.response?.data?.non_field_errors?.[0] ||
+        (modoEditar
           ? 'Error al modificar el pedido. Por favor, intenta nuevamente.'
-          : 'Error al guardar el pedido. Por favor, intenta nuevamente.'
-      )
+          : 'Error al guardar el pedido. Por favor, intenta nuevamente.')
+      notificar('error', mensajeError)
     } finally {
       setLoading(false)
     }
   }
 
   const totalPedido = data.detalles.reduce((acc, item) => acc + Number(item.subtotal), 0)
+  const sinCajasActivas = !modoEditar && cajasActivas.length === 0
 
   return (
     <CModal visible={visible} onClose={onClose} backdrop="static" size="lg">
@@ -246,8 +400,25 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, cajas, onSuccess
         </CModalTitle>
       </CModalHeader>
 
-      <CForm onSubmit={handleSubmit}>
+      <CForm onSubmit={handleSubmit} noValidate>
         <CModalBody>
+          {sinCajasActivas && (
+            <CAlert color="warning" className="d-flex align-items-center mb-3">
+              <CIcon icon={cilWarning} className="me-2 flex-shrink-0" size="lg" />
+              <div>
+                No hay ninguna <strong>caja abierta</strong> en este momento. Debes abrir una caja
+                antes de poder registrar nuevos pedidos.
+              </div>
+            </CAlert>
+          )}
+
+          {modoEditar && pedido?.pagado && (
+            <CAlert color="info" className="py-2 small mb-3">
+              Este pedido ya se encuentra marcado como <strong>Pagado</strong>. Verifica cualquier
+              modificación en los ítems con caja.
+            </CAlert>
+          )}
+
           {/* DATOS DE CABECERA DEL PEDIDO */}
           <div className={modoEditar ? 'p-3 bg-body-secondary rounded mb-3 border' : 'mb-3'}>
             <CRow className="g-3">
@@ -258,38 +429,46 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, cajas, onSuccess
                     name="empleado"
                     value={data.empleado}
                     onChange={handleChange}
+                    invalid={!!errores.empleado}
+                    feedbackInvalid={errores.empleado}
+                    disabled={sinCajasActivas}
                   >
                     <option value="">-- Seleccione empleado --</option>
-                    {cajas
-                      .filter((c) => c.empleado_detalle)
-                      .map((caja) => (
-                        <option key={caja.id_cajas} value={caja.empleado_detalle.id_empleados}>
-                          {caja.empleado_detalle.nombre} {caja.empleado_detalle.apellido} (Caja #
-                          {caja.id_cajas})
-                        </option>
-                      ))}
+                    {cajasActivas.map((caja) => (
+                      <option key={caja.id_cajas} value={caja.empleado_detalle.id_empleados}>
+                        {caja.empleado_detalle.nombre} {caja.empleado_detalle.apellido} (Caja #
+                        {caja.id_cajas})
+                      </option>
+                    ))}
                   </CFormSelect>
                 </CCol>
               )}
 
               <CCol md={4}>
                 <CFormInput
+                  type="text"
                   label={modoEditar ? 'Cliente' : 'Nombre del Cliente'}
                   name="cliente"
+                  maxLength={50}
                   placeholder="Ej: Juan Pérez"
                   value={data.cliente}
                   onChange={handleChange}
+                  invalid={!!errores.cliente}
+                  feedbackInvalid={errores.cliente}
                 />
               </CCol>
 
               <CCol md={4}>
                 <CFormInput
+                  type="text"
                   label={modoEditar ? 'Ubicación / Dirección' : 'Dirección / Mesa'}
                   name="direccion"
+                  maxLength={200}
                   placeholder="Ej: Mesa 2 o Av. San Martín 1234"
                   value={data.direccion}
                   onChange={handleChange}
                 />
+                <CFormText className="text-end">{data.direccion.length}/200</CFormText>
               </CCol>
 
               {modoEditar && (
@@ -313,16 +492,18 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, cajas, onSuccess
           <h6 className="fw-bold text-body-secondary mb-3">Agregar Productos al Pedido</h6>
 
           {/* SELECTOR DE PRODUCTOS */}
-          <CRow className="g-2 align-items-end mb-3">
+          <CRow className="g-2 align-items-start mb-3">
             <CCol md={7}>
               <CFormSelect
                 label="Seleccionar Producto"
                 name="producto"
                 value={productoSeleccionado.producto}
                 onChange={handleProductoChange}
+                invalid={!!erroresItem.producto}
+                feedbackInvalid={erroresItem.producto}
               >
                 <option value="">-- Seleccione un producto --</option>
-                {productos.map((item) => (
+                {productosActivos.map((item) => (
                   <option key={item.id_productos} value={item.id_productos}>
                     {item.nombre} (${formatearMoneda(item.precio_unitario)})
                   </option>
@@ -332,19 +513,26 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, cajas, onSuccess
             <CCol md={3}>
               <CFormInput
                 type="text"
+                inputMode="numeric"
                 label="Cantidad"
-                placeholder="Cantidad"
+                placeholder="Ej: 1"
                 name="cantidad"
+                maxLength={3}
                 value={productoSeleccionado.cantidad}
+                onKeyDown={handleKeyDownCantidad}
                 onChange={handleProductoChange}
+                invalid={!!erroresItem.cantidad}
+                feedbackInvalid={erroresItem.cantidad}
               />
             </CCol>
-            <CCol md={2}>
+            <CCol md={2} className="d-flex flex-column">
+              <label className="form-label d-none d-md-block invisible">Agregar</label>
               <CButton
                 type="button"
                 color="primary"
                 className="w-100"
                 onClick={handleAgregarProducto}
+                title="Agregar producto al pedido"
               >
                 <CIcon icon={cilPlus} />
               </CButton>
@@ -353,40 +541,91 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, cajas, onSuccess
 
           {/* TABLA DE ÍTEMS DEL PEDIDO */}
           {modoEditar && <h6 className="fw-bold mb-2">Ítems del Pedido</h6>}
-          <CTable small={!modoEditar} responsive align="middle" hover bordered className="mt-2">
+          {errores.detalles && (
+            <CAlert color="danger" className="py-2 small mb-2">
+              {errores.detalles}
+            </CAlert>
+          )}
+          <CTable
+            small={!modoEditar}
+            responsive
+            align="middle"
+            hover
+            bordered
+            className={`mt-2 ${errores.detalles ? 'border-danger' : ''}`}
+          >
             <CTableHead className="table-theme-header">
               <CTableRow>
                 <CTableHeaderCell>Producto</CTableHeaderCell>
-                <CTableHeaderCell className="text-center">Cantidad</CTableHeaderCell>
+                <CTableHeaderCell className="text-center" style={{ width: '150px' }}>
+                  Cantidad
+                </CTableHeaderCell>
                 <CTableHeaderCell className="text-end">Precio U.</CTableHeaderCell>
                 <CTableHeaderCell className="text-end">Subtotal</CTableHeaderCell>
                 <CTableHeaderCell className="text-center">Acción</CTableHeaderCell>
               </CTableRow>
             </CTableHead>
             <CTableBody>
-              {data.detalles.map((item) => (
-                <CTableRow key={item.id_temporal}>
-                  <CTableDataCell>{item.producto?.nombre}</CTableDataCell>
-                  <CTableDataCell className="text-center">{item.cantidad}</CTableDataCell>
-                  <CTableDataCell className="text-end">
-                    ${formatearMoneda(item.producto?.precio_unitario)}
-                  </CTableDataCell>
-                  <CTableDataCell className="text-end fw-bold">
-                    ${formatearMoneda(item.subtotal)}
-                  </CTableDataCell>
-                  <CTableDataCell className="text-center">
-                    <CButton
-                      type="button"
-                      color="danger"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEliminarProducto(item.id_temporal)}
-                    >
-                      <CIcon icon={cilTrash} />
-                    </CButton>
+              {data.detalles.length === 0 ? (
+                <CTableRow>
+                  <CTableDataCell colSpan={5} className="text-center text-body-secondary py-3">
+                    Aún no hay productos agregados al pedido.
                   </CTableDataCell>
                 </CTableRow>
-              ))}
+              ) : (
+                data.detalles.map((item) => (
+                  <CTableRow key={item.id_temporal}>
+                    <CTableDataCell>{item.producto?.nombre}</CTableDataCell>
+                    <CTableDataCell className="text-center">
+                      <div className="d-inline-flex align-items-center gap-2">
+                        <CButton
+                          type="button"
+                          color="secondary"
+                          variant="outline"
+                          size="sm"
+                          className="px-2 py-0"
+                          onClick={() => handleActualizarCantidadTabla(item.id_temporal, -1)}
+                          title="Disminuir cantidad"
+                        >
+                          <CIcon icon={cilMinus} size="sm" />
+                        </CButton>
+                        <span className="fw-semibold" style={{ minWidth: '24px' }}>
+                          {item.cantidad}
+                        </span>
+                        <CButton
+                          type="button"
+                          color="secondary"
+                          variant="outline"
+                          size="sm"
+                          className="px-2 py-0"
+                          onClick={() => handleActualizarCantidadTabla(item.id_temporal, 1)}
+                          title="Aumentar cantidad"
+                        >
+                          <CIcon icon={cilPlus} size="sm" />
+                        </CButton>
+                      </div>
+                    </CTableDataCell>
+                    <CTableDataCell className="text-end">
+                      ${formatearMoneda(item.producto?.precio_unitario)}
+                    </CTableDataCell>
+                    <CTableDataCell className="text-end fw-bold">
+                      ${formatearMoneda(item.subtotal)}
+                    </CTableDataCell>
+                    <CTableDataCell className="text-center">
+                      <CButton
+                        type="button"
+                        color="danger"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEliminarProducto(item.id_temporal)}
+                        title="Quitar producto"
+                      >
+                        <CIcon icon={cilTrash} />
+                      </CButton>
+                    </CTableDataCell>
+                  </CTableRow>
+                ))
+              )}
             </CTableBody>
           </CTable>
 
@@ -409,7 +648,7 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, cajas, onSuccess
             type="submit"
             color={modoEditar ? 'success' : 'primary'}
             className={modoEditar ? 'text-white' : ''}
-            disabled={loading}
+            disabled={loading || sinCajasActivas}
           >
             {loading
               ? 'Guardando...'

@@ -75,7 +75,6 @@ const Empleados = ({ onOpenModal }) => {
         },
       })
 
-      // Soporta respuesta paginada de Django REST Framework ({ count, results }) o un arreglo directo
       if (Array.isArray(respuesta.data)) {
         setEmpleados(respuesta.data)
         setTotalEmpleados(respuesta.data.length)
@@ -99,7 +98,7 @@ const Empleados = ({ onOpenModal }) => {
           Authorization: `Token ${token}`,
         },
       })
-      setLocales(respuesta.data)
+      setLocales(Array.isArray(respuesta.data) ? respuesta.data : respuesta.data.results || [])
     } catch (error) {
       console.error('Error al cargar locales:', error)
       notificar('error', 'No se pudieron cargar los locales.')
@@ -114,7 +113,7 @@ const Empleados = ({ onOpenModal }) => {
           Authorization: `Token ${token}`,
         },
       })
-      setRoles(respuesta.data)
+      setRoles(Array.isArray(respuesta.data) ? respuesta.data : respuesta.data.results || [])
     } catch (error) {
       console.error('Error al cargar roles:', error)
       notificar('error', 'No se pudieron cargar los roles.')
@@ -130,7 +129,6 @@ const Empleados = ({ onOpenModal }) => {
     cargarRoles()
   }, [])
 
-  // Consulta al backend cada vez que cambia la página o la búsqueda (con debounce para no saturar al escribir)
   useEffect(() => {
     const timer = setTimeout(() => {
       cargarEmpleados(paginaActual, busqueda)
@@ -274,94 +272,105 @@ const Empleados = ({ onOpenModal }) => {
                       ))
                     ) : empleados.length > 0 ? (
                       <>
-                        {empleados.map((empleado) => (
-                          <CTableRow key={empleado.id_empleados} style={{ height: '56px' }}>
-                            <CTableDataCell className="text-center text-body-secondary fw-medium">
-                              {empleado.id_empleados}
-                            </CTableDataCell>
+                        {empleados.map((empleado, index) => {
+                          const rolNombre =
+                            empleado.usuario_detalle?.roles_asignados?.[0]?.rol_detalle?.nombre
 
-                            <CTableDataCell>
-                              <div className="d-flex align-items-center gap-3">
-                                <CAvatar
-                                  color="light"
-                                  text={empleado.nombre.charAt(0)}
-                                  className="fw-semibold text-primary"
-                                />
-                                <div>
-                                  <div className="fw-semibold text-body">
-                                    {empleado.nombre} {empleado.apellido}
-                                  </div>
-                                  <div className="small text-body-secondary">
-                                    {empleado.usuario_detalle?.roles_asignados?.[0]?.rol_detalle
-                                      ?.nombre || 'Sin rol'}
+                          return (
+                            <CTableRow key={empleado.id_empleados} style={{ height: '56px' }}>
+                              <CTableDataCell className="text-center text-body-secondary fw-medium">
+                                {(paginaActual - 1) * registrosPorPagina + index + 1}
+                              </CTableDataCell>
+
+                              <CTableDataCell>
+                                <div className="d-flex align-items-center gap-3">
+                                  <CAvatar
+                                    color="light"
+                                    text={empleado.nombre ? empleado.nombre.charAt(0).toUpperCase() : '?'}
+                                    className="fw-semibold text-primary"
+                                  />
+                                  <div>
+                                    <div className="fw-semibold text-body">
+                                      {empleado.nombre} {empleado.apellido}
+                                    </div>
+                                    <div className="small text-body-secondary">
+                                      {rolNombre ? (
+                                        rolNombre
+                                      ) : (
+                                        <CBadge color="secondary" shape="rounded-pill">
+                                          Sin rol
+                                        </CBadge>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            </CTableDataCell>
+                              </CTableDataCell>
 
-                            <CTableDataCell className="text-nowrap text-body-secondary">
-                              {empleado.dni}
-                            </CTableDataCell>
+                              <CTableDataCell className="text-nowrap text-body-secondary">
+                                {empleado.dni}
+                              </CTableDataCell>
 
-                            <CTableDataCell className="text-nowrap text-body-secondary">
-                              {empleado.telefono}
-                            </CTableDataCell>
+                              <CTableDataCell className="text-nowrap text-body-secondary">
+                                {empleado.telefono}
+                              </CTableDataCell>
 
-                            <CTableDataCell
-                              className="text-body-secondary text-truncate"
-                              style={{ maxWidth: '200px' }}
-                            >
-                              {empleado.domicilio}
-                            </CTableDataCell>
+                              <CTableDataCell
+                                className="text-body-secondary text-truncate"
+                                style={{ maxWidth: '200px' }}
+                                title={empleado.domicilio}
+                              >
+                                {empleado.domicilio}
+                              </CTableDataCell>
 
-                            <CTableDataCell
-                              className="text-body-secondary text-truncate"
-                              style={{ maxWidth: '200px' }}
-                            >
-                              {empleado.local_detalle?.nombre}
-                            </CTableDataCell>
+                              <CTableDataCell
+                                className="text-body-secondary text-truncate"
+                                style={{ maxWidth: '200px' }}
+                              >
+                                {empleado.local_detalle?.nombre}
+                              </CTableDataCell>
 
-                            <CTableDataCell className="text-center">
-                              <CBadge color={getBadgeColor(empleado.estado)} shape="rounded-pill">
-                                {empleado.estado ? 'Activo' : 'Inactivo'}
-                              </CBadge>
-                            </CTableDataCell>
+                              <CTableDataCell className="text-center">
+                                <CBadge color={getBadgeColor(empleado.estado)} shape="rounded-pill">
+                                  {empleado.estado ? 'Activo' : 'Inactivo'}
+                                </CBadge>
+                              </CTableDataCell>
 
-                            <CTableDataCell className="text-center">
-                              <CDropdown alignment="end">
-                                <CDropdownToggle
-                                  color="transparent"
-                                  caret={false}
-                                  className="p-0 border-0 shadow-none"
-                                >
-                                  <CIcon icon={cilOptions} className="text-body-secondary" size="lg" />
-                                </CDropdownToggle>
-                                <CDropdownMenu>
-                                  <CDropdownItem
-                                    onClick={() => {
-                                      setEmpleadoAEditar(empleado)
-                                      setModalOpen(true)
-                                    }}
-                                    className="d-flex align-items-center gap-2"
+                              <CTableDataCell className="text-center">
+                                <CDropdown alignment="end">
+                                  <CDropdownToggle
+                                    color="transparent"
+                                    caret={false}
+                                    className="p-0 border-0 shadow-none"
                                   >
-                                    <CIcon icon={cilPencil} className="text-info" />
-                                    Editar
-                                  </CDropdownItem>
-                                  <CDropdownItem
-                                    onClick={() => {
-                                      setEmpleadoAEditar(empleado)
-                                      setDeleteModalOpen(true)
-                                    }}
-                                    className="d-flex align-items-center gap-2 text-danger"
-                                  >
-                                    <CIcon icon={cilTrash} />
-                                    Eliminar
-                                  </CDropdownItem>
-                                </CDropdownMenu>
-                              </CDropdown>
-                            </CTableDataCell>
-                          </CTableRow>
-                        ))}
+                                    <CIcon icon={cilOptions} className="text-body-secondary" size="lg" />
+                                  </CDropdownToggle>
+                                  <CDropdownMenu>
+                                    <CDropdownItem
+                                      onClick={() => {
+                                        setEmpleadoAEditar(empleado)
+                                        setModalOpen(true)
+                                      }}
+                                      className="d-flex align-items-center gap-2"
+                                    >
+                                      <CIcon icon={cilPencil} className="text-info" />
+                                      Editar
+                                    </CDropdownItem>
+                                    <CDropdownItem
+                                      onClick={() => {
+                                        setEmpleadoAEditar(empleado)
+                                        setDeleteModalOpen(true)
+                                      }}
+                                      className="d-flex align-items-center gap-2 text-danger"
+                                    >
+                                      <CIcon icon={cilTrash} />
+                                      Eliminar
+                                    </CDropdownItem>
+                                  </CDropdownMenu>
+                                </CDropdown>
+                              </CTableDataCell>
+                            </CTableRow>
+                          )
+                        })}
                         {Array.from({ length: filasVacias }).map((_, index) => (
                           <CTableRow
                             key={`empty-${index}`}
