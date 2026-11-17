@@ -15,10 +15,12 @@ import {
 } from '@coreui/react'
 import api from '../api/api'
 
-const ModalFormInsumo = ({ visible, onClose, insumo, categorias, onSuccess }) => {
+const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, onSuccess }) => {
+
   // Inicializar el formulario según los atributos de la base de datos
-    const [formData, setFormData] = useState({
-    id_categorias: '',
+    const [data, setData] = useState({
+    categoria: '',
+    proveedor: '',
     nombre: '',
     descripcion: '',
     unidad: '',
@@ -27,22 +29,32 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, onSuccess }) =>
     })
 
   const [loading, setLoading] = useState(false)
-  const isEditMode = !!insumo // Si viene un objeto insumo, es modo modificación
+  const modoEditar = !!insumo // Si viene un objeto insumo, es modo modificación
+
+  const unidades = ['kg','gr','l', 'ml']
 
   // Efecto para cargar los datos del insumo si estamos editando
     useEffect(() => {
-    if (isEditMode && insumo) {
-        setFormData({
-        id_categorias: insumo.id_categorias || insumo.ID_categorias || '',
-        nombre: insumo.nombre || insumo.Nombre || '',
-        descripcion: insumo.descripcion || insumo.Descripcion || '',
-        unidad: insumo.unidad || insumo.Unidad || '',
-        stock_actual: insumo.stock_actual || insumo.Stock_actual || 0,
-        stock_minimo: insumo.stock_minimo || insumo.Stock_minimo || 0,
+    
+    if (modoEditar && insumo) {
+
+        const ProveedorId = insumo.proveedores_asociados && insumo.proveedores_asociados.length > 0
+        ? insumo.proveedores_asociados[0].proveedor?.id_proveedores
+        : '';
+
+        setData({
+        categoria: insumo.categoria_detalle?.id_categorias || '',
+        proveedor: ProveedorId,
+        nombre: insumo.nombre || '',
+        descripcion: insumo.descripcion || '',
+        unidad: insumo.unidad || '',
+        stock_actual: insumo.stock_actual || 0,
+        stock_minimo: insumo.stock_minimo || 0,
         })
     } else {
-        setFormData({
-        id_categorias: '',
+        setData({
+        categoria: 0,
+        proveedor: 0,
         nombre: '',
         descripcion: '',
         unidad: '',
@@ -50,11 +62,11 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, onSuccess }) =>
         stock_minimo: 0,
         })
     }
-    }, [insumo, visible, isEditMode])
+    }, [insumo, visible, modoEditar])
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    setFormData((prev) => ({
+    setData((prev) => ({
       ...prev,
       [name]: value,
     }))
@@ -62,18 +74,19 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, onSuccess }) =>
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setLoading(false)
+    setLoading(true)
+    console.log(data)
     try {
       const token = localStorage.getItem('token')
       const headers = { Authorization: `Token ${token}` }
 
-      if (isEditMode) {
+      if (modoEditar) {
         // Petición de Modificación (PUT)
-        const idInsumo = insumo.id_insumos || insumo.ID_insumos
-        await api.put(`/api/insumos/${idInsumo}/`, formData, { headers })
+        const idInsumo = insumo.id_insumos
+        await api.put(`/api/insumos/${idInsumo}/`, data, { headers })
       } else {
         // Petición de Alta (POST)
-        await api.post('/api/insumos/', formData, { headers })
+        await api.post('/api/insumos/', data, { headers })
       }
 
       onSuccess() // Callback para recargar la tabla principal
@@ -89,7 +102,7 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, onSuccess }) =>
     <CModal visible={visible} onClose={onClose} backdrop="static" size="lg">
       <CModalHeader>
         <CModalTitle className="fw-semibold">
-          {isEditMode ? 'Modificar Insumo' : 'Agregar Nuevo Insumo'}
+          {modoEditar ? 'Modificar Insumo' : 'Agregar Nuevo Insumo'}
         </CModalTitle>
       </CModalHeader>
       <CForm onSubmit={handleSubmit}>
@@ -102,7 +115,8 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, onSuccess }) =>
                 label="Nombre del Insumo"
                 name="nombre"
                 maxLength={50}
-                value={formData.Nombre}
+                minLength={5}
+                value={data.nombre}
                 onChange={handleChange}
                 required
                 placeholder="Ej. Harina 000"
@@ -113,46 +127,68 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, onSuccess }) =>
             <CCol md={4}>
               <CFormSelect
                 label="Categoría"
-                name="id_categorias"
-                value={formData.ID_categorias}
+                name="categoria"
+                value={data.categoria}
                 onChange={handleChange}
                 required
               >
-                <option value="">Selecciona...</option>
+                <option value="">{modoEditar ? insumo.categoria_detalle.nombre : "Selecciona..."}</option>
                 {categorias.map((cat) => (
-                  <option key={cat.ID_categorias || cat.id_categorias} value={cat.ID_categorias || cat.id_categorias}>
-                    {cat.nombre || cat.Nombre}
+                  <option key={cat.id_categorias} value={cat.id_categorias}>
+                    {cat.nombre}
                   </option>
                 ))}
               </CFormSelect>
             </CCol>
 
             {/* Descripción */}
-            <CCol md={12}>
+            <CCol md={8}>
               <CFormTextarea
                 label="Descripción"
                 name="descripcion"
                 rows={2}
                 maxLength={200}
-                value={formData.Descripcion}
+                minLength={0}
+                value={data.descripcion}
                 onChange={handleChange}
-                placeholder="Detalles específicos de la materia prima..."
+                placeholder="Detalles específicos del insumo..."
               />
             </CCol>
 
-            {/* Unidad de Medida */}
-            <CCol md={4} >
-              <CFormInput
-                type="text"
-                label="Unidad de Medida"
-                name="unidad"
-                maxLength={10}
-                value={formData.Unidad}
+            <CCol md={4}>
+              <CFormSelect
+                label="Proveedor"
+                name="proveedor"
+                value={data.proveedor}
                 onChange={handleChange}
                 required
-                placeholder="Ej. Kg, Litros, Unidades"
-              />
+              >
+                <option value="">Selecciona...</option>
+                {proveedores.map((pro) => (
+                  <option value={pro.id_proveedores}>
+                    {pro.nombre}
+                  </option>
+                ))}
+              </CFormSelect>
             </CCol>
+
+            <CCol md={4}>
+              <CFormSelect
+                label="Unidad de Medida"
+                name="unidad"
+                value={data.unidad}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Selecciona...</option>
+                {unidades.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </CFormSelect>
+            </CCol>
+
 
             {/* Stock Actual */}
             <CCol md={4}>
@@ -161,7 +197,7 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, onSuccess }) =>
                 label="Stock Actual"
                 name="stock_actual"
                 min={0}
-                value={formData.Stock_actual}
+                value={data.stock_actual}
                 onChange={handleChange}
                 required
               />
@@ -174,7 +210,7 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, onSuccess }) =>
                 label="Stock Mínimo"
                 name="stock_minimo"
                 min={0}
-                value={formData.Stock_minimo}
+                value={data.stock_minimo}
                 onChange={handleChange}
                 required
               />
@@ -185,8 +221,8 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, onSuccess }) =>
           <CButton color="secondary" variant="ghost" onClick={onClose} disabled={loading}>
             Cancelar
           </CButton>
-          <CButton color={isEditMode ? 'info' : 'primary'} type="submit" disabled={loading}>
-            {loading ? 'Guardando...' : isEditMode ? 'Guardar Cambios' : 'Registrar Insumo'}
+          <CButton color={modoEditar ? 'info' : 'primary'} type="submit" disabled={loading}>
+            {loading ? 'Guardando...' : modoEditar ? 'Guardar Cambios' : 'Registrar Insumo'}
           </CButton>
         </CModalFooter>
       </CForm>

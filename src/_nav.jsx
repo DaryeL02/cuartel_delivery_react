@@ -141,7 +141,7 @@ const _nav = [
       {
         component: CNavItem,
         name: 'Apertura y cierre',
-        to: '/cajas/apertura-cierre',
+        to: '/cajas/AperturaCierre',
       },
       {
         component: CNavItem,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from 'react'
 import {
   CCard,
   CCardBody,
@@ -23,66 +23,100 @@ import {
   CFormSelect,
   CFormTextarea,
   CInputGroup,
-  CInputGroupText
-} from '@coreui/react';
-import CIcon from '@coreui/icons-react';
-import { cilPlus, cilPencil, cilTrash, cilFastfood, cilClock, cilCheckCircle } from '@coreui/icons';
+  CInputGroupText,
+} from '@coreui/react'
+import CIcon from '@coreui/icons-react'
+import { cilPlus, cilPencil, cilTrash, cilFastfood, cilClock, cilCheckCircle } from '@coreui/icons'
 
 const Pedidos = () => {
   // Estado para el listado de pedidos (Mock data)
   const [pedidos, setPedidos] = useState([
-    { id: 101, cliente: 'Juan Pérez', detalle: '1x Lomito Completo, 1x Papas Fritas', total: 8500, estado: 'En Preparación', hora: '21:30' },
-    { id: 102, cliente: 'María Gomez', detalle: '2x Milanesa TyC, 1x Coca-Cola 1.5L', total: 12400, estado: 'Pendiente', hora: '21:42' },
-    { id: 103, cliente: 'Carlos López', detalle: '1x Hamburguesa Especial (sin cebolla)', total: 5200, estado: 'Listo para retirar', hora: '21:15' },
-  ]);
+    {
+      id: 101,
+      cliente: 'Juan Pérez',
+      detalle: '1x Lomito Completo, 1x Papas Fritas',
+      total: 8500,
+      estado: 'En Preparación',
+      hora: '21:30',
+    },
+    {
+      id: 102,
+      cliente: 'María Gomez',
+      detalle: '2x Milanesa TyC, 1x Coca-Cola 1.5L',
+      total: 12400,
+      estado: 'Pendiente',
+      hora: '21:42',
+    },
+    {
+      id: 103,
+      cliente: 'Carlos López',
+      detalle: '1x Hamburguesa Especial (sin cebolla)',
+      total: 5200,
+      estado: 'Listo para retirar',
+      hora: '21:15',
+    },
+  ])
 
   // Estados para el manejo del Modal (Crear / Editar)
-  const [modalVisible, setModalVisible] = useState(false);
-  const [editando, setEditando] = useState(false);
-  const [pedidoActual, setPedidoActual] = useState({ id: '', cliente: '', detalle: '', total: '', estado: 'Pendiente' });
+  const [modalVisible, setModalVisible] = useState(false)
+  const [editando, setEditando] = useState(false)
+  const [pedidoActual, setPedidoActual] = useState({
+    id: '',
+    cliente: '',
+    detalle: '',
+    total: '',
+    estado: 'Pendiente',
+  })
 
   // Abrir modal para nuevo pedido
   const handleNuevoPedido = () => {
-    setEditando(false);
-    setPedidoActual({ id: Date.now(), cliente: '', detalle: '', total: '', estado: 'Pendiente' });
-    setModalVisible(true);
-  };
+    setEditando(false)
+    setPedidoActual({ id: Date.now(), cliente: '', detalle: '', total: '', estado: 'Pendiente' })
+    setModalVisible(true)
+  }
 
   // Abrir modal para editar
   const handleEditarPedido = (pedido) => {
-    setEditando(true);
-    setPedidoActual(pedido);
-    setModalVisible(true);
-  };
+    setEditando(true)
+    setPedidoActual(pedido)
+    setModalVisible(true)
+  }
 
   // Guardar pedido (Crear o Editar)
   const handleGuardar = (e) => {
-    e.preventDefault();
+    e.preventDefault()
     if (editando) {
-      setPedidos(pedidos.map(p => p.id === pedidoActual.id ? pedidoActual : p));
+      setPedidos(pedidos.map((p) => (p.id === pedidoActual.id ? pedidoActual : p)))
     } else {
-      const horaActual = new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
-      setPedidos([...pedidos, { ...pedidoActual, hora: horaActual }]);
+      const horaActual = new Date().toLocaleTimeString('es-AR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+      setPedidos([...pedidos, { ...pedidoActual, hora: horaActual }])
     }
-    setModalVisible(false);
-  };
+    setModalVisible(false)
+  }
 
   // Cancelar/Eliminar pedido
   const handleCancelarPedido = (id) => {
     if (window.confirm('¿Estás seguro de que deseas cancelar este pedido?')) {
-      setPedidos(pedidos.filter(p => p.id !== id));
+      setPedidos(pedidos.filter((p) => p.id !== id))
     }
-  };
+  }
 
   // Helper para el color de los Badges según el estado
   const getBadgeColor = (estado) => {
     switch (estado) {
-      case 'Pendiente': return 'warning';
-      case 'En Preparación': return 'info';
-      case 'Listo para retirar': return 'success';
-      default: return 'secondary';
+      case 'Pendiente':
+        return 'warning'
+      case 'En Preparación':
+        return 'info'
+      case 'Listo para retirar':
+        return 'success'
+      default:
+        return 'secondary'
     }
-  };
+  }
 
   return (
     <div className="container-fluid p-4">
@@ -92,7 +126,9 @@ const Pedidos = () => {
           <CCard className="text-white bg-warning mb-3">
             <CCardBody className="d-flex justify-content-between align-items-center">
               <div>
-                <div className="fs-4 fw-semibold">{pedidos.filter(p => p.estado === 'Pendiente').length}</div>
+                <div className="fs-4 fw-semibold">
+                  {pedidos.filter((p) => p.estado === 'Pendiente').length}
+                </div>
                 <div>Nuevos / Pendientes</div>
               </div>
               <CIcon icon={cilClock} size="xl" />
@@ -103,7 +139,9 @@ const Pedidos = () => {
           <CCard className="text-white bg-info mb-3">
             <CCardBody className="d-flex justify-content-between align-items-center">
               <div>
-                <div className="fs-4 fw-semibold">{pedidos.filter(p => p.estado === 'En Preparación').length}</div>
+                <div className="fs-4 fw-semibold">
+                  {pedidos.filter((p) => p.estado === 'En Preparación').length}
+                </div>
                 <div>En Cocina</div>
               </div>
               <CIcon icon={cilFastfood} size="xl" />
@@ -114,7 +152,9 @@ const Pedidos = () => {
           <CCard className="text-white bg-success mb-3">
             <CCardBody className="d-flex justify-content-between align-items-center">
               <div>
-                <div className="fs-4 fw-semibold">{pedidos.filter(p => p.estado === 'Listo para retirar').length}</div>
+                <div className="fs-4 fw-semibold">
+                  {pedidos.filter((p) => p.estado === 'Listo para retirar').length}
+                </div>
                 <div>Listos para Despachar</div>
               </div>
               <CIcon icon={cilCheckCircle} size="xl" />
@@ -129,7 +169,11 @@ const Pedidos = () => {
           <CCard className="mb-4 shadow-sm">
             <CCardHeader className="d-flex justify-content-between align-items-center bg-light">
               <strong className="text-uppercase">Panel de Pedidos Activos</strong>
-              <CButton color="primary" onClick={handleNuevoPedido} className="d-flex align-items-center gap-2">
+              <CButton
+                color="primary"
+                onClick={handleNuevoPedido}
+                className="d-flex align-items-center gap-2"
+              >
                 <CIcon icon={cilPlus} /> Nuevo Pedido
               </CButton>
             </CCardHeader>
@@ -151,20 +195,42 @@ const Pedidos = () => {
                     <CTableRow key={pedido.id}>
                       <CTableDataCell className="text-center fw-bold">{pedido.id}</CTableDataCell>
                       <CTableDataCell className="fw-semibold">{pedido.cliente}</CTableDataCell>
-                      <CTableDataCell style={{ maxWidth: '300px' }}>{pedido.detalle}</CTableDataCell>
-                      <CTableDataCell className="text-center text-muted">{pedido.hora}</CTableDataCell>
-                      <CTableDataCell className="text-end fw-bold text-success">${pedido.total.toLocaleString()}</CTableDataCell>
+                      <CTableDataCell style={{ maxWidth: '300px' }}>
+                        {pedido.detalle}
+                      </CTableDataCell>
+                      <CTableDataCell className="text-center text-muted">
+                        {pedido.hora}
+                      </CTableDataCell>
+                      <CTableDataCell className="text-end fw-bold text-success">
+                        ${pedido.total.toLocaleString()}
+                      </CTableDataCell>
                       <CTableDataCell className="text-center">
-                        <CBadge color={getBadgeColor(pedido.estado)} shape="rounded-pill" className="px-3 py-2">
+                        <CBadge
+                          color={getBadgeColor(pedido.estado)}
+                          shape="rounded-pill"
+                          className="px-3 py-2"
+                        >
                           {pedido.estado}
                         </CBadge>
                       </CTableDataCell>
                       <CTableDataCell className="text-center">
                         <div className="d-flex justify-content-center gap-2">
-                          <CButton color="info" size="sm" variant="outline" onClick={() => handleEditarPedido(pedido)} title="Editar pedido">
+                          <CButton
+                            color="info"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditarPedido(pedido)}
+                            title="Editar pedido"
+                          >
                             <CIcon icon={cilPencil} />
                           </CButton>
-                          <CButton color="danger" size="sm" variant="outline" onClick={() => handleCancelarPedido(pedido.id)} title="Cancelar pedido">
+                          <CButton
+                            color="danger"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleCancelarPedido(pedido.id)}
+                            title="Cancelar pedido"
+                          >
                             <CIcon icon={cilTrash} />
                           </CButton>
                         </div>
@@ -179,9 +245,16 @@ const Pedidos = () => {
       </CRow>
 
       {/* 3. Formulario Modal: Crear / Editar Pedido */}
-      <CModal visible={modalVisible} onClose={() => setModalVisible(false)} alignment="center" size="lg">
+      <CModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        alignment="center"
+        size="lg"
+      >
         <CModalHeader>
-          <CModalTitle>{editando ? `Editar Pedido #${pedidoActual.id}` : 'Registrar Nuevo Pedido'}</CModalTitle>
+          <CModalTitle>
+            {editando ? `Editar Pedido #${pedidoActual.id}` : 'Registrar Nuevo Pedido'}
+          </CModalTitle>
         </CModalHeader>
         <CForm onSubmit={handleGuardar}>
           <CModalBody>
@@ -225,7 +298,9 @@ const Pedidos = () => {
                     type="number"
                     placeholder="0.00"
                     value={pedidoActual.total}
-                    onChange={(e) => setPedidoActual({ ...pedidoActual, total: Number(e.target.value) })}
+                    onChange={(e) =>
+                      setPedidoActual({ ...pedidoActual, total: Number(e.target.value) })
+                    }
                     required
                   />
                 </CInputGroup>
@@ -243,7 +318,7 @@ const Pedidos = () => {
         </CForm>
       </CModal>
     </div>
-  );
-};
+  )
+}
 
-export default Pedidos;
+export default Pedidos

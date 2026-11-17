@@ -2,28 +2,12 @@ import React from 'react'
 import api from '../../components/api/api'
 import { Link, useNavigate } from 'react-router-dom'
 import { CButton, CCard, CCardBody, CCol, CContainer, CRow } from '@coreui/react'
-import Swal from 'sweetalert2'
-import { Button } from '@coreui/coreui'
 
+import { useLocation } from 'react-router-dom'
 const CheckEmail = () => {
-  const navigate = useNavigate()
-  const email = sessionStorage.getItem('emailReset')
-  const reenviarCodigo = async () => {
-    //volver a pedir codigo al correo
-    try {
-      await api.post('/api/solicitar-reset/', { email: email })
-      Swal.fire({
-        title: 'Codigo reenviado!',
-      })
-    } catch (error) {
-      console.log(error.response?.status, error.response?.data)
-      Swal.fire({
-        icon: 'error',
-        title: 'Oops...',
-        text: 'No se pudo reenviar el codigo',
-      })
-    }
-  }
+  const { state } = useLocation()
+  const email = state?.email
+
   return (
     <div className="bg-body-tertiary min-vh-100 d-flex flex-row align-items-center">
       <CContainer>
@@ -31,18 +15,22 @@ const CheckEmail = () => {
           <CCol md={6}>
             <CCard className="mx-4 text-center">
               <CCardBody className="p-4">
-                <h1>revisa tu correo electronico</h1>
+                <h1>Revisa tu correo electrónico</h1>
                 <p className="text-body-secondary">
-                  Please click the link sent to
-                  <span className="fw-semibold">{email}</span> ingresa en la pantalla
+                  Haz clic en el enlace enviado a{' '}
+                  <span className="fw-semibold">{email || 'tu correo electrónico'}</span> para
+                  verificar tu cuenta. ¡Gracias!
                 </p>
                 <div className="d-grid">
-                  <CButton color="primary" className="w-100" onClick={() => navigate('/authentication/change-password')}>
-                    Ya tengo el codigo
-                  </CButton>
+                  <Link to="/">
+                    <CButton color="primary" className="w-100">
+                      Volver al inicio
+                    </CButton>
+                  </Link>
                 </div>
                 <p className="text-body-secondary mt-3 mb-0">
-                Lorem ipsum, dolor sit<CButton onClick={reenviarCodigo}>Reenviar </CButton>
+                  ¿No recibiste el correo electrónico?{' '}
+                  <Link to="/authentication/login">Reenviar</Link>
                 </p>
               </CCardBody>
             </CCard>

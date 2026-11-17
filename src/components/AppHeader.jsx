@@ -28,53 +28,34 @@ import {
   CDropdownItem,
   CDropdownMenu,
   CDropdownToggle,
-  CFormInput,
   CHeader,
   CHeaderNav,
   CHeaderToggler,
-  CListGroup,
-  CListGroupItem,
-  CModal,
-  CModalBody,
-  CModalHeader,
-  CModalTitle,
-  CNavLink,
-  CNavItem,
-  CSearchButton,
   useColorModes,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
-import {
-  cilBell,
-  cilContrast,
-  cilEnvelopeOpen,
-  cilList,
-  cilMenu,
-  cilMoon,
-  cilSun,
-} from '@coreui/icons'
+import { cilContrast, cilMenu, cilMoon, cilSun } from '@coreui/icons'
 
 import { AppBreadcrumb } from './index'
 import { AppHeaderDropdown } from './header/index'
 
 /**
- * AppHeader functional component
+ * AppHeader comoponente funcional
+ * Gestiona la interfaz de la barra superior, incluyendo:
+ * - Integración con Redux para abrir o cerrar el menú lateral (sidebar)
+ * - Gestión del tema (claro/oscuro) con el hook useColorModes de CoreUI
+ * - Efecto de sombra al hacer scroll hacia abajo
+ * - Navegación adaptable (responsive)
  *
- * Manages header UI including:
- * - Redux integration for sidebar state
- * - Theme management with CoreUI useColorModes hook
- * - Scroll-based shadow effect
- * - Responsive navigation
- *
- * @returns {React.ReactElement} Header component with navigation and controls
+ * @returns {React.ReactElement} Header componenre encanezado con controles y naveg
  */
 const AppHeader = () => {
   const headerRef = useRef()
   const { colorMode, setColorMode } = useColorModes('coreui-free-react-admin-template-theme')
   const [searchVisible, setSearchVisible] = useState(false)
 
-  const dispatch = useDispatch()
-  const sidebarShow = useSelector((state) => state.sidebarShow)
+  /**  const dispatch = useDispatch() **/
+  /**   const sidebarShow = useSelector((state) => state.sidebarShow)**/
 
   useEffect(() => {
     const handleScroll = () => {
@@ -95,76 +76,8 @@ const AppHeader = () => {
         >
           <CIcon icon={cilMenu} size="lg" />
         </CHeaderToggler>
-        <CSearchButton
-          onTrigger={() => setSearchVisible(true)}
-          aria-label="Open search dialog"
-          aria-controls="app-header-search-modal"
-        />
-        <CModal
-          id="app-header-search-modal"
-          visible={searchVisible}
-          onClose={() => setSearchVisible(false)}
-          aria-labelledby="app-header-search-modal-title"
-        >
-          <CModalHeader>
-            <CModalTitle id="app-header-search-modal-title" className="w-100">
-              <CFormInput type="search" placeholder="Search" aria-label="Search" />
-            </CModalTitle>
-          </CModalHeader>
-          <CModalBody>
-            <p className="text-body-secondary small mb-2">Recent searches</p>
-            <CListGroup flush>
-              <CListGroupItem
-                as="button"
-                type="button"
-                className="d-flex justify-content-between align-items-center"
-              >
-                CoreUI components overview
-                <CBadge color="secondary" shape="rounded-pill">
-                  Open
-                </CBadge>
-              </CListGroupItem>
-              <CListGroupItem
-                as="button"
-                type="button"
-                className="d-flex justify-content-between align-items-center"
-              >
-                Modal dialog examples
-                <CBadge color="secondary" shape="rounded-pill">
-                  Open
-                </CBadge>
-              </CListGroupItem>
-              <CListGroupItem
-                as="button"
-                type="button"
-                className="d-flex justify-content-between align-items-center"
-              >
-                Sidebar navigation customization
-                <CBadge color="secondary" shape="rounded-pill">
-                  Open
-                </CBadge>
-              </CListGroupItem>
-            </CListGroup>
-          </CModalBody>
-        </CModal>
+
         <CHeaderNav className="ms-auto">
-          <CNavItem>
-            <CNavLink href="#">
-              <CIcon icon={cilBell} size="lg" />
-            </CNavLink>
-          </CNavItem>
-          <CNavItem>
-            <CNavLink href="#">
-              <CIcon icon={cilList} size="lg" />
-            </CNavLink>
-          </CNavItem>
-          <CNavItem>
-            <CNavLink href="#">
-              <CIcon icon={cilEnvelopeOpen} size="lg" />
-            </CNavLink>
-          </CNavItem>
-        </CHeaderNav>
-        <CHeaderNav>
           <li className="nav-item py-1">
             <div className="vr h-100 mx-2 text-body text-opacity-75"></div>
           </li>
@@ -186,7 +99,7 @@ const AppHeader = () => {
                 type="button"
                 onClick={() => setColorMode('light')}
               >
-                <CIcon className="me-2" icon={cilSun} size="lg" /> Light
+                <CIcon className="me-2" icon={cilSun} size="lg" /> Claro
               </CDropdownItem>
               <CDropdownItem
                 active={colorMode === 'dark'}
@@ -195,16 +108,7 @@ const AppHeader = () => {
                 type="button"
                 onClick={() => setColorMode('dark')}
               >
-                <CIcon className="me-2" icon={cilMoon} size="lg" /> Dark
-              </CDropdownItem>
-              <CDropdownItem
-                active={colorMode === 'auto'}
-                className="d-flex align-items-center"
-                as="button"
-                type="button"
-                onClick={() => setColorMode('auto')}
-              >
-                <CIcon className="me-2" icon={cilContrast} size="lg" /> Auto
+                <CIcon className="me-2" icon={cilMoon} size="lg" /> Oscuro
               </CDropdownItem>
             </CDropdownMenu>
           </CDropdown>

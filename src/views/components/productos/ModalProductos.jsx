@@ -18,7 +18,7 @@ export const Modal_test = ({ onGuardado }) => {
           descripcion: datos.descripcion,
           precio_unitario: datos.precio_unitario,
         },
-        { headers: { Authorization: 'Token  ' + localStorage.getItem('token') } },
+        { headers: { Authorization: 'Token ' + localStorage.getItem('token') } },
       )
       setVisible(false)
       reset()
@@ -53,10 +53,23 @@ export const Modal_test = ({ onGuardado }) => {
               <CFormInput id="inputDescripcion" label="Descripción" {...register('descripcion')} />
             </CCol>
             <CCol md={8}>
-              <CFormInput type="number" step="0.01" id="inputStockactual" label="Stock Actual" placeholder="23.00" />
+              <CFormInput
+                type="number"
+                step="0.01"
+                id="inputStockactual"
+                label="Stock Actual"
+                {...register('stock_actual')}
+                placeholder="23.00"
+              />
             </CCol>
             <CCol md={4}>
-              <CFormInput id="inputPrecio" label="Precio unitario" placeholder='1500' step="0.01" {...register('precio_unitario')}/>
+              <CFormInput
+                id="inputPrecio"
+                label="Precio unitario"
+                placeholder="1500"
+                step="0.01"
+                {...register('precio_unitario')}
+              />
             </CCol>
           </CForm>
         </CModalBody>

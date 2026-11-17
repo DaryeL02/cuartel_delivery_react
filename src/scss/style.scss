@@ -1,5 +1,13 @@
 @use "@coreui/coreui/scss/coreui" as * with ( 
   $enable-deprecation-messages: false,
+  //colores del cuartel
+  $primary: #f59e0b,
+  $secondary: #4b5563,
+  $success: #16a34a,
+  $danger: #dc2626,
+  $warning: #92400e,
+  $dark: #141414
+
 );
 @use "@coreui/chartjs/scss/coreui-chartjs";
 @use "vendors/simplebar";
@@ -8,7 +16,7 @@ body {
   background-color: var(--cui-tertiary-bg);
 }
 
-.wrapper {
+.wrapper {// Estructura del template "No tocar"//
   width: 100%;
   padding-inline: var(--cui-sidebar-occupy-start, 0) var(--cui-sidebar-occupy-end, 0);
   will-change: auto;
@@ -54,9 +62,9 @@ body {
 
 .footer {
   min-height: calc(3rem + 1px); // stylelint-disable-line function-disallowed-list
-}
+}// estructura del Template "no tocar"//
 
-@include color-mode(dark) {
+@include color-mode(dark) {// modo oscuro
   body {
     background-color: var(--cui-dark-bg-subtle);
   }

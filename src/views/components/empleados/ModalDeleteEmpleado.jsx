@@ -1,0 +1,62 @@
+import React, { useState, useEffect } from 'react'
+import {
+  CModal,
+  CModalHeader,
+  CModalTitle,
+  CModalBody,
+  CModalFooter,
+  CButton,
+  CForm,
+  CRow,
+} from '@coreui/react'
+import api from '../api/api'
+
+const ModalDeleteEmpleado = ({ visible, onClose, empleado, onSuccess }) => {
+
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      const token = localStorage.getItem('token')
+      const headers = { Authorization: `Token ${token}` }
+      console.log(empleado.id_empleados)
+      await api.delete(`/api/empleados/${empleado.id_empleados}/` , { headers })
+
+      onSuccess()
+      onClose() 
+    } catch (error) {
+      console.error('Error al eliminar el empleado:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <CModal visible={visible} onClose={onClose} backdrop="static" size="lg">
+      <CModalHeader>
+        <CModalTitle className="fw-semibold">
+          Eliminar empleado
+        </CModalTitle>
+      </CModalHeader>
+      <CForm onSubmit={handleSubmit}>
+        <CModalBody>
+          <CRow className="g-3">
+            <p>¿Desea eliminar el empleado?</p>
+          </CRow>
+        </CModalBody>
+        <CModalFooter>
+          <CButton color="secondary" variant="ghost" onClick={onClose} disabled={loading}>
+            Cancelar
+          </CButton>
+          <CButton color={'primary'} type="submit" disabled={loading}>
+            {loading ? 'Aceptar...' :  'Aceptar'}
+          </CButton>
+        </CModalFooter>
+      </CForm>
+    </CModal>
+  )
+}
+
+export default ModalDeleteEmpleado
