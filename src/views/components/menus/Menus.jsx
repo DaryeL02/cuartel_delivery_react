@@ -1,211 +1,595 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'
 import {
   CCard,
-  CCardHeader,
   CCardBody,
-  CRow,
+  CCardHeader,
   CCol,
-  CButton,
+  CRow,
   CTable,
-  CTableHead,
-  CTableRow,
-  CTableHeaderCell,
   CTableBody,
+  CTableHead,
+  CTableHeaderCell,
+  CTableRow,
   CTableDataCell,
+  CButton,
+  CAvatar,
   CBadge,
-  CFormSelect
-} from '@coreui/react';
+  CDropdown,
+  CDropdownToggle,
+  CDropdownMenu,
+  CDropdownItem,
+  CPagination,
+  CPaginationItem,
+  CFormInput,
+  CFormSelect,
+  CNav,
+  CNavItem,
+  CNavLink,
+  CTabContent,
+  CTabPane,
+} from '@coreui/react'
+import CIcon from '@coreui/icons-react'
+import {
+  cilPlus,
+  cilOptions,
+  cilPencil,
+  cilTrash,
+  cilFastfood,
+  cilCheckCircle,
+  cilHistory,
+  cilBan,
+} from '@coreui/icons'
+import { toast } from 'react-toastify'
 
-// Datos estáticos basados en los requerimientos del proyecto "El Cuartel Delivery"
-const initialPendingOrders = [
-  { id: '1024', cliente: 'Matías Velazquez', productos: '1x Sándwich de Milanesa Completo, 1x Papas Fritas', total: 8500 },
-  { id: '1025', cliente: 'Daniel Colque', productos: '2x Lomito Especial', total: 14000 },
-  { id: '1026', cliente: 'Karen Zalazar', productos: '1x Hamburguesa de la Casa, 1x Gaseosa 500ml', total: 7200 }
-];
+import ModalAgregarMenu from './ModalAgregarMenu'
+import ModalActualizarMenu from './ModalActualizarMenu'
+import ModalEstadoMenu from './ModalEstadoMenu'
+import ModalEliminarMenu from './ModalEliminarMenu'
+import MenuDigitalActivo from './MenuDigitalActivo'
+import HistorialPrecios from './HistorialPrecios'
 
-const initialSalesHistory = [
-  { id: 'V-501', pedidoId: '1021', cliente: 'Eduardo Flores', total: 9500, metodoPago: 'Efectivo', hora: '21:15' },
-  { id: 'V-502', pedidoId: '1022', cliente: 'Brisa Cardozo', total: 6800, metodoPago: 'Transferencia', hora: '21:30' },
-  { id: 'V-503', pedidoId: '1023', cliente: 'Martín Ramos', total: 12500, metodoPago: 'Tarjeta', hora: '21:45' }
-];
+const PAGE_SIZE = 10
+const ROW_HEIGHT = '54px'
 
-export default function Menus() {
-  const [pendingOrders, setPendingOrders] = useState(initialPendingOrders);
-  const [salesHistory, setSalesHistory] = useState(initialSalesHistory);
-  const [selectedPaymentMethods, setSelectedPaymentMethods] = useState({});
+const Menus = () => {
+  const [activeTab, setActiveTab] = useState(1)
+  const [busqueda, setBusqueda] = useState('')
+  const [debouncedBusqueda, setDebouncedBusqueda] = useState('')
+  const [filtroCategoria, setFiltroCategoria] = useState('TODAS')
+  const [paginaActual, setPaginaActual] = useState(1)
 
-  const handlePaymentMethodChange = (orderId, value) => {
-    setSelectedPaymentMethods(prev => ({ ...prev, [orderId]: value }));
-  };
+  // Estados de modales separados
+  const [agregarModalOpen, setAgregarModalOpen] = useState(false)
+  const [actualizarModalOpen, setActualizarModalOpen] = useState(false)
+  const [estadoModalOpen, setEstadoModalOpen] = useState(false)
+  const [eliminarModalOpen, setEliminarModalOpen] = useState(false)
+  const [menuSeleccionado, setMenuSeleccionado] = useState(null)
 
-  // Lógica operativa del Proceso N°3 (Gestionar Ventas) del documento
-  const handleConfirmSale = (order) => {
-    const metodoPago = selectedPaymentMethods[order.id];
-    if (!metodoPago) {
-      alert('Por favor, seleccione un método de pago antes de confirmar la venta.');
-      return;
+  const notificar = (tipo, mensaje) => {
+    switch (tipo) {
+      case 'exito':
+        toast.success(mensaje)
+        break
+      case 'error':
+        toast.error(mensaje)
+        break
+      case 'advertencia':
+        toast.warning(mensaje)
+        break
+      default:
+        toast(mensaje)
+    }
+  }
+
+  const [menus, setMenus] = useState([
+    {
+      id_menu: 1,
+      nombre: 'Lomito Completo El Cuartel',
+      categoria: 'Sándwiches',
+      descripcion: 'Pan casero, bife de lomo, jamón, queso, huevo, lechuga, tomate y papas fritas.',
+      precio: 12500,
+      es_combo: false,
+      estado: true,
+    },
+    {
+      id_menu: 2,
+      nombre: 'Combo Cuartelero Doble',
+      categoria: 'Combos',
+      descripcion: '2 Sándwiches de milanesa completos + 1 Gaseosa 1.5L + Porción grande de papas.',
+      precio: 22000,
+      es_combo: true,
+      estado: true,
+    },
+    {
+      id_menu: 3,
+      nombre: 'Sándwich de Bondiola Braseada',
+      categoria: 'Sándwiches',
+      descripcion: 'Bondiola desmenuzada a la cerveza negra con cebolla caramelizada y cheddar.',
+      precio: 11800,
+      es_combo: false,
+      estado: false,
+    },
+    {
+      id_menu: 4,
+      nombre: 'Promo Mediodía: Milanesa + Lata',
+      categoria: 'Promociones',
+      descripcion: 'Sándwich de milanesa clásico + gaseosa en lata 354ml (Lun a Vie 12 a 15hs).',
+      precio: 9500,
+      es_combo: true,
+      estado: true,
+    },
+  ])
+
+  const [historial, setHistorial] = useState([
+    {
+      id_historial: 1,
+      fecha_hora: '17/11/2026 14:20',
+      usuario: 'admin_dueño',
+      menu_nombre: 'Lomito Completo El Cuartel',
+      tipo_cambio: 'Modificación de Precio',
+      detalle: '$11.500 → $12.500 (+8.7%)',
+    },
+    {
+      id_historial: 2,
+      fecha_hora: '17/11/2026 11:05',
+      usuario: 'admin_dueño',
+      menu_nombre: 'Sándwich de Bondiola Braseada',
+      tipo_cambio: 'Cambio de Estado',
+      detalle: 'Activo → Inactivo (Falta de insumos)',
+    },
+    {
+      id_historial: 3,
+      fecha_hora: '15/11/2026 19:30',
+      usuario: 'encargado_turno',
+      menu_nombre: 'Combo Cuartelero Doble',
+      tipo_cambio: 'Alta de Menú',
+      detalle: 'Registrado con precio inicial $22.000',
+    },
+  ])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedBusqueda(busqueda)
+      setPaginaActual(1)
+    }, 350)
+    return () => clearTimeout(timers)
+  }, [busqueda])
+
+  const registrarLog = (menuNombre, tipoCambio, detalle) => {
+    const ahora = new Date()
+    const fechaFormateada = `${ahora.toLocaleDateString('es-AR')} ${ahora.toLocaleTimeString('es-AR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    })}`
+
+    setHistorial((prev) => [
+      {
+        id_historial: Date.now(),
+        fecha_hora: fechaFormateada,
+        usuario: 'admin_dueño',
+        menu_nombre: menuNombre,
+        tipo_cambio: tipoCambio,
+        detalle,
+      },
+      ...prev,
+    ])
+  }
+
+  // Handlers de acciones
+  const handleAgregarMenu = (nuevoMenu) => {
+    setMenus((prev) => [nuevoMenu, ...prev])
+    registrarLog(
+      nuevoMenu.nombre,
+      nuevoMenu.es_combo ? 'Alta de Combo' : 'Alta de Menú',
+      `Registrado con precio inicial $${Number(nuevoMenu.precio).toLocaleString('es-AR')}`
+    )
+    notificar('exito', 'Menú registrado con éxito.')
+  }
+
+  const handleActualizarMenu = (menuEditado) => {
+    const anterior = menus.find((m) => m.id_menu === menuEditado.id_menu)
+    setMenus((prev) =>
+      prev.map((m) => (m.id_menu === menuEditado.id_menu ? menuEditado : m))
+    )
+
+    if (anterior && Number(anterior.precio) !== Number(menuEditado.precio)) {
+      const diff = (((menuEditado.precio - anterior.precio) / anterior.precio) * 100).toFixed(1)
+      const signo = diff > 0 ? '+' : ''
+      registrarLog(
+        menuEditado.nombre,
+        'Modificación de Precio',
+        `$${Number(anterior.precio).toLocaleString('es-AR')} → $${Number(
+          menuEditado.precio
+        ).toLocaleString('es-AR')} (${signo}${diff}%)`
+      )
+    } else {
+      registrarLog(menuEditado.nombre, 'Actualización de Datos', 'Se modificó descripción o categoría')
     }
 
-    const now = new Date();
-    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    notificar('exito', 'Menú actualizado con éxito.')
+  }
 
-    const newSale = {
-      id: `V-${salesHistory.length + 501}`,
-      pedidoId: order.id,
-      cliente: order.cliente,
-      total: order.total,
-      metodoPago: metodoPago,
-      hora: currentTime
-    };
+  const handleEstadoMenu = (menu, motivo) => {
+    const nuevoEstado = !menu.estado
+    setMenus((prev) =>
+      prev.map((m) => (m.id_menu === menu.id_menu ? { ...m, estado: nuevoEstado } : m))
+    )
 
-    setSalesHistory([newSale, ...salesHistory]);
-    setPendingOrders(pendingOrders.filter(item => item.id !== order.id));
-    
-    const updatedMethods = { ...selectedPaymentMethods };
-    delete updatedMethods[order.id];
-    setSelectedPaymentMethods(updatedMethods);
-  };
+    registrarLog(
+      menu.nombre,
+      'Cambio de Estado',
+      `${menu.estado ? 'Activo' : 'Inactivo'} → ${nuevoEstado ? 'Activo' : 'Inactivo'} (${motivo})`
+    )
 
-  const totalSalesAmount = salesHistory.reduce((acc, sale) => acc + sale.total, 0);
+    if (nuevoEstado) {
+      notificar('exito', `"${menu.nombre}" activado en la carta.`)
+    } else {
+      notificar('advertencia', `"${menu.nombre}" desactivado y ocultado de toma de pedidos.`)
+    }
+  }
+
+  const handleEliminarMenu = (menu) => {
+    setMenus((prev) => prev.filter((m) => m.id_menu !== menu.id_menu))
+    registrarLog(menu.nombre, 'Eliminación de Menú', 'Eliminado de la carta comercial')
+    notificar('exito', 'Menú eliminado con éxito.')
+  }
+
+  // Filtrado y paginación
+  const menusFiltrados = menus.filter((m) => {
+    const coincideNombre = m.nombre.toLowerCase().includes(debouncedBusqueda.toLowerCase())
+    const coincideCategoria = filtroCategoria === 'TODAS' || m.categoria === filtroCategoria
+    return coincideNombre && coincideCategoria
+  })
+
+  const totalRegistros = menusFiltrados.length
+  const totalPaginas = Math.max(1, Math.ceil(totalRegistros / PAGE_SIZE))
+  const inicio = (paginaActual - 1) * PAGE_SIZE
+  const menusPaginados = menusFiltrados.slice(inicio, inicio + PAGE_SIZE)
+  const filasVacias = Math.max(0, PAGE_SIZE - menusPaginados.length)
 
   return (
-    <div className="fade-in">
-      {/* Indicadores numéricos superiores basados en CoreUI widgets */}
-      <CRow className="mb-4">
-        <CCol xs={12} sm={6} lg={4}>
-          <CCard className="text-white bg-dark">
-            <CCardBody className="pb-3 d-flex justify-content-between align-items-start">
-              <div>
-                <div className="fs-4 fw-semibold">${totalSalesAmount.toLocaleString('es-AR')}</div>
-                <div>Total Recaudado (Ventas del Día)</div>
-              </div>
-            </CCardBody>
-          </CCard>
-        </CCol>
-        <CCol xs={12} sm={6} lg={4}>
-          <CCard className="text-white bg-warning">
-            <CCardBody className="pb-3 d-flex justify-content-between align-items-start">
-              <div>
-                <div className="fs-4 fw-semibold">{pendingOrders.length}</div>
-                <div>Pedidos Entregados por Facturar</div>
-              </div>
-            </CCardBody>
-          </CCard>
-        </CCol>
-        <CCol xs={12} sm={6} lg={4}>
-          <CCard className="text-white bg-success">
-            <CCardBody className="pb-3 d-flex justify-content-between align-items-start">
-              <div>
-                <div className="fs-4 fw-semibold">{salesHistory.length}</div>
-                <div>Ventas Registradas Hoy</div>
-              </div>
-            </CCardBody>
-          </CCard>
-        </CCol>
-      </CRow>
-
+    <div>
       <CRow>
-        {/* Panel Principal Izquierdo: Control de comandas entregadas por cobrar */}
-        <CCol xs={12} lg={7} className="mb-4">
-          <CCard className="h-100">
-            <CCardHeader className="bg-body-secondary fw-bold text-uppercase">
-              📥 Pedidos Entregados Pendientes de Cobro
-            </CCardHeader>
-            <CCardBody>
-              {pendingOrders.length === 0 ? (
-                <div className="text-center py-4 text-body-secondary">
-                  No hay pedidos pendientes de facturación en este momento.
-                </div>
-              ) : (
-                <CTable align="middle" responsive hover>
-                  <CTableHead className="table-theme-header">
-                    <CTableRow>
-                      <CTableHeaderCell style={{ width: '10%' }}>Pedido</CTableHeaderCell>
-                      <CTableHeaderCell style={{ width: '40%' }}>Detalle / Cliente</CTableHeaderCell>
-                      <CTableHeaderCell style={{ width: '25%' }}>Método de Pago</CTableHeaderCell>
-                      <CTableHeaderCell style={{ width: '25%' }} className="text-end">Acciones</CTableHeaderCell>
-                    </CTableRow>
-                  </CTableHead>
-                  <CTableBody>
-                    {pendingOrders.map((order) => (
-                      <CTableRow key={order.id}>
-                        <CTableDataCell><span className="fw-semibold">#{order.id}</span></CTableDataCell>
-                        <CTableDataCell>
-                          <div className="small text-body-secondary mb-1">{order.cliente}</div>
-                          <div className="fw-normal">{order.productos}</div>
-                          <div className="mt-1 fw-bold text-success">${order.total.toLocaleString('es-AR')}</div>
-                        </CTableDataCell>
-                        <CTableDataCell>
-                          <CFormSelect 
-                            size="sm"
-                            value={selectedPaymentMethods[order.id] || ''}
-                            onChange={(e) => handlePaymentMethodChange(order.id, e.target.value)}
-                          >
-                            <option value="">Seleccionar...</option>
-                            <option value="Efectivo">Efectivo</option>
-                            <option value="Transferencia">Transferencia</option>
-                            <option value="Tarjeta">Tarjeta</option>
-                          </CFormSelect>
-                        </CTableDataCell>
-                        <CTableDataCell className="text-end">
-                          <CButton color="success" size="sm" className="text-white" onClick={() => handleConfirmSale(order)}>
-                            Confirmar Venta
-                          </CButton>
-                        </CTableDataCell>
-                      </CTableRow>
-                    ))}
-                  </CTableBody>
-                </CTable>
-              )}
-            </CCardBody>
-          </CCard>
-        </CCol>
+        <CCol xs={12}>
+          <CCard className="mb-4 shadow-sm">
+            <CCardHeader className="d-flex flex-wrap justify-content-between align-items-center gap-3 bg-body py-3">
+              <div>
+                <h5 className="mb-0 text-body fw-semibold">Gestión de Menús</h5>
+              </div>
 
-        {/* Panel Secundario Derecho: Historial de auditoría rápida de ventas del día */}
-        <CCol xs={12} lg={5} className="mb-4">
-          <CCard className="h-100">
-            <CCardHeader className="bg-body-secondary fw-bold text-uppercase">
-              📋 Historial de Ventas del Turno
-            </CCardHeader>
-            <CCardBody>
-              {salesHistory.length === 0 ? (
-                <div className="text-center py-4 text-body-secondary">Aún no se han registrado transacciones.</div>
-              ) : (
-                <CTable align="middle" responsive hover>
-                  <CTableHead className="table-theme-header">
-                    <CTableRow>
-                      <CTableHeaderCell>Comprobante</CTableHeaderCell>
-                      <CTableHeaderCell>Cliente / Hora</CTableHeaderCell>
-                      <CTableHeaderCell>Pago</CTableHeaderCell>
-                      <CTableHeaderCell className="text-end">Monto</CTableHeaderCell>
-                    </CTableRow>
-                  </CTableHead>
-                  <CTableBody>
-                    {salesHistory.map((sale) => (
-                      <CTableRow key={sale.id}>
-                        <CTableDataCell>
-                          <div className="fw-semibold text-primary">{sale.id}</div>
-                          <div className="small text-body-secondary">Pedido #{sale.pedidoId}</div>
-                        </CTableDataCell>
-                        <CTableDataCell>
-                          <div>{sale.cliente}</div>
-                          <div className="small text-body-secondary">{sale.hora} hs</div>
-                        </CTableDataCell>
-                        <CTableDataCell>
-                          <CBadge color={sale.metodoPago === 'Efectivo' ? 'success' : sale.metodoPago === 'Transferencia' ? 'info' : 'primary'}>
-                            {sale.metodoPago}
-                          </CBadge>
-                        </CTableDataCell>
-                        <CTableDataCell className="text-end fw-bold text-body">${sale.total.toLocaleString('es-AR')}</CTableDataCell>
-                      </CTableRow>
-                    ))}
-                  </CTableBody>
-                </CTable>
+              {activeTab === 1 && (
+                <div
+                  className="d-flex align-items-center gap-2"
+                  style={{ maxWidth: '620px', width: '100%' }}
+                >
+                  <CFormSelect
+                    value={filtroCategoria}
+                    onChange={(e) => {
+                      setFiltroCategoria(e.target.value)
+                      setPaginaActual(1)
+                    }}
+                    style={{ maxWidth: '180px' }}
+                    className="shadow-sm"
+                  >
+                    <option value="TODAS">Todas las categorías</option>
+                    <option value="Sándwiches">Sándwiches</option>
+                    <option value="Combos">Combos</option>
+                    <option value="Promociones">Promociones</option>
+                    <option value="Bebidas">Bebidas</option>
+                  </CFormSelect>
+
+                  <CFormInput
+                    type="text"
+                    placeholder="Buscar por nombre..."
+                    value={busqueda}
+                    onChange={(e) => setBusqueda(e.target.value)}
+                    className="shadow-sm"
+                  />
+
+                  <CButton
+                    color="primary"
+                    className="d-flex align-items-center gap-2 text-nowrap"
+                    onClick={() => setAgregarModalOpen(true)}
+                  >
+                    <CIcon icon={cilPlus} />
+                    Agregar menú
+                  </CButton>
+                </div>
               )}
+            </CCardHeader>
+
+            <div className="px-3 pt-2 bg-body border-bottom">
+              <CNav variant="tabs" role="tablist" className="border-bottom-0">
+                <CNavItem>
+                  <CNavLink
+                    active={activeTab === 1}
+                    onClick={() => setActiveTab(1)}
+                    style={{ cursor: 'pointer' }}
+                    className="d-flex align-items-center gap-2 fw-medium"
+                  >
+                    <CIcon icon={cilFastfood} />
+                    Administración de Carta
+                  </CNavLink>
+                </CNavItem>
+                <CNavItem>
+                  <CNavLink
+                    active={activeTab === 2}
+                    onClick={() => setActiveTab(2)}
+                    style={{ cursor: 'pointer' }}
+                    className="d-flex align-items-center gap-2 fw-medium"
+                  >
+                    <CIcon icon={cilCheckCircle} className="text-success" />
+                    Menú Digital Activo
+                  </CNavLink>
+                </CNavItem>
+                <CNavItem>
+                  <CNavLink
+                    active={activeTab === 3}
+                    onClick={() => setActiveTab(3)}
+                    style={{ cursor: 'pointer' }}
+                    className="d-flex align-items-center gap-2 fw-medium"
+                  >
+                    <CIcon icon={cilHistory} className="text-info" />
+                    Historial y Variación de Precios
+                  </CNavLink>
+                </CNavItem>
+              </CNav>
+            </div>
+
+            <CCardBody className="px-0 py-0">
+              <CTabContent>
+                {/* PESTAÑA 1: LISTADO PRINCIPAL */}
+                <CTabPane visible={activeTab === 1}>
+                  <div className="table-responsive" style={{ minHeight: '585px' }}>
+                    <CTable align="middle" className="mb-0 border-0" hover responsive>
+                      <CTableHead className="table-theme-header text-nowrap fw-bold">
+                        <CTableRow>
+                          <CTableHeaderCell className="text-center border-0" style={{ width: '5%' }}>
+                            N°
+                          </CTableHeaderCell>
+                          <CTableHeaderCell className="border-0" style={{ width: '25%' }}>
+                            Menú / Producto
+                          </CTableHeaderCell>
+                          <CTableHeaderCell className="border-0" style={{ width: '32%' }}>
+                            Descripción
+                          </CTableHeaderCell>
+                          <CTableHeaderCell className="border-0" style={{ width: '11%' }}>
+                            Categoría
+                          </CTableHeaderCell>
+                          <CTableHeaderCell className="text-end border-0" style={{ width: '10%' }}>
+                            Precio
+                          </CTableHeaderCell>
+                          <CTableHeaderCell className="text-center border-0" style={{ width: '9%' }}>
+                            Estado
+                          </CTableHeaderCell>
+                          <CTableHeaderCell className="text-center border-0" style={{ width: '8%' }}>
+                            Acciones
+                          </CTableHeaderCell>
+                        </CTableRow>
+                      </CTableHead>
+
+                      <CTableBody>
+                        {menusPaginados.length > 0 ? (
+                          <>
+                            {menusPaginados.map((menu, index) => (
+                              <CTableRow
+                                key={menu.id_menu}
+                                style={{ height: ROW_HEIGHT }}
+                                className={!menu.estado ? 'opacity-75' : ''}
+                              >
+                                <CTableDataCell className="text-center text-body-secondary fw-medium">
+                                  {inicio + index + 1}
+                                </CTableDataCell>
+
+                                <CTableDataCell>
+                                  <div className="d-flex align-items-center gap-3">
+                                    <CAvatar
+                                      color={menu.es_combo ? 'info' : 'warning'}
+                                      className={`bg-opacity-10 ${
+                                        menu.es_combo ? 'text-info' : 'text-warning'
+                                      } fw-semibold`}
+                                    >
+                                      <CIcon icon={cilFastfood} size="sm" />
+                                    </CAvatar>
+                                    <div className="fw-semibold text-body d-flex align-items-center gap-2">
+                                      {menu.nombre}
+                                      {menu.es_combo && (
+                                        <CBadge color="info" shape="rounded-pill">
+                                          Combo
+                                        </CBadge>
+                                      )}
+                                    </div>
+                                  </div>
+                                </CTableDataCell>
+
+                                <CTableDataCell>
+                                  <div
+                                    className="text-body-secondary text-truncate"
+                                    style={{ maxWidth: '380px' }}
+                                    title={menu.descripcion}
+                                  >
+                                    {menu.descripcion}
+                                  </div>
+                                </CTableDataCell>
+
+                                <CTableDataCell className="text-body-secondary text-truncate">
+                                  {menu.categoria}
+                                </CTableDataCell>
+
+                                <CTableDataCell className="text-end fw-semibold text-body text-nowrap">
+                                  ${Number(menu.precio).toLocaleString('es-AR')}
+                                </CTableDataCell>
+
+                                <CTableDataCell className="text-center text-nowrap">
+                                  <CBadge
+                                    color={menu.estado ? 'success' : 'danger'}
+                                    shape="rounded-pill"
+                                  >
+                                    {menu.estado ? 'Activo' : 'Inactivo'}
+                                  </CBadge>
+                                </CTableDataCell>
+
+                                <CTableDataCell className="text-center">
+                                  <CDropdown alignment="end">
+                                    <CDropdownToggle
+                                      color="transparent"
+                                      caret={false}
+                                      className="p-0 border-0 shadow-none"
+                                    >
+                                      <CIcon
+                                        icon={cilOptions}
+                                        className="text-body-secondary"
+                                        size="lg"
+                                      />
+                                    </CDropdownToggle>
+                                    <CDropdownMenu>
+                                      <CDropdownItem
+                                        onClick={() => {
+                                          setMenuSeleccionado(menu)
+                                          setActualizarModalOpen(true)
+                                        }}
+                                        className="d-flex align-items-center gap-2"
+                                      >
+                                        <CIcon icon={cilPencil} className="text-info" />
+                                        Editar
+                                      </CDropdownItem>
+                                      <CDropdownItem
+                                        onClick={() => {
+                                          setMenuSeleccionado(menu)
+                                          setEstadoModalOpen(true)
+                                        }}
+                                        className={`d-flex align-items-center gap-2 ${
+                                          menu.estado ? 'text-warning' : 'text-success'
+                                        }`}
+                                      >
+                                        <CIcon
+                                          icon={menu.estado ? cilBan : cilCheckCircle}
+                                        />
+                                        {menu.estado ? 'Desactivar' : 'Activar'}
+                                      </CDropdownItem>
+                                      <CDropdownItem
+                                        onClick={() => {
+                                          setMenuSeleccionado(menu)
+                                          setEliminarModalOpen(true)
+                                        }}
+                                        className="d-flex align-items-center gap-2 text-danger"
+                                      >
+                                        <CIcon icon={cilTrash} />
+                                        Eliminar
+                                      </CDropdownItem>
+                                    </CDropdownMenu>
+                                  </CDropdown>
+                                </CTableDataCell>
+                              </CTableRow>
+                            ))}
+
+                            {Array.from({ length: filasVacias }).map((_, idx) => (
+                              <CTableRow
+                                key={`empty-${idx}`}
+                                style={{ height: ROW_HEIGHT, pointerEvents: 'none' }}
+                              >
+                                <CTableDataCell colSpan="7" className="border-bottom-0" />
+                              </CTableRow>
+                            ))}
+                          </>
+                        ) : (
+                          <CTableRow style={{ height: `calc(${ROW_HEIGHT} * ${PAGE_SIZE})` }}>
+                            <CTableDataCell
+                              colSpan="7"
+                              className="text-center align-middle text-body-secondary"
+                            >
+                              No se encontraron menús que coincidan con la búsqueda.
+                            </CTableDataCell>
+                          </CTableRow>
+                        )}
+                      </CTableBody>
+                    </CTable>
+                  </div>
+
+                  <div className="d-flex justify-content-between align-items-center px-4 py-3 bg-body border-top">
+                    <span className="small text-body-secondary">
+                      Mostrando {menusPaginados.length} de {totalRegistros} menús registrados
+                    </span>
+                    <CPagination className="mb-0" aria-label="Navegación de menús">
+                      <CPaginationItem
+                        disabled={paginaActual === 1}
+                        onClick={() => setPaginaActual((prev) => Math.max(1, prev - 1))}
+                        style={{ cursor: paginaActual === 1 ? 'default' : 'pointer' }}
+                      >
+                        Anterior
+                      </CPaginationItem>
+                      {Array.from({ length: totalPaginas }).map((_, index) => {
+                        const numPagina = index + 1
+                        return (
+                          <CPaginationItem
+                            key={numPagina}
+                            active={paginaActual === numPagina}
+                            onClick={() => setPaginaActual(numPagina)}
+                            style={{ cursor: 'pointer' }}
+                          >
+                            {numPagina}
+                          </CPaginationItem>
+                        )
+                      })}
+                      <CPaginationItem
+                        disabled={paginaActual >= totalPaginas}
+                        onClick={() => setPaginaActual((prev) => Math.min(totalPaginas, prev + 1))}
+                        style={{
+                          cursor: paginaActual >= totalPaginas ? 'default' : 'pointer',
+                        }}
+                      >
+                        Siguiente
+                      </CPaginationItem>
+                    </CPagination>
+                  </div>
+                </CTabPane>
+
+                {/* PESTAÑA 2: MENÚ DIGITAL ACTIVO */}
+                <CTabPane visible={activeTab === 2}>
+                  <div className="p-4">
+                    <MenuDigitalActivo menus={menus} />
+                  </div>
+                </CTabPane>
+
+                {/* PESTAÑA 3: HISTORIAL Y VARIACIÓN DE PRECIOS */}
+                <CTabPane visible={activeTab === 3}>
+                  <HistorialPrecios historial={historial} />
+                </CTabPane>
+              </CTabContent>
             </CCardBody>
           </CCard>
         </CCol>
       </CRow>
+
+      {/* Modales independientes */}
+      <ModalAgregarMenu
+        visible={agregarModalOpen}
+        onClose={() => setAgregarModalOpen(false)}
+        onAdd={handleAgregarMenu}
+      />
+
+      <ModalActualizarMenu
+        visible={actualizarModalOpen}
+        onClose={() => setActualizarModalOpen(false)}
+        menu={menuSeleccionado}
+        onUpdate={handleActualizarMenu}
+      />
+
+      <ModalEstadoMenu
+        visible={estadoModalOpen}
+        onClose={() => setEstadoModalOpen(false)}
+        menu={menuSeleccionado}
+        onConfirm={handleEstadoMenu}
+      />
+
+      <ModalEliminarMenu
+        visible={eliminarModalOpen}
+        onClose={() => setEliminarModalOpen(false)}
+        menu={menuSeleccionado}
+        onDelete={handleEliminarMenu}
+      />
     </div>
-  );
+  )
 }
+
+export default Menus
