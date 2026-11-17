@@ -1,16 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react'
-
 import { CChartLine } from '@coreui/react-chartjs'
 import { getStyle } from '@coreui/utils'
 
-const random = (min = 0, max = 100) => Math.floor(Math.random() * (max - min + 1)) + min
-
-const MainChart = () => {
+const MainChart = ({ datos = [] }) => {
   const chartRef = useRef(null)
-  const [randomData] = useState(() => [
-    Array.from({ length: 7 }, () => random(50, 200)),
-    Array.from({ length: 7 }, () => random(50, 200)),
-  ])
+  const labels = datos.map((item) => item.dia)
+  const valoresVentas = datos.map((item) => Number(item.total || 0))
 
   useEffect(() => {
     const handleColorSchemeChange = () => {
@@ -34,7 +29,7 @@ const MainChart = () => {
     document.documentElement.addEventListener('ColorSchemeChange', handleColorSchemeChange)
     return () =>
       document.documentElement.removeEventListener('ColorSchemeChange', handleColorSchemeChange)
-  }, [chartRef])
+  }, [])
 
   return (
     <>
@@ -42,33 +37,16 @@ const MainChart = () => {
         ref={chartRef}
         style={{ height: '300px', marginTop: '40px' }}
         data={{
-          labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
+          labels,
           datasets: [
             {
-              label: 'My First dataset',
+              label: 'Ventas',
               backgroundColor: `rgba(${getStyle('--cui-info-rgb')}, .1)`,
               borderColor: getStyle('--cui-info'),
               pointHoverBackgroundColor: getStyle('--cui-info'),
               borderWidth: 2,
-              data: randomData[0],
+              data: valoresVentas,
               fill: true,
-            },
-            {
-              label: 'My Second dataset',
-              backgroundColor: 'transparent',
-              borderColor: getStyle('--cui-success'),
-              pointHoverBackgroundColor: getStyle('--cui-success'),
-              borderWidth: 2,
-              data: randomData[1],
-            },
-            {
-              label: 'My Third dataset',
-              backgroundColor: 'transparent',
-              borderColor: getStyle('--cui-danger'),
-              pointHoverBackgroundColor: getStyle('--cui-danger'),
-              borderWidth: 1,
-              borderDash: [8, 5],
-              data: [65, 65, 65, 65, 65, 65, 65],
             },
           ],
         }}

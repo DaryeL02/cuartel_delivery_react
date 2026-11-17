@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { CWidgetStatsD, CRow, CCol } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cibFacebook, cibLinkedin, cibYoutube } from '@coreui/icons'
-
+// iconos de youtube importados desde el dashboard
 const DashboardBrand = (props) => {
   return (
     <CRow className={props.className} xs={{ gutter: 4 }}>
