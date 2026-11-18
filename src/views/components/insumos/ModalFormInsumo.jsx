@@ -34,6 +34,7 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
   const [errores, setErrores] = useState({})
   const [loading, setLoading] = useState(false)
   const [modalProveedorVisible, setModalProveedorVisible] = useState(false)
+  const [erroresProveedor, setErroresProveedor] = useState({})
   const [nuevoProveedor, setNuevoProveedor] = useState({
     nombre: '', direccion: '', telefono: '', email: '', cuit: '', descripcion: '',
   })
@@ -252,7 +253,9 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
 
   const crearProveedor = async (e) => {
     e.preventDefault()
+    setErroresProveedor({})
     if (!nuevoProveedor.nombre.trim()) {
+      setErroresProveedor({ nombre: 'El nombre del proveedor es obligatorio.' })
       notificar('advertencia', 'El nombre del proveedor es obligatorio.')
       return
     }
@@ -267,7 +270,21 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
       setModalProveedorVisible(false)
       notificar('exito', 'Proveedor creado y seleccionado.')
     } catch (error) {
-      const mensaje = error.response?.data?.detail || error.response?.data?.nombre?.[0] || 'No se pudo crear el proveedor.'
+      const datosError = error.response?.data
+      if (datosError && typeof datosError === 'object') {
+        const mensajes = Object.fromEntries(
+          Object.entries(datosError).map(([campo, valor]) => [
+            campo,
+            Array.isArray(valor) ? valor[0] : String(valor),
+          ]),
+        )
+        setErroresProveedor(mensajes)
+      }
+      const mensaje =
+        datosError?.detail ||
+        datosError?.nombre?.[0] ||
+        Object.values(datosError || {}).flat()[0] ||
+        'No se pudo crear el proveedor.'
       notificar('error', mensaje)
     }
   }
@@ -454,17 +471,32 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
       <CModalHeader><CModalTitle>Nuevo proveedor</CModalTitle></CModalHeader>
       <CForm onSubmit={crearProveedor}>
         <CModalBody className="d-grid gap-3">
-          <CFormInput label="Nombre" value={nuevoProveedor.nombre} required maxLength={100}
-            onChange={(e) => setNuevoProveedor((prev) => ({ ...prev, nombre: e.target.value }))} />
+          <CFormInput
+            label={<span>Nombre <span className="text-danger">*</span></span>}
+            value={nuevoProveedor.nombre}
+            required
+            maxLength={100}
+            invalid={!!erroresProveedor.nombre}
+            feedbackInvalid={erroresProveedor.nombre}
+            onChange={(e) => {
+              setNuevoProveedor((prev) => ({ ...prev, nombre: e.target.value }))
+              setErroresProveedor((prev) => ({ ...prev, nombre: null }))
+            }}
+          />
           <CFormInput label="Dirección" value={nuevoProveedor.direccion} maxLength={200}
+            invalid={!!erroresProveedor.direccion} feedbackInvalid={erroresProveedor.direccion}
             onChange={(e) => setNuevoProveedor((prev) => ({ ...prev, direccion: e.target.value }))} />
           <CFormInput label="Teléfono" value={nuevoProveedor.telefono} maxLength={20}
+            invalid={!!erroresProveedor.telefono} feedbackInvalid={erroresProveedor.telefono}
             onChange={(e) => setNuevoProveedor((prev) => ({ ...prev, telefono: e.target.value }))} />
           <CFormInput label="Correo" type="email" value={nuevoProveedor.email} maxLength={30}
+            invalid={!!erroresProveedor.email} feedbackInvalid={erroresProveedor.email}
             onChange={(e) => setNuevoProveedor((prev) => ({ ...prev, email: e.target.value }))} />
           <CFormInput label="CUIT" value={nuevoProveedor.cuit} maxLength={30}
+            invalid={!!erroresProveedor.cuit} feedbackInvalid={erroresProveedor.cuit}
             onChange={(e) => setNuevoProveedor((prev) => ({ ...prev, cuit: e.target.value }))} />
           <CFormTextarea label="Descripción" value={nuevoProveedor.descripcion} maxLength={200}
+            invalid={!!erroresProveedor.descripcion} feedbackInvalid={erroresProveedor.descripcion}
             onChange={(e) => setNuevoProveedor((prev) => ({ ...prev, descripcion: e.target.value }))} />
         </CModalBody>
         <CModalFooter>

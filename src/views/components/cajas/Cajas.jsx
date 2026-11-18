@@ -7,6 +7,17 @@ import {
   CRow,
   CCol,
   CBadge,
+  CTable,
+  CTableHead,
+  CTableRow,
+  CTableHeaderCell,
+  CTableBody,
+  CTableDataCell,
+  CModal,
+  CModalHeader,
+  CModalTitle,
+  CModalBody,
+  CModalFooter,
 } from '@coreui/react';
 import { toast } from 'react-toastify';
 import api from '../api/api';
@@ -20,6 +31,9 @@ export default function Cajas() {
   const [modalCerrarCajaOpen, setModalCerrarCajaOpen] = useState(false);
   const [locales, setLocales] = useState([]);
   const [cajaACerrar, setCajaACerrar] = useState(null);
+  const [cajaHistorial, setCajaHistorial] = useState(null);
+  const [movimientosCaja, setMovimientosCaja] = useState([]);
+  const [cargandoMovimientos, setCargandoMovimientos] = useState(false);
   const usuarioActual = JSON.parse(localStorage.getItem('user') || '{}');
   const rolesActuales = usuarioActual.roles_nombres || [usuarioActual.rol_nombre];
   const puedeAbrirCaja = rolesActuales.some((rol) =>
@@ -45,7 +59,7 @@ export default function Cajas() {
   const cargarCajas = async () => {
     try {
       const token = localStorage.getItem('token');
-      const respuesta = await api.get('/api/cajas/', {
+      const respuesta = await api.get('/api/cajas/?date=today', {
         headers: {
           Authorization: `Token ${token}`,
         },
@@ -72,6 +86,27 @@ export default function Cajas() {
     }
   };
 
+  const verMovimientos = async (caja) => {
+    setCajaHistorial(caja);
+    setMovimientosCaja([]);
+    setCargandoMovimientos(true);
+    try {
+      const respuesta = await api.get('/api/movimientos-caja/', {
+        params: { caja: caja.id_cajas },
+        headers: { Authorization: `Token ${localStorage.getItem('token')}` },
+      });
+      setMovimientosCaja(
+        Array.isArray(respuesta.data) ? respuesta.data : respuesta.data.results || [],
+      );
+    } catch (error) {
+      console.error('Error al cargar los movimientos de caja:', error);
+      notificar('error', error.response?.data?.detail || 'No se pudieron cargar los movimientos.');
+      setCajaHistorial(null);
+    } finally {
+      setCargandoMovimientos(false);
+    }
+  };
+
   useEffect(() => {
     cargarCajas();
     cargarLocales();
@@ -88,7 +123,7 @@ export default function Cajas() {
           disabled={!puedeAbrirCaja}
           title={
             !puedeAbrirCaja
-              ? 'Solo Dueño o Administrador pueden abrir una caja.'
+              ? 'No tiene los permisos adecuados para abrir una caja'
               : 'Abrir una nueva caja'
           }
         >
@@ -168,6 +203,14 @@ export default function Cajas() {
                   <div className="d-flex gap-2">
                     {itemCaja.estado ? (
                       <>
+                        <CButton
+                          color="info"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => verMovimientos(itemCaja)}
+                        >
+                          Ver Movimientos
+                        </CButton>
                         <CButton color="primary" size="sm" disabled onClick={() => {}}>
                           + Movimiento
                         </CButton>
@@ -190,7 +233,17 @@ export default function Cajas() {
                         )}
                       </>
                     ) : (
-                      <span className="text-success small fw-bold">Arqueo Finalizado con Éxito</span>
+                      <>
+                        <CButton
+                          color="info"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => verMovimientos(itemCaja)}
+                        >
+                          Ver Movimientos
+                        </CButton>
+                        <span className="text-success small fw-bold">Arqueo Finalizado con Éxito</span>
+                      </>
                     )}
                   </div>
                 </div>
@@ -213,6 +266,58 @@ export default function Cajas() {
         caja={cajaACerrar}
         onSuccess={cargarCajas}
       />
+      <CModal visible={!!cajaHistorial} onClose={() => setCajaHistorial(null)} size="lg">
+        <CModalHeader>
+          <CModalTitle>Movimientos de Caja #{cajaHistorial?.id_cajas}</CModalTitle>
+        </CModalHeader>
+        <CModalBody>
+          {cargandoMovimientos ? (
+            <p className="text-center text-body-secondary mb-0">Cargando movimientos...</p>
+          ) : movimientosCaja.length ? (
+            <CTable responsive hover>
+              <CTableHead>
+                <CTableRow>
+                  <CTableHeaderCell>Fecha</CTableHeaderCell>
+                  <CTableHeaderCell>Tipo</CTableHeaderCell>
+                  <CTableHeaderCell>Concepto</CTableHeaderCell>
+                  <CTableHeaderCell>Referencia</CTableHeaderCell>
+                  <CTableHeaderCell>Responsable</CTableHeaderCell>
+                  <CTableHeaderCell className="text-end">Monto</CTableHeaderCell>
+                </CTableRow>
+              </CTableHead>
+              <CTableBody>
+                {movimientosCaja.map((movimiento) => (
+                  <CTableRow key={movimiento.id_movimientos}>
+                    <CTableDataCell>
+                      {new Date(movimiento.fecha_hora_creacion).toLocaleString()}
+                    </CTableDataCell>
+                    <CTableDataCell>{movimiento.tipo_movimiento}</CTableDataCell>
+                    <CTableDataCell>{movimiento.concepto}</CTableDataCell>
+                    <CTableDataCell>
+                      {movimiento.venta_id
+                        ? `Venta #${movimiento.venta_id}`
+                        : movimiento.compra_id
+                          ? `Compra #${movimiento.compra_id}`
+                          : '-'}
+                    </CTableDataCell>
+                    <CTableDataCell>{movimiento.caja_usuario || '-'}</CTableDataCell>
+                    <CTableDataCell className="text-end">
+                      ${Number(movimiento.monto || 0).toFixed(2)}
+                    </CTableDataCell>
+                  </CTableRow>
+                ))}
+              </CTableBody>
+            </CTable>
+          ) : (
+            <p className="text-center text-body-secondary mb-0">No hay movimientos registrados.</p>
+          )}
+        </CModalBody>
+        <CModalFooter>
+          <CButton color="secondary" onClick={() => setCajaHistorial(null)}>
+            Cerrar
+          </CButton>
+        </CModalFooter>
+      </CModal>
     </div>
   );
 }

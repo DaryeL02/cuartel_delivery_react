@@ -40,8 +40,13 @@ const Pedidos = () => {
   // Estados de datos desde API
   const [pedidos, setPedidos] = useState([])
   const [productos, setProductos] = useState([])
+  const [bebidas, setBebidas] = useState([])
   const [cajas, setCajas] = useState([])
   const [loading, setLoading] = useState(true)
+  const [historialVisible, setHistorialVisible] = useState(false)
+  const [historialPedidos, setHistorialPedidos] = useState([])
+  const [pedidoDetalleHistorial, setPedidoDetalleHistorial] = useState(null)
+  const [cargandoHistorial, setCargandoHistorial] = useState(false)
 
   // Filtros en tabla
   const [busqueda, setBusqueda] = useState('')
@@ -104,6 +109,30 @@ const Pedidos = () => {
     }
   }
 
+  const cargarBebidas = async () => {
+    try {
+      const respuesta = await api.get('/api/bebidas/', getAuthConfig())
+      setBebidas(Array.isArray(respuesta.data) ? respuesta.data : respuesta.data.results || [])
+    } catch (error) {
+      console.error('Error al cargar bebidas:', error)
+      notificar('error', error.response?.data?.detail || 'No se pudieron cargar las bebidas.')
+    }
+  }
+
+  const abrirHistorial = async () => {
+    setHistorialVisible(true)
+    setCargandoHistorial(true)
+    try {
+      const respuesta = await api.get('/api/pedidos/', getAuthConfig())
+      setHistorialPedidos(Array.isArray(respuesta.data) ? respuesta.data : respuesta.data.results || [])
+    } catch (error) {
+      console.error('Error al cargar el historial de pedidos:', error)
+      notificar('error', error.response?.data?.detail || 'No se pudo cargar el historial de pedidos.')
+    } finally {
+      setCargandoHistorial(false)
+    }
+  }
+
   const cargarCajas = async () => {
     try {
       const respuesta = await api.get('/api/cajas/?status=active', getAuthConfig())
@@ -116,6 +145,7 @@ const Pedidos = () => {
   useEffect(() => {
     cargarPedidos()
     cargarProductos()
+    cargarBebidas()
     cargarCajas()
   }, [])
 
@@ -190,15 +220,20 @@ const Pedidos = () => {
                 Administra el flujo de pedidos del día y modifica sus ítems o estado.
               </p>
             </div>
-            <CButton
-              color="primary"
-              onClick={() => {
-                setPedidoAEditar(null)
-                setModalOpen(true)
-              }}
-            >
-              <CIcon icon={cilPlus} className="me-1" /> Nuevo Pedido
-            </CButton>
+            <div className="d-flex gap-2">
+              <CButton color="info" variant="outline" onClick={abrirHistorial}>
+                <CIcon icon={cilClock} className="me-1" /> Historial
+              </CButton>
+              <CButton
+                color="primary"
+                onClick={() => {
+                  setPedidoAEditar(null)
+                  setModalOpen(true)
+                }}
+              >
+                <CIcon icon={cilPlus} className="me-1" /> Nuevo Pedido
+              </CButton>
+            </div>
           </div>
         </CCol>
 
@@ -306,7 +341,7 @@ const Pedidos = () => {
                       const resumenItems =
                         detalles.length > 0
                           ? `${detalles.length} ítem(s): ${detalles
-                              .map((d) => `${d.cantidad}x ${d.producto?.nombre}`)
+                              .map((d) => `${d.cantidad}x ${d.producto?.nombre || d.bebida?.nombre}`)
                               .join(', ')}`
                           : 'Sin detalles'
 
@@ -385,9 +420,132 @@ const Pedidos = () => {
         onClose={() => setModalOpen(false)}
         pedido={pedidoAEditar}
         productos={productos}
+        bebidas={bebidas}
         cajas={cajas}
         onSuccess={cargarPedidos}
       />
+
+      <CModal
+        visible={historialVisible}
+        onClose={() => {
+          setHistorialVisible(false)
+          setPedidoDetalleHistorial(null)
+        }}
+        size="xl"
+      >
+        <CModalHeader>
+          <CModalTitle>Historial de Pedidos</CModalTitle>
+        </CModalHeader>
+        <CModalBody>
+          {cargandoHistorial ? (
+            <p className="text-center text-body-secondary">Cargando pedidos...</p>
+          ) : (
+            <>
+              <CTable responsive hover bordered>
+                <CTableHead>
+                  <CTableRow>
+                    <CTableHeaderCell>Pedido</CTableHeaderCell>
+                    <CTableHeaderCell>Fecha</CTableHeaderCell>
+                    <CTableHeaderCell>Empleado</CTableHeaderCell>
+                    <CTableHeaderCell>Cliente</CTableHeaderCell>
+                    <CTableHeaderCell>Dirección</CTableHeaderCell>
+                    <CTableHeaderCell>Estado</CTableHeaderCell>
+                    <CTableHeaderCell>Pagado</CTableHeaderCell>
+                    <CTableHeaderCell className="text-end">Total</CTableHeaderCell>
+                    <CTableHeaderCell>Detalle</CTableHeaderCell>
+                  </CTableRow>
+                </CTableHead>
+                <CTableBody>
+                  {historialPedidos.map((pedido) => (
+                    <CTableRow key={pedido.id_pedidos}>
+                      <CTableDataCell>#{pedido.id_pedidos}</CTableDataCell>
+                      <CTableDataCell>
+                        {pedido.fecha_hora_creacion
+                          ? new Date(pedido.fecha_hora_creacion).toLocaleString()
+                          : '-'}
+                      </CTableDataCell>
+                      <CTableDataCell>
+                        {pedido.empleado_detalle
+                          ? `${pedido.empleado_detalle.nombre} ${pedido.empleado_detalle.apellido}`
+                          : '-'}
+                      </CTableDataCell>
+                      <CTableDataCell>{pedido.cliente}</CTableDataCell>
+                      <CTableDataCell>{pedido.direccion || '-'}</CTableDataCell>
+                      <CTableDataCell>{pedido.estado}</CTableDataCell>
+                      <CTableDataCell>{pedido.pagado ? 'Sí' : 'No'}</CTableDataCell>
+                      <CTableDataCell className="text-end">
+                        ${formatearMoneda(pedido.precio_total)}
+                      </CTableDataCell>
+                      <CTableDataCell>
+                        <CButton
+                          size="sm"
+                          color="info"
+                          variant="outline"
+                          onClick={() =>
+                            setPedidoDetalleHistorial(
+                              pedidoDetalleHistorial?.id_pedidos === pedido.id_pedidos
+                                ? null
+                                : pedido,
+                            )
+                          }
+                        >
+                          Detalles
+                        </CButton>
+                      </CTableDataCell>
+                    </CTableRow>
+                  ))}
+                </CTableBody>
+              </CTable>
+              {!historialPedidos.length && !cargandoHistorial && (
+                <p className="text-center text-body-secondary mb-0">No hay pedidos para mostrar.</p>
+              )}
+              {pedidoDetalleHistorial && (
+                <div className="mt-4">
+                  <h6 className="fw-bold">
+                    Detalle del pedido #{pedidoDetalleHistorial.id_pedidos}
+                  </h6>
+                  <CTable responsive hover>
+                    <CTableHead>
+                      <CTableRow>
+                        <CTableHeaderCell>Producto / bebida</CTableHeaderCell>
+                        <CTableHeaderCell>Cantidad</CTableHeaderCell>
+                        <CTableHeaderCell className="text-end">Subtotal</CTableHeaderCell>
+                      </CTableRow>
+                    </CTableHead>
+                    <CTableBody>
+                      {(pedidoDetalleHistorial.pedido_detalle || []).map((detalle) => (
+                        <CTableRow key={detalle.id_detalles_pedidos}>
+                          <CTableDataCell>
+                            {detalle.producto?.nombre || detalle.bebida?.nombre || '-'}
+                          </CTableDataCell>
+                          <CTableDataCell>{detalle.cantidad}</CTableDataCell>
+                          <CTableDataCell className="text-end">
+                            ${formatearMoneda(detalle.subtotal)}
+                          </CTableDataCell>
+                        </CTableRow>
+                      ))}
+                    </CTableBody>
+                  </CTable>
+                  <div className="text-end fw-bold">
+                    Total: ${formatearMoneda(pedidoDetalleHistorial.precio_total)}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </CModalBody>
+        <CModalFooter>
+          <CButton
+            color="secondary"
+            onClick={() => {
+              setHistorialVisible(false)
+              setPedidoDetalleHistorial(null)
+            }}
+          >
+            Cerrar
+          </CButton>
+        </CModalFooter>
+      </CModal>
 
       {/* MODAL DE CONFIRMACIÓN PARA COMPLETAR PEDIDO */}
       <CModal

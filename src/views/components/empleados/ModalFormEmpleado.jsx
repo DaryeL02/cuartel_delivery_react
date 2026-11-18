@@ -233,6 +233,7 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
         const mensajePrincipal =
           erroresBackend.detail ||
           erroresBackend.non_field_errors ||
+          erroresBackend.dni ||
           (modoEditar
             ? 'No se pudieron guardar los cambios. Revisa los datos ingresados.'
             : 'No se pudo registrar el empleado. Revisa los datos ingresados.')

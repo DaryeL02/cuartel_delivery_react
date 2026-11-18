@@ -333,16 +333,19 @@ const ModalFormProducto = ({ visible, onClose, producto, insumos_lista, onSucces
                             onChange={() => handleInsumoCheck(insumo.id_insumos)}
                           />
                           {data.insumos.some((item) => item.id_insumos === insumo.id_insumos) && (
-                            <CFormInput
-                              aria-label={`Cantidad de ${insumo.nombre}`}
-                              type="number"
-                              min="0.01"
-                              step="0.01"
-                              size="sm"
-                              style={{ maxWidth: '90px' }}
-                              value={data.insumos.find((item) => item.id_insumos === insumo.id_insumos)?.cantidad ?? '1'}
-                              onChange={(e) => cambiarCantidadInsumo(insumo.id_insumos, e.target.value)}
-                            />
+                            <div className="d-flex align-items-center gap-2">
+                              <CFormInput
+                                aria-label={`Cantidad de ${insumo.nombre}`}
+                                type="number"
+                                min="0.01"
+                                step="0.01"
+                                size="sm"
+                                style={{ maxWidth: '90px' }}
+                                value={data.insumos.find((item) => item.id_insumos === insumo.id_insumos)?.cantidad ?? '1'}
+                                onChange={(e) => cambiarCantidadInsumo(insumo.id_insumos, e.target.value)}
+                              />
+                              <small className="text-body-secondary">{insumo.unidad}</small>
+                            </div>
                           )}
                         </div>
                       </CCol>

@@ -28,7 +28,7 @@ import { toast } from 'react-toastify'
 const MAX_DECIMAL_9_2 = 9999999.99
 const MAX_CANTIDAD_ITEM = 999
 
-const ModalFormPedido = ({ visible, onClose, pedido, productos, cajas, onSuccess }) => {
+const ModalFormPedido = ({ visible, onClose, pedido, productos, bebidas = [], cajas, onSuccess }) => {
   const modoEditar = !!pedido
 
   const [data, setData] = useState({
@@ -40,7 +40,8 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, cajas, onSuccess
   })
 
   const [productoSeleccionado, setProductoSeleccionado] = useState({
-    producto: '',
+    tipo: 'producto',
+    articulo: '',
     cantidad: '',
   })
 
@@ -71,6 +72,7 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, cajas, onSuccess
   const productosActivos = Array.isArray(productos)
     ? productos.filter((p) => p.estado !== false)
     : []
+  const bebidasActivas = Array.isArray(bebidas) ? bebidas.filter((b) => b.estado !== false) : []
 
   useEffect(() => {
     if (!visible) return
@@ -87,6 +89,7 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, cajas, onSuccess
         detalles: (pedido.pedido_detalle || []).map((det) => ({
           id_temporal: det.id_detalles_pedidos || Date.now() + Math.random(),
           producto: det.producto,
+          bebida: det.bebida,
           cantidad: Number(det.cantidad),
           subtotal: Number(det.subtotal),
         })),
@@ -102,7 +105,7 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, cajas, onSuccess
       })
     }
 
-    setProductoSeleccionado({ producto: '', cantidad: '' })
+    setProductoSeleccionado({ tipo: 'producto', articulo: '', cantidad: '' })
   }, [pedido, visible, modoEditar, cajas])
 
   const formatearMoneda = (valor) => {
@@ -155,8 +158,8 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, cajas, onSuccess
   const handleAgregarProducto = () => {
     const nuevosErroresItem = {}
 
-    if (!productoSeleccionado.producto) {
-      nuevosErroresItem.producto = 'Selecciona un producto.'
+    if (!productoSeleccionado.articulo) {
+      nuevosErroresItem.articulo = 'Selecciona un producto o una bebida.'
     }
     const cantidadNum = Number(productoSeleccionado.cantidad)
     if (!productoSeleccionado.cantidad || isNaN(cantidadNum) || cantidadNum <= 0) {
@@ -170,21 +173,26 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, cajas, onSuccess
       return
     }
 
-    const productoCompleto = productos.find(
-      (p) => String(p.id_productos) === String(productoSeleccionado.producto)
+    const esBebida = productoSeleccionado.tipo === 'bebida'
+    const articulos = esBebida ? bebidasActivas : productosActivos
+    const idArticulo = esBebida ? 'id_bebidas' : 'id_productos'
+    const articuloCompleto = articulos.find(
+      (articulo) => String(articulo[idArticulo]) === String(productoSeleccionado.articulo)
     )
-    if (!productoCompleto) return
+    if (!articuloCompleto) return
 
-    const precioUnitario = Number(productoCompleto.precio_unitario)
+    const precioUnitario = Number(articuloCompleto.precio_unitario)
     const indiceExistente = data.detalles.findIndex(
-      (item) => String(item.producto?.id_productos) === String(productoCompleto.id_productos)
+      (item) =>
+        (esBebida ? item.bebida?.id_bebidas : item.producto?.id_productos) ===
+        articuloCompleto[idArticulo]
     )
 
     if (indiceExistente !== -1) {
       const itemActual = data.detalles[indiceExistente]
       const nuevaCantidad = itemActual.cantidad + cantidadNum
       if (nuevaCantidad > MAX_CANTIDAD_ITEM) {
-        notificar('advertencia', `La cantidad máxima por producto es ${MAX_CANTIDAD_ITEM} unidades.`)
+        notificar('advertencia', `La cantidad máxima por artículo es ${MAX_CANTIDAD_ITEM} unidades.`)
         return
       }
 
@@ -227,10 +235,10 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, cajas, onSuccess
       }
 
       const nuevoDetalle = {
-        id_temporal: Date.now() + Math.random(),
-        producto: {
-          id_productos: productoCompleto.id_productos,
-          nombre: productoCompleto.nombre,
+        id_temporal: `${esBebida ? 'bebida' : 'producto'}-${articuloCompleto[idArticulo]}`,
+        [esBebida ? 'bebida' : 'producto']: {
+          [idArticulo]: articuloCompleto[idArticulo],
+          nombre: articuloCompleto.nombre,
           precio_unitario: precioUnitario,
         },
         cantidad: cantidadNum,
@@ -243,7 +251,7 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, cajas, onSuccess
       }))
     }
 
-    setProductoSeleccionado({ producto: '', cantidad: '' })
+    setProductoSeleccionado({ tipo: 'producto', articulo: '', cantidad: '' })
     setErroresItem({})
     if (errores.detalles) {
       setErrores((prev) => ({ ...prev, detalles: null }))
@@ -261,7 +269,9 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, cajas, onSuccess
             notificar('advertencia', `Máximo ${MAX_CANTIDAD_ITEM} unidades por ítem.`)
             return item
           }
-          const precioUnitario = Number(item.producto?.precio_unitario || 0)
+          const precioUnitario = Number(
+            item.producto?.precio_unitario || item.bebida?.precio_unitario || 0,
+          )
           const nuevoSubtotal = Number((nuevaCantidad * precioUnitario).toFixed(2))
           if (nuevoSubtotal > MAX_DECIMAL_9_2) {
             notificar('advertencia', 'El subtotal excede el límite máximo permitido.')
@@ -334,7 +344,9 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, cajas, onSuccess
     const headers = { Authorization: `Token ${token}` }
 
     const detallesPayload = data.detalles.map((item) => ({
-      id_productos: Number(item.producto.id_productos),
+      ...(item.bebida
+        ? { id_bebidas: Number(item.bebida.id_bebidas) }
+        : { id_productos: Number(item.producto.id_productos) }),
       cantidad: Number(item.cantidad),
     }))
 
@@ -489,25 +501,49 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, cajas, onSuccess
           </div>
 
           {!modoEditar && <hr className="my-3" />}
-          <h6 className="fw-bold text-body-secondary mb-3">Agregar Productos al Pedido</h6>
+          <h6 className="fw-bold text-body-secondary mb-3">Agregar Productos o Bebidas al Pedido</h6>
 
           {/* SELECTOR DE PRODUCTOS */}
           <CRow className="g-2 align-items-start mb-3">
             <CCol md={7}>
               <CFormSelect
-                label="Seleccionar Producto"
-                name="producto"
-                value={productoSeleccionado.producto}
-                onChange={handleProductoChange}
-                invalid={!!erroresItem.producto}
-                feedbackInvalid={erroresItem.producto}
+                className="mb-2"
+                label="Tipo de artículo"
+                name="tipo"
+                value={productoSeleccionado.tipo}
+                onChange={(e) => {
+                  setProductoSeleccionado({ tipo: e.target.value, articulo: '', cantidad: '' })
+                  setErroresItem((prev) => ({ ...prev, articulo: null }))
+                }}
               >
-                <option value="">-- Seleccione un producto --</option>
-                {productosActivos.map((item) => (
-                  <option key={item.id_productos} value={item.id_productos}>
-                    {item.nombre} (${formatearMoneda(item.precio_unitario)})
-                  </option>
-                ))}
+                <option value="producto">Producto</option>
+                <option value="bebida">Bebida</option>
+              </CFormSelect>
+              <CFormSelect
+                label={productoSeleccionado.tipo === 'bebida' ? 'Seleccionar Bebida' : 'Seleccionar Producto'}
+                name="articulo"
+                value={productoSeleccionado.articulo}
+                onChange={handleProductoChange}
+                invalid={!!erroresItem.articulo}
+                feedbackInvalid={erroresItem.articulo}
+              >
+                <option value="">
+                  {productoSeleccionado.tipo === 'bebida'
+                    ? '-- Seleccione una bebida --'
+                    : '-- Seleccione un producto --'}
+                </option>
+                {(productoSeleccionado.tipo === 'bebida' ? bebidasActivas : productosActivos).map(
+                  (item) => {
+                    const id = productoSeleccionado.tipo === 'bebida'
+                      ? item.id_bebidas
+                      : item.id_productos
+                    return (
+                      <option key={id} value={id}>
+                        {item.nombre} (${formatearMoneda(item.precio_unitario)})
+                      </option>
+                    )
+                  },
+                )}
               </CFormSelect>
             </CCol>
             <CCol md={3}>
@@ -556,7 +592,7 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, cajas, onSuccess
           >
             <CTableHead className="table-theme-header">
               <CTableRow>
-                <CTableHeaderCell>Producto</CTableHeaderCell>
+                <CTableHeaderCell>Artículo</CTableHeaderCell>
                 <CTableHeaderCell className="text-center" style={{ width: '150px' }}>
                   Cantidad
                 </CTableHeaderCell>
@@ -575,7 +611,7 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, cajas, onSuccess
               ) : (
                 data.detalles.map((item) => (
                   <CTableRow key={item.id_temporal}>
-                    <CTableDataCell>{item.producto?.nombre}</CTableDataCell>
+                    <CTableDataCell>{item.producto?.nombre || item.bebida?.nombre}</CTableDataCell>
                     <CTableDataCell className="text-center">
                       <div className="d-inline-flex align-items-center gap-2">
                         <CButton
@@ -606,7 +642,7 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, cajas, onSuccess
                       </div>
                     </CTableDataCell>
                     <CTableDataCell className="text-end">
-                      ${formatearMoneda(item.producto?.precio_unitario)}
+                      ${formatearMoneda(item.producto?.precio_unitario || item.bebida?.precio_unitario)}
                     </CTableDataCell>
                     <CTableDataCell className="text-end fw-bold">
                       ${formatearMoneda(item.subtotal)}

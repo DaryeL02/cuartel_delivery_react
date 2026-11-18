@@ -32,9 +32,14 @@ import { useDispatch } from 'react-redux'
 import { toast } from 'react-toastify'
 
 const AppHeaderDropdown = () => {
-
   const navigate = useNavigate()
   const dispatch = useDispatch()
+  const usuarioActual = JSON.parse(localStorage.getItem('user') || '{}')
+  const nombreUsuario =
+    usuarioActual.usuario ||
+    usuarioActual.empleado?.nombre ||
+    usuarioActual.empleado_nombre ||
+    'Usuario'
 
   const handleLogout = async () => {
     try {
@@ -65,6 +70,9 @@ const AppHeaderDropdown = () => {
       </CDropdownToggle>
       <CDropdownMenu className="pt-0" placement="bottom-end">
         
+        <CDropdownHeader className="bg-body-secondary fw-semibold">
+          {nombreUsuario}
+        </CDropdownHeader>
         <CDropdownHeader className="bg-body-secondary fw-semibold my-2">Configuración</CDropdownHeader>
         <CDropdownItem onClick={handleNavigate} style={{ cursor: 'pointer' }}>
           <CIcon icon={cilUser} className="me-2" onClick={handleNavigate} />

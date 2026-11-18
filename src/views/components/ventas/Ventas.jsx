@@ -59,12 +59,16 @@ const Ventas = () => {
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null)
   const [modoVenta, setModoVenta] = useState(null) // null | 'nuevo' | 'importado'
   const [productoSeleccionado, setProductoSeleccionado] = useState({
-    producto: '',
+    tipo: 'producto',
+    articulo: '',
     cantidad: '',
   })
   const [productos, setProductos] = useState([])
   const [metodos, setMetodos] = useState([])
   const [metodoSeleccionado, setMetodoSeleccionado] = useState('')
+  const [bebidas, setBebidas] = useState([])
+  const [ventas, setVentas] = useState([])
+  const [ventaDetalle, setVentaDetalle] = useState(null)
 
   const [errores, setErrores] = useState({})
   const [confirmModalOpen, setConfirmModalOpen] = useState(false)
@@ -130,6 +134,26 @@ const Ventas = () => {
     } catch (error) {
       console.error('Error al cargar productos:', error)
       notificar('error', 'No se pudieron cargar los productos.')
+    }
+  }
+
+  const cargarBebidas = async () => {
+    try {
+      const respuesta = await api.get('/api/bebidas/', getAuthConfig())
+      setBebidas(Array.isArray(respuesta.data) ? respuesta.data : respuesta.data.results || [])
+    } catch (error) {
+      console.error('Error al cargar bebidas:', error)
+      notificar('error', error.response?.data?.detail || 'No se pudieron cargar las bebidas.')
+    }
+  }
+
+  const cargarVentas = async () => {
+    try {
+      const respuesta = await api.get('/api/ventas/', getAuthConfig())
+      setVentas(Array.isArray(respuesta.data) ? respuesta.data : respuesta.data.results || [])
+    } catch (error) {
+      console.error('Error al cargar el historial de ventas:', error)
+      notificar('error', error.response?.data?.detail || 'No se pudo cargar el historial de ventas.')
     }
   }
 
@@ -221,8 +245,8 @@ const Ventas = () => {
     }
 
     const nuevosErr = {}
-    if (!productoSeleccionado.producto) {
-      nuevosErr.producto = 'Selecciona un producto.'
+    if (!productoSeleccionado.articulo) {
+      nuevosErr.articulo = 'Selecciona un producto o una bebida.'
     }
     const cantidadNum = Number(productoSeleccionado.cantidad)
     if (!productoSeleccionado.cantidad || cantidadNum <= 0) {
@@ -235,25 +259,34 @@ const Ventas = () => {
       return
     }
 
-    const productoCompleto = productos.find(
-      (p) => String(p.id_productos) === String(productoSeleccionado.producto)
+    const esBebida = productoSeleccionado.tipo === 'bebida'
+    const articulos = esBebida ? bebidasActivas : productosActivos
+    const idArticulo = esBebida ? 'id_bebidas' : 'id_productos'
+    const articuloCompleto = articulos.find(
+      (articulo) => String(articulo[idArticulo]) === String(productoSeleccionado.articulo)
     )
-    if (!productoCompleto) return
+    if (!articuloCompleto) return
 
-    const precioUnitario = Number(productoCompleto.precio_unitario)
+    const precioUnitario = Number(articuloCompleto.precio_unitario)
     const existente = nuevoPedido.detalles.find(
-      (item) => String(item.producto.id_productos) === String(productoCompleto.id_productos)
+      (item) =>
+        String(esBebida ? item.bebida?.id_bebidas : item.producto?.id_productos) ===
+        String(articuloCompleto[idArticulo])
     )
 
     const nuevaCantidadTotal = existente ? existente.cantidad + cantidadNum : cantidadNum
     if (nuevaCantidadTotal > 9999) {
-      notificar('advertencia', 'La cantidad máxima por producto es 9.999 unidades.')
+      notificar('advertencia', 'La cantidad máxima por artículo es 9.999 unidades.')
       return
     }
 
     const nuevoSubtotalItem = nuevaCantidadTotal * precioUnitario
     const totalSinEsteProducto = nuevoPedido.detalles
-      .filter((item) => String(item.producto.id_productos) !== String(productoCompleto.id_productos))
+      .filter(
+        (item) =>
+          String(esBebida ? item.bebida?.id_bebidas : item.producto?.id_productos) !==
+          String(articuloCompleto[idArticulo]),
+      )
       .reduce((acc, item) => acc + Number(item.subtotal), 0)
 
     if (nuevoSubtotalItem > MAX_DECIMAL_9_2 || totalSinEsteProducto + nuevoSubtotalItem > MAX_DECIMAL_9_2) {
@@ -268,7 +301,8 @@ const Ventas = () => {
       setNuevoPedido((prev) => ({
         ...prev,
         detalles: prev.detalles.map((item) =>
-          String(item.producto.id_productos) === String(productoCompleto.id_productos)
+          String(esBebida ? item.bebida?.id_bebidas : item.producto?.id_productos) ===
+          String(articuloCompleto[idArticulo])
             ? {
                 ...item,
                 cantidad: nuevaCantidadTotal,
@@ -279,10 +313,10 @@ const Ventas = () => {
       }))
     } else {
       const nuevoDetalle = {
-        id_temporal: Date.now() + Math.random(),
-        producto: {
-          id_productos: productoCompleto.id_productos,
-          nombre: productoCompleto.nombre,
+        id_temporal: `${esBebida ? 'bebida' : 'producto'}-${articuloCompleto[idArticulo]}`,
+        [esBebida ? 'bebida' : 'producto']: {
+          [idArticulo]: articuloCompleto[idArticulo],
+          nombre: articuloCompleto.nombre,
           precio_unitario: precioUnitario,
         },
         cantidad: cantidadNum,
@@ -296,10 +330,11 @@ const Ventas = () => {
     }
 
     setProductoSeleccionado({
-      producto: '',
+      tipo: 'producto',
+      articulo: '',
       cantidad: '',
     })
-    setErrores((prev) => ({ ...prev, producto: null, cantidad: null, detalles: null }))
+    setErrores((prev) => ({ ...prev, articulo: null, cantidad: null, detalles: null }))
   }
 
   const handleAjustarCantidad = (idTemporal, delta) => {
@@ -310,7 +345,8 @@ const Ventas = () => {
           const nuevaCant = item.cantidad + delta
           if (nuevaCant <= 0) return null
           if (nuevaCant > 9999) return item
-          const nuevoSub = nuevaCant * Number(item.producto.precio_unitario)
+          const nuevoSub =
+            nuevaCant * Number(item.producto?.precio_unitario || item.bebida?.precio_unitario || 0)
           return {
             ...item,
             cantidad: nuevaCant,
@@ -422,7 +458,9 @@ const Ventas = () => {
         modoVenta === 'importado' ? pedidoSeleccionado.pedido_detalle : nuevoPedido.detalles
 
       const detallesFormateados = listaOrigen.map((item) => ({
-        id_productos: Number(item.producto.id_productos),
+        ...(item.bebida
+          ? { id_bebidas: Number(item.bebida.id_bebidas) }
+          : { id_productos: Number(item.producto.id_productos) }),
         cantidad: Number(item.cantidad),
       }))
 
@@ -478,6 +516,7 @@ const Ventas = () => {
       setNuevoPedido({ cliente: '', direccion: '', detalles: [] })
       setErrores({})
       cargarPedidos()
+      cargarVentas()
     } catch (error) {
       console.error('Error al procesar la venta:', error.response?.data || error)
       const mensajeBackend =
@@ -494,7 +533,9 @@ const Ventas = () => {
     cargarCajas()
     cargarPedidos()
     cargarProductos()
+    cargarBebidas()
     cargarMetodos()
+    cargarVentas()
   }, [])
 
   const formatearMoneda = (valor) => {
@@ -514,6 +555,7 @@ const Ventas = () => {
   )
 
   const productosActivos = productos.filter((p) => p.estado !== false)
+  const bebidasActivas = bebidas.filter((b) => b.estado !== false)
   const metodosActivos = metodos.filter((m) => m.estado !== false)
   const metodoActualObj = metodosActivos.find(
     (m) => String(m.id_metodos) === String(metodoSeleccionado)
@@ -643,10 +685,10 @@ const Ventas = () => {
                     <CTableBody>
                       {pedidoSeleccionado?.pedido_detalle?.map((item) => (
                         <CTableRow key={item.id_detalles_pedidos}>
-                          <CTableDataCell>{item.producto.nombre}</CTableDataCell>
+                          <CTableDataCell>{item.producto?.nombre || item.bebida?.nombre}</CTableDataCell>
                           <CTableDataCell className="text-center">{item.cantidad}</CTableDataCell>
                           <CTableDataCell className="text-end">
-                            ${formatearMoneda(item.producto.precio_unitario)}
+                            ${formatearMoneda(item.producto?.precio_unitario || item.bebida?.precio_unitario)}
                           </CTableDataCell>
                           <CTableDataCell className="text-end fw-semibold">
                             ${formatearMoneda(item.subtotal)}
@@ -662,21 +704,52 @@ const Ventas = () => {
               {modoVenta === 'nuevo' && (
                 <div>
                   <CRow className="g-2 mb-3 align-items-start">
-                    <CCol md={6}>
+                    <CCol md={3}>
                       <CFormSelect
-                        name="producto"
-                        label="Producto Directo"
-                        value={productoSeleccionado.producto}
-                        onChange={handleChange}
-                        invalid={!!errores.producto}
-                        feedbackInvalid={errores.producto}
+                        label="Tipo"
+                        value={productoSeleccionado.tipo}
+                        onChange={(e) =>
+                          {
+                            setProductoSeleccionado({
+                              tipo: e.target.value,
+                              articulo: '',
+                              cantidad: productoSeleccionado.cantidad,
+                            })
+                            setErrores((prev) => ({ ...prev, articulo: null }))
+                          }
+                        }
                       >
-                        <option value="">-- Seleccione un producto --</option>
-                        {productosActivos.map((item) => (
-                          <option key={item.id_productos} value={item.id_productos}>
-                            {item.nombre} (${formatearMoneda(item.precio_unitario)})
-                          </option>
-                        ))}
+                        <option value="producto">Producto</option>
+                        <option value="bebida">Bebida</option>
+                      </CFormSelect>
+                    </CCol>
+                    <CCol md={5}>
+                      <CFormSelect
+                        name="articulo"
+                        label={productoSeleccionado.tipo === 'bebida' ? 'Bebida directa' : 'Producto directo'}
+                        value={productoSeleccionado.articulo}
+                        onChange={handleChange}
+                        invalid={!!errores.articulo}
+                        feedbackInvalid={errores.articulo}
+                      >
+                        <option value="">
+                          {productoSeleccionado.tipo === 'bebida'
+                            ? '-- Seleccione una bebida --'
+                            : '-- Seleccione un producto --'}
+                        </option>
+                        {(productoSeleccionado.tipo === 'bebida' ? bebidasActivas : productosActivos).map(
+                          (item) => {
+                            const id =
+                              productoSeleccionado.tipo === 'bebida'
+                                ? item.id_bebidas
+                                : item.id_productos
+                            return (
+                              <option key={id} value={id}>
+                                {item.nombre} (${formatearMoneda(item.precio_unitario)})
+                              </option>
+                            )
+                          },
+                        )}
                       </CFormSelect>
                     </CCol>
                     <CCol md={3}>
@@ -731,7 +804,7 @@ const Ventas = () => {
                       ) : (
                         nuevoPedido.detalles.map((item) => (
                           <CTableRow key={item.id_temporal}>
-                            <CTableDataCell>{item.producto.nombre}</CTableDataCell>
+                            <CTableDataCell>{item.producto?.nombre || item.bebida?.nombre}</CTableDataCell>
                             <CTableDataCell className="text-center">
                               <div className="d-inline-flex align-items-center gap-1">
                                 <CButton
@@ -760,7 +833,7 @@ const Ventas = () => {
                               </div>
                             </CTableDataCell>
                             <CTableDataCell className="text-end">
-                              ${formatearMoneda(item.producto.precio_unitario)}
+                              ${formatearMoneda(item.producto?.precio_unitario || item.bebida?.precio_unitario)}
                             </CTableDataCell>
                             <CTableDataCell className="text-end fw-semibold">
                               ${formatearMoneda(item.subtotal)}
@@ -875,6 +948,62 @@ const Ventas = () => {
         </CCard>
       </CCol>
 
+      <CCol xs={12} lg={4}>
+        <CCard className="mb-4 shadow-sm">
+          <CCardHeader className="bg-body-secondary fw-bold">Historial de ventas</CCardHeader>
+          <CCardBody>
+            {ventas.length ? (
+              <div style={{ maxHeight: '65vh', overflowY: 'auto' }}>
+                <CTable responsive hover small>
+                <CTableHead>
+                  <CTableRow>
+                    <CTableHeaderCell>Venta</CTableHeaderCell>
+                    <CTableHeaderCell>Fecha</CTableHeaderCell>
+                    <CTableHeaderCell className="text-end">Total</CTableHeaderCell>
+                    <CTableHeaderCell>Detalle</CTableHeaderCell>
+                  </CTableRow>
+                </CTableHead>
+                <CTableBody>
+                  {[...ventas]
+                    .sort((a, b) => Number(b.id_ventas) - Number(a.id_ventas))
+                    .map((venta) => (
+                      <CTableRow key={venta.id_ventas}>
+                        <CTableDataCell>
+                          #{venta.id_ventas}
+                          <small className="d-block text-body-secondary">
+                            {venta.metodo_detalle?.nombre || 'Sin método'}
+                          </small>
+                        </CTableDataCell>
+                        <CTableDataCell>
+                          {venta.fecha_hora_creacion
+                            ? new Date(venta.fecha_hora_creacion).toLocaleString()
+                            : '-'}
+                        </CTableDataCell>
+                        <CTableDataCell className="text-end">
+                          ${formatearMoneda(venta.precio_total)}
+                        </CTableDataCell>
+                        <CTableDataCell>
+                          <CButton
+                            size="sm"
+                            color="info"
+                            variant="outline"
+                            onClick={() => setVentaDetalle(venta)}
+                          >
+                            Detalles
+                          </CButton>
+                        </CTableDataCell>
+                      </CTableRow>
+                    ))}
+                </CTableBody>
+                </CTable>
+              </div>
+            ) : (
+              <p className="text-center text-body-secondary mb-0">No hay ventas registradas.</p>
+            )}
+          </CCardBody>
+        </CCard>
+      </CCol>
+
       {/* MODAL DE CONFIRMACIÓN DE COBRO */}
       <CModal
         visible={confirmModalOpen}
@@ -928,6 +1057,56 @@ const Ventas = () => {
           >
             <CIcon icon={cilCheckCircle} className="me-1" />
             {loading ? 'Registrando...' : 'Confirmar y Cobrar'}
+          </CButton>
+        </CModalFooter>
+      </CModal>
+      <CModal visible={!!ventaDetalle} onClose={() => setVentaDetalle(null)} size="lg">
+        <CModalHeader>
+          <CModalTitle>Detalle de Venta #{ventaDetalle?.id_ventas}</CModalTitle>
+        </CModalHeader>
+        <CModalBody>
+          <div className="d-flex flex-wrap justify-content-between gap-2 mb-3">
+            <span>
+              Fecha:{' '}
+              <strong>
+                {ventaDetalle?.fecha_hora_creacion
+                  ? new Date(ventaDetalle.fecha_hora_creacion).toLocaleString()
+                  : '-'}
+              </strong>
+            </span>
+            <span>
+              Método: <strong>{ventaDetalle?.metodo_detalle?.nombre || '-'}</strong>
+            </span>
+            <span>
+              Total: <strong>${formatearMoneda(ventaDetalle?.precio_total)}</strong>
+            </span>
+          </div>
+          <CTable responsive hover>
+            <CTableHead>
+              <CTableRow>
+                <CTableHeaderCell>Producto / bebida</CTableHeaderCell>
+                <CTableHeaderCell>Cantidad</CTableHeaderCell>
+                <CTableHeaderCell className="text-end">Subtotal</CTableHeaderCell>
+              </CTableRow>
+            </CTableHead>
+            <CTableBody>
+              {(ventaDetalle?.detalle_venta || []).map((detalle) => (
+                <CTableRow key={detalle.id_detalles_ventas}>
+                  <CTableDataCell>
+                    {detalle.producto?.nombre || detalle.bebida?.nombre || '-'}
+                  </CTableDataCell>
+                  <CTableDataCell>{detalle.cantidad}</CTableDataCell>
+                  <CTableDataCell className="text-end">
+                    ${formatearMoneda(detalle.subtotal)}
+                  </CTableDataCell>
+                </CTableRow>
+              ))}
+            </CTableBody>
+          </CTable>
+        </CModalBody>
+        <CModalFooter>
+          <CButton color="secondary" onClick={() => setVentaDetalle(null)}>
+            Cerrar
           </CButton>
         </CModalFooter>
       </CModal>

@@ -34,22 +34,16 @@ const _nav = [
   },
   {
     component: CNavItem,
-    name: 'Historial de Ventas',
-    to: '/historial-ventas',
-    icon: <CIcon icon={cilCash} customClassName="nav-icon" />,
-  },
-  {
-    component: CNavItem,
     name: 'Pedidos',
     to: '/pedidos',
     icon: <CIcon icon={cilBasket} customClassName="nav-icon" />,
   },
-  {
-    component: CNavItem,
-    name: 'Historial de Pedidos',
-    to: '/historial-pedidos',
-    icon: <CIcon icon={cilBasket} customClassName="nav-icon" />,
-  },
+  // {
+  //   component: CNavItem,
+  //   name: 'Historial de Pedidos',
+  //   to: '/historial-pedidos',
+  //   icon: <CIcon icon={cilBasket} customClassName="nav-icon" />,
+  // },
   {
     component: CNavTitle,
     name: 'Administración',
@@ -100,12 +94,6 @@ const _nav = [
     component: CNavItem,
     name: 'Cajas',
     to: '/cajas',
-    icon: <CIcon icon={cilCart} customClassName="nav-icon" />,
-  },
-  {
-    component: CNavItem,
-    name: 'Movimientos de Caja',
-    to: '/movimientos-caja',
     icon: <CIcon icon={cilCart} customClassName="nav-icon" />,
   },
   {
