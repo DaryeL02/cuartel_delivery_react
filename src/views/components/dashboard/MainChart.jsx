@@ -1,9 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef } from 'react'
 import { CChartLine } from '@coreui/react-chartjs'
 import { getStyle } from '@coreui/utils'
 
 const MainChart = ({ datos = [] }) => {
   const chartRef = useRef(null)
+
   const labels = datos.map((item) => item.dia)
   const valoresVentas = datos.map((item) => Number(item.total || 0))
 
@@ -27,76 +28,92 @@ const MainChart = ({ datos = [] }) => {
     }
 
     document.documentElement.addEventListener('ColorSchemeChange', handleColorSchemeChange)
-    return () =>
+
+    return () => {
       document.documentElement.removeEventListener('ColorSchemeChange', handleColorSchemeChange)
+    }
   }, [])
 
   return (
-    <>
-      <CChartLine
-        ref={chartRef}
-        style={{ height: '300px', marginTop: '40px' }}
-        data={{
-          labels,
-          datasets: [
-            {
-              label: 'Ventas',
-              backgroundColor: `rgba(${getStyle('--cui-info-rgb')}, .1)`,
-              borderColor: getStyle('--cui-info'),
-              pointHoverBackgroundColor: getStyle('--cui-info'),
-              borderWidth: 2,
-              data: valoresVentas,
-              fill: true,
-            },
-          ],
-        }}
-        options={{
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false,
-            },
+    <CChartLine
+      ref={chartRef}
+      style={{ height: '300px', marginTop: '40px' }}
+      data={{
+        labels,
+        datasets: [
+          {
+            label: 'Ventas',
+            backgroundColor: `rgba(${getStyle('--cui-info-rgb')}, .1)`,
+            borderColor: getStyle('--cui-info'),
+            pointHoverBackgroundColor: getStyle('--cui-info'),
+            borderWidth: 2,
+            data: valoresVentas,
+            fill: true,
           },
-          scales: {
-            x: {
-              grid: {
-                color: getStyle('--cui-border-color-translucent'),
-                drawOnChartArea: false,
-              },
-              ticks: {
-                color: getStyle('--cui-body-color'),
-              },
-            },
-            y: {
-              beginAtZero: true,
-              border: {
-                color: getStyle('--cui-border-color-translucent'),
-              },
-              grid: {
-                color: getStyle('--cui-border-color-translucent'),
-              },
-              max: 250,
-              ticks: {
-                color: getStyle('--cui-body-color'),
-                maxTicksLimit: 5,
-                stepSize: Math.ceil(250 / 5),
+        ],
+      }}
+      options={{
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false,
+          },
+          tooltip: {
+            callbacks: {
+              label: (context) => {
+                const valor = Number(context.raw || 0)
+
+                return `Ventas: ${valor.toLocaleString('es-AR', {
+                  style: 'currency',
+                  currency: 'ARS',
+                })}`
               },
             },
           },
-          elements: {
-            line: {
-              tension: 0.4,
+        },
+        scales: {
+          x: {
+            grid: {
+              color: getStyle('--cui-border-color-translucent'),
+              drawOnChartArea: false,
             },
-            point: {
-              radius: 0,
-              hitRadius: 10,
-              hoverRadius: 4,
-              hoverBorderWidth: 3,
+            ticks: {
+              color: getStyle('--cui-body-color'),
             },
           },
-        }}
-      />
-    </>
+          y: {
+            beginAtZero: true,
+            border: {
+              color: getStyle('--cui-border-color-translucent'),
+            },
+            grid: {
+              color: getStyle('--cui-border-color-translucent'),
+            },
+            ticks: {
+              color: getStyle('--cui-body-color'),
+              maxTicksLimit: 5,
+              callback: (valor) =>
+                Number(valor).toLocaleString('es-AR', {
+                  style: 'currency',
+                  currency: 'ARS',
+                  maximumFractionDigits: 0,
+                }),
+            },
+          },
+        },
+        elements: {
+          line: {
+            tension: 0.4,
+          },
+          point: {
+            radius: 0,
+            hitRadius: 10,
+            hoverRadius: 4,
+            hoverBorderWidth: 3,
+          },
+        },
+      }}
+    />
   )
 }
 
