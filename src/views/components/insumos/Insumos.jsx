@@ -205,20 +205,17 @@ const Insumos = ({ onOpenModal }) => {
                       <CTableHeaderCell className="border-0" style={{ width: '25%' }}>
                         Insumo
                       </CTableHeaderCell>
-                      <CTableHeaderCell className="border-0" style={{ width: '30%' }}>
-                        Descripción
-                      </CTableHeaderCell>
-                      <CTableHeaderCell className="border-0" style={{ width: '10%' }}>
-                        Categoría
-                      </CTableHeaderCell>
-                      <CTableHeaderCell className="border-0" style={{ width: '10%' }}>
-                        Proveedor
-                      </CTableHeaderCell>
-                      <CTableHeaderCell className="text-end border-0" style={{ width: '5%' }}>
+                      <CTableHeaderCell className="text-end border-0" style={{ width: '15%' }}>
                         Stock Actual
                       </CTableHeaderCell>
-                      <CTableHeaderCell className="text-end border-0" style={{ width: '5%' }}>
+                      <CTableHeaderCell className="text-end border-0" style={{ width: '15%' }}>
                         Stock mínimo
+                      </CTableHeaderCell>
+                      <CTableHeaderCell className="border-0" style={{ width: '15%' }}>
+                        Unidad
+                      </CTableHeaderCell>
+                      <CTableHeaderCell className="border-0" style={{ width: '15%' }}>
+                        Categoría
                       </CTableHeaderCell>
                       <CTableHeaderCell className="text-center border-0" style={{ width: '10%' }}>
                         Acciones
@@ -303,45 +300,21 @@ const Insumos = ({ onOpenModal }) => {
                               </div>
                             </CTableDataCell>
 
-                            <CTableDataCell>
-                              <div
-                                className="text-body-secondary text-truncate"
-                                style={{ maxWidth: '380px' }}
-                                title={insumo.descripcion}
-                              >
-                                {insumo.descripcion}
-                              </div>
-                            </CTableDataCell>
-
-                            <CTableDataCell className="text-body-secondary text-truncate">
-                              {insumo.categoria_detalle?.nombre}
-                            </CTableDataCell>
-
-                            <CTableDataCell className="text-body-secondary text-truncate">
-                              {insumo.proveedores_asociados &&
-                              insumo.proveedores_asociados.length > 0 ? (
-                                insumo.proveedores_asociados.map((item) => (
-                                  <div key={item.id_proveedores_insumos}>
-                                    {item.proveedor?.nombre || 'Proveedor sin nombre'}
-                                  </div>
-                                ))
-                              ) : (
-                                <span>Sin proveedor asignado</span>
-                              )}
-                            </CTableDataCell>
-
                             <CTableDataCell className="text-end fw-semibold text-nowrap">
                               <CBadge
                                 color={getStockBadgeColor(insumo.stock_actual, insumo.stock_minimo)}
                                 shape="rounded-pill"
                               >
-                                {insumo.stock_actual} {insumo.unidad}
+                                {insumo.stock_actual}
                               </CBadge>
                             </CTableDataCell>
 
                             <CTableDataCell className="text-end fw-semibold text-body text-nowrap">
-                              {insumo.stock_minimo} {insumo.unidad}
+                              {insumo.stock_minimo}
                             </CTableDataCell>
+
+                            <CTableDataCell className="text-body-secondary">{insumo.unidad}</CTableDataCell>
+                            <CTableDataCell className="text-body-secondary">{insumo.categoria_detalle?.nombre}</CTableDataCell>
 
                             <CTableDataCell className="text-center">
                               <CDropdown alignment="end">
@@ -383,13 +356,13 @@ const Insumos = ({ onOpenModal }) => {
                             key={`empty-${idx}`}
                             style={{ height: ROW_HEIGHT, pointerEvents: 'none' }}
                           >
-                            <CTableDataCell colSpan="8" className="border-bottom-0" />
+                            <CTableDataCell colSpan="7" className="border-bottom-0" />
                           </CTableRow>
                         ))}
                       </>
                     ) : (
                       <CTableRow style={{ height: `calc(${ROW_HEIGHT} * ${PAGE_SIZE})` }}>
-                        <CTableDataCell colSpan="8" className="text-center align-middle text-body-secondary">
+                        <CTableDataCell colSpan="7" className="text-center align-middle text-body-secondary">
                           No se encontraron insumos que coincidan con la búsqueda.
                         </CTableDataCell>
                       </CTableRow>
@@ -448,6 +421,9 @@ const Insumos = ({ onOpenModal }) => {
         insumo={insumoAEditar}
         categorias={categorias}
         proveedores={proveedores}
+        onProveedorCreado={(proveedor) =>
+          setProveedores((actuales) => [...actuales, proveedor])
+        }
         onSuccess={cargarInsumos}
       />
       <ModalDeleteInsumo

@@ -18,9 +18,9 @@ import {
 import api from '../api/api'
 import { toast } from 'react-toastify'
 
-const MAX_STOCK = 9999999.99 // DECIMAL(9,2)
+const MAX_STOCK = 2147483647
 
-const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, onSuccess }) => {
+const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, onSuccess, onProveedorCreado }) => {
   const [data, setData] = useState({
     categoria: '',
     proveedor: '',
@@ -33,9 +33,13 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
 
   const [errores, setErrores] = useState({})
   const [loading, setLoading] = useState(false)
+  const [modalProveedorVisible, setModalProveedorVisible] = useState(false)
+  const [nuevoProveedor, setNuevoProveedor] = useState({
+    nombre: '', direccion: '', telefono: '', email: '', cuit: '', descripcion: '',
+  })
   const modoEditar = !!insumo
 
-  const unidades = ['kg', 'gr', 'l', 'ml']
+  const unidades = ['kg', 'gr', 'l', 'ml', 'Unidades']
 
   const notificar = (tipo, mensaje) => {
     switch (tipo) {
@@ -83,21 +87,17 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
     }
   }, [insumo, visible, modoEditar])
 
-  const normalizarDecimal = (valor) => valor.replace(',', '.')
-
   const handleChange = (e) => {
     const { name, value } = e.target
 
     if (name === 'stock_actual' || name === 'stock_minimo') {
-      const valorNormalizado = normalizarDecimal(value)
-      const regexDecimal92 = /^\d{0,7}(\.\d{0,2})?$/
-      if (valorNormalizado !== '' && !regexDecimal92.test(valorNormalizado)) {
+      if (value !== '' && !/^\d{0,10}$/.test(value)) {
         return
       }
 
       setData((prev) => ({
         ...prev,
-        [name]: valorNormalizado,
+        [name]: value,
       }))
     } else {
       setData((prev) => ({
@@ -131,25 +131,17 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
     }
 
     const esDigito = /^[0-9]$/.test(e.key)
-    const esSeparadorDecimal = e.key === '.' || e.key === ','
-    const valorActual = String(e.currentTarget.value || '')
-
-    if (esSeparadorDecimal && valorActual.includes('.')) {
-      e.preventDefault()
-      return
-    }
-
-    if (!esDigito && !esSeparadorDecimal) {
+    if (!esDigito) {
       e.preventDefault()
     }
   }
 
   const handlePasteDecimal = (e, campo) => {
     e.preventDefault()
-    const textoPegado = normalizarDecimal(e.clipboardData.getData('text').trim())
-    const regexDecimal92 = /^\d{1,7}(\.\d{0,2})?$/
+    const textoPegado = e.clipboardData.getData('text').trim()
+    const regexEntero = /^\d{1,10}$/
 
-    if (regexDecimal92.test(textoPegado) && Number(textoPegado) <= MAX_STOCK) {
+    if (regexEntero.test(textoPegado) && Number(textoPegado) <= MAX_STOCK) {
       setData((prev) => ({
         ...prev,
         [campo]: textoPegado,
@@ -221,8 +213,8 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
       nombre: data.nombre.trim(),
       descripcion: data.descripcion.trim(),
       unidad: data.unidad,
-      stock_actual: stockActualFinal.toFixed(2),
-      stock_minimo: stockMinimoFinal.toFixed(2),
+      stock_actual: stockActualFinal,
+      stock_minimo: stockMinimoFinal,
     }
 
     try {
@@ -258,6 +250,28 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
     }
   }
 
+  const crearProveedor = async (e) => {
+    e.preventDefault()
+    if (!nuevoProveedor.nombre.trim()) {
+      notificar('advertencia', 'El nombre del proveedor es obligatorio.')
+      return
+    }
+    try {
+      const { data: proveedor } = await api.post('/api/proveedores/', {
+        ...nuevoProveedor,
+        nombre: nuevoProveedor.nombre.trim(),
+      })
+      setData((prev) => ({ ...prev, proveedor: String(proveedor.id_proveedores) }))
+      if (onProveedorCreado) onProveedorCreado(proveedor)
+      setNuevoProveedor({ nombre: '', direccion: '', telefono: '', email: '', cuit: '', descripcion: '' })
+      setModalProveedorVisible(false)
+      notificar('exito', 'Proveedor creado y seleccionado.')
+    } catch (error) {
+      const mensaje = error.response?.data?.detail || error.response?.data?.nombre?.[0] || 'No se pudo crear el proveedor.'
+      notificar('error', mensaje)
+    }
+  }
+
   const mostrarAlertaStockBajo =
     data.stock_actual !== '' &&
     data.stock_minimo !== '' &&
@@ -275,6 +289,7 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
   )
 
   return (
+    <>
     <CModal visible={visible} onClose={onClose} backdrop="static" size="lg">
       <CModalHeader>
         <CModalTitle className="fw-semibold">
@@ -351,6 +366,14 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
                   </option>
                 ))}
               </CFormSelect>
+              <CButton
+                type="button"
+                color="link"
+                className="px-0"
+                onClick={() => setModalProveedorVisible(true)}
+              >
+                + Nuevo proveedor
+              </CButton>
             </CCol>
 
             {/* Unidad de Medida - VARCHAR(10) */}
@@ -372,11 +395,11 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
               </CFormSelect>
             </CCol>
 
-            {/* Stock Actual - DECIMAL(9,2) */}
+            {/* Stock Actual - INTEGER */}
             <CCol md={4}>
               <CFormInput
                 type="text"
-                inputMode="decimal"
+                inputMode="numeric"
                 label="Stock Actual"
                 name="stock_actual"
                 value={data.stock_actual}
@@ -385,16 +408,16 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
                 onPaste={(e) => handlePasteDecimal(e, 'stock_actual')}
                 invalid={!!errores.stock_actual}
                 feedbackInvalid={errores.stock_actual}
-                placeholder="0.00"
+                placeholder="0"
                 autoComplete="off"
               />
             </CCol>
 
-            {/* Stock Mínimo - DECIMAL(9,2) */}
+            {/* Stock Mínimo - INTEGER */}
             <CCol md={4}>
               <CFormInput
                 type="text"
-                inputMode="decimal"
+                inputMode="numeric"
                 label="Stock Mínimo"
                 name="stock_minimo"
                 value={data.stock_minimo}
@@ -403,7 +426,7 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
                 onPaste={(e) => handlePasteDecimal(e, 'stock_minimo')}
                 invalid={!!errores.stock_minimo}
                 feedbackInvalid={errores.stock_minimo}
-                placeholder="0.00"
+                placeholder="0"
                 autoComplete="off"
               />
             </CCol>
@@ -427,6 +450,30 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
         </CModalFooter>
       </CForm>
     </CModal>
+    <CModal visible={modalProveedorVisible} onClose={() => setModalProveedorVisible(false)} backdrop="static">
+      <CModalHeader><CModalTitle>Nuevo proveedor</CModalTitle></CModalHeader>
+      <CForm onSubmit={crearProveedor}>
+        <CModalBody className="d-grid gap-3">
+          <CFormInput label="Nombre" value={nuevoProveedor.nombre} required maxLength={100}
+            onChange={(e) => setNuevoProveedor((prev) => ({ ...prev, nombre: e.target.value }))} />
+          <CFormInput label="Dirección" value={nuevoProveedor.direccion} maxLength={200}
+            onChange={(e) => setNuevoProveedor((prev) => ({ ...prev, direccion: e.target.value }))} />
+          <CFormInput label="Teléfono" value={nuevoProveedor.telefono} maxLength={20}
+            onChange={(e) => setNuevoProveedor((prev) => ({ ...prev, telefono: e.target.value }))} />
+          <CFormInput label="Correo" type="email" value={nuevoProveedor.email} maxLength={30}
+            onChange={(e) => setNuevoProveedor((prev) => ({ ...prev, email: e.target.value }))} />
+          <CFormInput label="CUIT" value={nuevoProveedor.cuit} maxLength={30}
+            onChange={(e) => setNuevoProveedor((prev) => ({ ...prev, cuit: e.target.value }))} />
+          <CFormTextarea label="Descripción" value={nuevoProveedor.descripcion} maxLength={200}
+            onChange={(e) => setNuevoProveedor((prev) => ({ ...prev, descripcion: e.target.value }))} />
+        </CModalBody>
+        <CModalFooter>
+          <CButton color="secondary" variant="ghost" type="button" onClick={() => setModalProveedorVisible(false)}>Cancelar</CButton>
+          <CButton color="primary" type="submit">Crear y seleccionar</CButton>
+        </CModalFooter>
+      </CForm>
+    </CModal>
+    </>
   )
 }
 

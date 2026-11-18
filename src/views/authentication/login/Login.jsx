@@ -81,6 +81,7 @@ const Login = () => {
 
       if (response.data && response.data.token) {
         localStorage.setItem('token', response.data.token)
+        localStorage.setItem('user', JSON.stringify(response.data.user))
         notificar('exito', 'Bienvenido/a')
         navigate('/dashboard')
       } else {

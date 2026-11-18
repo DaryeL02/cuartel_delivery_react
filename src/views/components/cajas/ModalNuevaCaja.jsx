@@ -16,9 +16,8 @@ import {
 import { toast } from 'react-toastify';
 import api from '../api/api';
 
-export default function NuevaCaja({ visible, onClose, usuarios, locales, onSuccess }) {
+export default function NuevaCaja({ visible, onClose, locales, cajasAbiertas = [], onSuccess }) {
   const [data, setData] = useState({
-    usuario: '',
     local: '',
     monto_apertura: '',
     estado: true,
@@ -45,7 +44,6 @@ export default function NuevaCaja({ visible, onClose, usuarios, locales, onSucce
   useEffect(() => {
     if (visible) {
       setData({
-        usuario: '',
         local: '',
         monto_apertura: '',
         estado: true,
@@ -64,10 +62,6 @@ export default function NuevaCaja({ visible, onClose, usuarios, locales, onSucce
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!data.usuario) {
-      notificar('advertencia', 'Selecciona un usuario para el cajero.');
-      return;
-    }
     if (!data.local) {
       notificar('advertencia', 'Selecciona un local o sucursal.');
       return;
@@ -90,7 +84,10 @@ export default function NuevaCaja({ visible, onClose, usuarios, locales, onSucce
       onClose();
     } catch (error) {
       console.error('Error al abrir la caja:', error);
-      notificar('error', 'No se pudo abrir la caja. Verifica los datos e intenta nuevamente.');
+      const mensaje =
+        error.response?.data?.detail ||
+        'No se pudo abrir la caja. Verifica los datos e intenta nuevamente.';
+      notificar(error.response?.status === 409 ? 'advertencia' : 'error', mensaje);
     } finally {
       setLoading(false);
     }
@@ -104,27 +101,8 @@ export default function NuevaCaja({ visible, onClose, usuarios, locales, onSucce
       <CForm onSubmit={handleSubmit} noValidate>
         <CModalBody>
           <CRow className="g-3">
-            {/* Campo: Usuario */}
-            <CCol md={6}>
-              <CFormLabel htmlFor="usuario">Usuario del cajero</CFormLabel>
-              <CFormSelect
-                name="usuario"
-                id="usuario"
-                value={data.usuario}
-                onChange={handleChange}
-                required
-              >
-                <option value="">Seleccionar usuario...</option>
-                {usuarios.map((item) => (
-                  <option key={item.id_usuarios} value={item.id_usuarios}>
-                    {item.usuario}
-                  </option>
-                ))}
-              </CFormSelect>
-            </CCol>
-
             {/* Campo: Local (Select) */}
-            <CCol md={6}>
+            <CCol md={12}>
               <CFormLabel htmlFor="local">Local / Sucursal</CFormLabel>
               <CFormSelect
                 id="local"
@@ -135,8 +113,15 @@ export default function NuevaCaja({ visible, onClose, usuarios, locales, onSucce
               >
                 <option value="">Seleccionar local...</option>
                 {locales.map((item) => (
-                  <option key={item.id_locales} value={item.id_locales}>
+                  <option
+                    key={item.id_locales}
+                    value={item.id_locales}
+                    disabled={cajasAbiertas.some((caja) => String(caja.local) === String(item.id_locales))}
+                  >
                     {item.nombre}
+                    {cajasAbiertas.some((caja) => String(caja.local) === String(item.id_locales))
+                      ? ' (ya tiene una caja abierta)'
+                      : ''}
                   </option>
                 ))}
               </CFormSelect>

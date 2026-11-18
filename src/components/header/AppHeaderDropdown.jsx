@@ -29,6 +29,7 @@ import api from '../../views/components/api/api'
 
 import { useNavigate } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
+import { toast } from 'react-toastify'
 
 const AppHeaderDropdown = () => {
 
@@ -37,23 +38,19 @@ const AppHeaderDropdown = () => {
 
   const handleLogout = async () => {
     try {
-      // 1. Si tu backend invalida tokens, haz la petición aquí:
-      // await api.post('/logout')
+      await api.post('/api/logout/')
 
       localStorage.removeItem('token')
       localStorage.removeItem('user')
-
-      // 3. Remueve el token de los headers por defecto
-      // setAuthToken(null)
-
-      // 4. Limpia el estado global de Redux de CoreUI
-      // Tu template usa una acción genérica 'set'. Reseteamos valores si guardabas datos de auth ahí.
-      dispatch({ type: 'set', user: null, isAuthenticated: false }) 
-
-      // 5. Redirecciona al flujo público (Login)
+      dispatch({ type: 'set', user: null, isAuthenticated: false })
       navigate('/authentication/login')
     } catch (error) {
       console.error('Error al cerrar sesión:', error)
+      if (error.response?.status === 409) {
+        toast.warning(error.response.data.detail)
+      } else {
+        toast.error('No se pudo cerrar la sesión.')
+      }
     }
   }
 

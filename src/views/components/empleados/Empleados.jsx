@@ -190,13 +190,7 @@ const Empleados = ({ onOpenModal }) => {
                         Empleado
                       </CTableHeaderCell>
                       <CTableHeaderCell className="border-0" style={{ width: '15%' }}>
-                        DNI
-                      </CTableHeaderCell>
-                      <CTableHeaderCell className="border-0" style={{ width: '10%' }}>
-                        Teléfono
-                      </CTableHeaderCell>
-                      <CTableHeaderCell className="border-0" style={{ width: '20%' }}>
-                        Domicilio
+                        Rol
                       </CTableHeaderCell>
                       <CTableHeaderCell className="border-0" style={{ width: '10%' }}>
                         Sucursal
@@ -240,22 +234,17 @@ const Empleados = ({ onOpenModal }) => {
                           </CTableDataCell>
                           <CTableDataCell>
                             <CPlaceholder animation="glow">
-                              <CPlaceholder xs={8} />
-                            </CPlaceholder>
-                          </CTableDataCell>
-                          <CTableDataCell>
-                            <CPlaceholder animation="glow">
-                              <CPlaceholder xs={9} />
-                            </CPlaceholder>
-                          </CTableDataCell>
-                          <CTableDataCell>
-                            <CPlaceholder animation="glow">
                               <CPlaceholder xs={10} />
                             </CPlaceholder>
                           </CTableDataCell>
                           <CTableDataCell>
                             <CPlaceholder animation="glow">
                               <CPlaceholder xs={7} />
+                            </CPlaceholder>
+                          </CTableDataCell>
+                          <CTableDataCell className="text-center">
+                            <CPlaceholder animation="glow">
+                              <CPlaceholder xs={4} />
                             </CPlaceholder>
                           </CTableDataCell>
                           <CTableDataCell className="text-center">
@@ -293,33 +282,12 @@ const Empleados = ({ onOpenModal }) => {
                                     <div className="fw-semibold text-body">
                                       {empleado.nombre} {empleado.apellido}
                                     </div>
-                                    <div className="small text-body-secondary">
-                                      {rolNombre ? (
-                                        rolNombre
-                                      ) : (
-                                        <CBadge color="secondary" shape="rounded-pill">
-                                          Sin rol
-                                        </CBadge>
-                                      )}
-                                    </div>
                                   </div>
                                 </div>
                               </CTableDataCell>
 
-                              <CTableDataCell className="text-nowrap text-body-secondary">
-                                {empleado.dni}
-                              </CTableDataCell>
-
-                              <CTableDataCell className="text-nowrap text-body-secondary">
-                                {empleado.telefono}
-                              </CTableDataCell>
-
-                              <CTableDataCell
-                                className="text-body-secondary text-truncate"
-                                style={{ maxWidth: '200px' }}
-                                title={empleado.domicilio}
-                              >
-                                {empleado.domicilio}
+                              <CTableDataCell className="text-body-secondary">
+                                {empleado.rol_nombre || rolNombre || 'Sin rol'}
                               </CTableDataCell>
 
                               <CTableDataCell
@@ -376,13 +344,13 @@ const Empleados = ({ onOpenModal }) => {
                             key={`empty-${index}`}
                             style={{ height: '56px', pointerEvents: 'none' }}
                           >
-                            <CTableDataCell colSpan="8" className="border-0 bg-transparent" />
+                            <CTableDataCell colSpan="6" className="border-0 bg-transparent" />
                           </CTableRow>
                         ))}
                       </>
                     ) : (
                       <CTableRow style={{ height: '560px' }}>
-                        <CTableDataCell colSpan="8" className="text-center align-middle text-body-secondary">
+                        <CTableDataCell colSpan="6" className="text-center align-middle text-body-secondary">
                           No se encontraron empleados que coincidan con la búsqueda.
                         </CTableDataCell>
                       </CTableRow>

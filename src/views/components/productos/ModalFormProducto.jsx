@@ -57,7 +57,10 @@ const ModalFormProducto = ({ visible, onClose, producto, insumos_lista, onSucces
         precio_unitario: producto.precio_unitario !== undefined && producto.precio_unitario !== null ? String(producto.precio_unitario) : '',
         estado: producto.estado ?? true,
         insumos: producto.insumos_asociados
-          ? producto.insumos_asociados.map((item) => item.insumo.id_insumos)
+          ? producto.insumos_asociados.map((item) => ({
+              id_insumos: item.insumo.id_insumos,
+              cantidad: String(item.cantidad ?? 1),
+            }))
           : [],
       })
     } else {
@@ -143,10 +146,10 @@ const ModalFormProducto = ({ visible, onClose, producto, insumos_lista, onSucces
 
   const handleInsumoCheck = (idInsumo) => {
     setData((prev) => {
-      const yaSeleccionado = prev.insumos.includes(idInsumo)
+      const yaSeleccionado = prev.insumos.some((item) => item.id_insumos === idInsumo)
       const nuevosInsumos = yaSeleccionado
-        ? prev.insumos.filter((id) => id !== idInsumo)
-        : [...prev.insumos, idInsumo]
+        ? prev.insumos.filter((item) => item.id_insumos !== idInsumo)
+        : [...prev.insumos, { id_insumos: idInsumo, cantidad: '1' }]
 
       return {
         ...prev,
@@ -157,6 +160,15 @@ const ModalFormProducto = ({ visible, onClose, producto, insumos_lista, onSucces
     if (errores.insumos) {
       setErrores((prev) => ({ ...prev, insumos: null }))
     }
+  }
+
+  const cambiarCantidadInsumo = (idInsumo, cantidad) => {
+    setData((prev) => ({
+      ...prev,
+      insumos: prev.insumos.map((item) =>
+        item.id_insumos === idInsumo ? { ...item, cantidad } : item
+      ),
+    }))
   }
 
   const validarFormulario = () => {
@@ -180,6 +192,8 @@ const ModalFormProducto = ({ visible, onClose, producto, insumos_lista, onSucces
 
     if (data.insumos.length === 0) {
       nuevosErrores.insumos = 'Debes seleccionar al menos un insumo para el producto.'
+    } else if (data.insumos.some((item) => !Number.isFinite(Number(item.cantidad)) || Number(item.cantidad) <= 0)) {
+      nuevosErrores.insumos = 'Indica una cantidad mayor a cero para cada insumo.'
     }
 
     setErrores(nuevosErrores)
@@ -201,7 +215,10 @@ const ModalFormProducto = ({ visible, onClose, producto, insumos_lista, onSucces
       descripcion: data.descripcion.trim(),
       precio_unitario: Number(data.precio_unitario).toFixed(2),
       estado: data.estado,
-      insumos: data.insumos.map((id) => ({ id_insumos: id })),
+      insumos: data.insumos.map((item) => ({
+        id_insumos: item.id_insumos,
+        cantidad: Number(item.cantidad).toFixed(2),
+      })),
     }
 
     try {
@@ -308,12 +325,26 @@ const ModalFormProducto = ({ visible, onClose, producto, insumos_lista, onSucces
                   <CRow>
                     {insumos_lista.map((insumo) => (
                       <CCol xs={12} sm={6} key={insumo.id_insumos} className="mb-2">
-                        <CFormCheck
-                          id={`insumo-${insumo.id_insumos}`}
-                          label={insumo.nombre}
-                          checked={data.insumos.includes(insumo.id_insumos)}
-                          onChange={() => handleInsumoCheck(insumo.id_insumos)}
-                        />
+                        <div className="d-flex align-items-center gap-2">
+                          <CFormCheck
+                            id={`insumo-${insumo.id_insumos}`}
+                            label={insumo.nombre}
+                            checked={data.insumos.some((item) => item.id_insumos === insumo.id_insumos)}
+                            onChange={() => handleInsumoCheck(insumo.id_insumos)}
+                          />
+                          {data.insumos.some((item) => item.id_insumos === insumo.id_insumos) && (
+                            <CFormInput
+                              aria-label={`Cantidad de ${insumo.nombre}`}
+                              type="number"
+                              min="0.01"
+                              step="0.01"
+                              size="sm"
+                              style={{ maxWidth: '90px' }}
+                              value={data.insumos.find((item) => item.id_insumos === insumo.id_insumos)?.cantidad ?? '1'}
+                              onChange={(e) => cambiarCantidadInsumo(insumo.id_insumos, e.target.value)}
+                            />
+                          )}
+                        </div>
                       </CCol>
                     ))}
                   </CRow>

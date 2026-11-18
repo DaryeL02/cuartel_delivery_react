@@ -9,6 +9,14 @@ const Pedidos = React.lazy(() => import('./views/components/pedidos/Pedidos'))
 const Menus = React.lazy(() => import('./views/components/menus/Menus'))
 const Cajas = React.lazy(() => import('./views/components/cajas/Cajas.jsx'))
 const Ventas = React.lazy(() => import('./views/components/ventas/Ventas.jsx'))
+const Proveedores = React.lazy(() => import('./views/components/proveedores/Proveedores'))
+const Compras = React.lazy(() => import('./views/components/compras/Compras'))
+const Bebidas = React.lazy(() => import('./views/components/bebidas/Bebidas'))
+const HistorialVentas = React.lazy(() => import('./views/components/ventas/HistorialVentas'))
+const HistorialPedidos = React.lazy(() => import('./views/components/pedidos/HistorialPedidos'))
+const HistorialMovimientos = React.lazy(
+  () => import('./views/components/cajas/HistorialMovimientos'),
+)
 
 export const routes = [
   { path: '/', exact: true, name: 'Home' },
@@ -21,6 +29,12 @@ export const routes = [
   { path: '/cajas', name: 'Cajas', element: Cajas },
   { path: '/perfil', name: 'Perfil', element: Perfil },
   { path: '/ventas', name: 'Ventas', element: Ventas },
+  { path: '/proveedores', name: 'Proveedores', element: Proveedores },
+  { path: '/compras', name: 'Compras', element: Compras },
+  { path: '/bebidas', name: 'Bebidas', element: Bebidas },
+  { path: '/historial-ventas', name: 'Historial de Ventas', element: HistorialVentas },
+  { path: '/historial-pedidos', name: 'Historial de Pedidos', element: HistorialPedidos },
+  { path: '/movimientos-caja', name: 'Movimientos de Caja', element: HistorialMovimientos },
 ]
 
 export default routes

@@ -18,9 +18,13 @@ export default function Cajas() {
   const [listaCajas, setListaCajas] = useState([]);
   const [modalNuevaCajaOpen, setModalNuevaCajaOpen] = useState(false);
   const [modalCerrarCajaOpen, setModalCerrarCajaOpen] = useState(false);
-  const [usuarios, setUsuarios] = useState([]);
   const [locales, setLocales] = useState([]);
   const [cajaACerrar, setCajaACerrar] = useState(null);
+  const usuarioActual = JSON.parse(localStorage.getItem('user') || '{}');
+  const rolesActuales = usuarioActual.roles_nombres || [usuarioActual.rol_nombre];
+  const puedeAbrirCaja = rolesActuales.some((rol) =>
+    ['dueño', 'dueno', 'administrador'].includes((rol || '').toLocaleLowerCase())
+  );
 
   const notificar = (tipo, mensaje) => {
     switch (tipo) {
@@ -41,7 +45,7 @@ export default function Cajas() {
   const cargarCajas = async () => {
     try {
       const token = localStorage.getItem('token');
-      const respuesta = await api.get('/api/cajas/?date=today&status=active', {
+      const respuesta = await api.get('/api/cajas/', {
         headers: {
           Authorization: `Token ${token}`,
         },
@@ -50,21 +54,6 @@ export default function Cajas() {
     } catch (error) {
       console.error('Error al cargar cajas:', error);
       notificar('error', 'Error al cargar el listado de cajas.');
-    }
-  };
-
-  const cargarUsuarios = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const respuesta = await api.get('/api/usuarios/', {
-        headers: {
-          Authorization: `Token ${token}`,
-        },
-      });
-      setUsuarios(respuesta.data);
-    } catch (error) {
-      console.error('Error al cargar usuarios:', error);
-      notificar('error', 'Error al cargar los usuarios.');
     }
   };
 
@@ -85,7 +74,6 @@ export default function Cajas() {
 
   useEffect(() => {
     cargarCajas();
-    cargarUsuarios();
     cargarLocales();
   }, []);
 
@@ -94,7 +82,16 @@ export default function Cajas() {
       {/* SECCIÓN SUPERIOR: BOTÓN SIEMPRE DISPONIBLE PARA ABRIR OTRA CAJA */}
       <div className="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
         <h4 className="m-0 fw-bold text-body-secondary">Cajas</h4>
-        <CButton color="success" onClick={() => setModalNuevaCajaOpen(true)}>
+        <CButton
+          color="success"
+          onClick={() => setModalNuevaCajaOpen(true)}
+          disabled={!puedeAbrirCaja}
+          title={
+            !puedeAbrirCaja
+              ? 'Solo Dueño o Administrador pueden abrir una caja.'
+              : 'Abrir una nueva caja'
+          }
+        >
           + Abrir Nueva Caja
         </CButton>
       </div>
@@ -104,7 +101,12 @@ export default function Cajas() {
         <CCard className="text-center p-5 shadow-sm border-dashed">
           <CCardBody>
             <p className="text-body-secondary fs-5">No hay cajas creadas en este turno.</p>
-            <CButton color="success" size="lg" onClick={() => setModalNuevaCajaOpen(true)}>
+            <CButton
+              color="success"
+              size="lg"
+              onClick={() => setModalNuevaCajaOpen(true)}
+              disabled={!puedeAbrirCaja}
+            >
               Iniciar Primera Apertura
             </CButton>
           </CCardBody>
@@ -119,6 +121,11 @@ export default function Cajas() {
               <CCardHeader className="d-flex justify-content-between align-items-center bg-body-secondary">
                 <div>
                   <strong className="fs-5 text-body">Caja ID: #{itemCaja.id_cajas}</strong>
+                  <div className="small text-body-secondary">
+                    Responsable: {itemCaja.empleado_detalle
+                      ? `${itemCaja.empleado_detalle.nombre} ${itemCaja.empleado_detalle.apellido}`
+                      : itemCaja.usuario_nombre}
+                  </div>
                 </div>
                 <CBadge color={itemCaja.estado ? 'success' : 'secondary'} shape="rounded-pill">
                   {itemCaja.estado ? 'ACTIVA / ABIERTA' : 'CERRADA'}
@@ -135,6 +142,9 @@ export default function Cajas() {
                   </CCol>
                   <CCol sm={6} md={3} className="border-end">
                     <div className="text-body-secondary small uppercase fw-bold">Saldo en Sistema</div>
+                    <div className="fs-5 fw-semibold text-primary">
+                      ${Number(itemCaja.saldo_esperado || 0).toFixed(2)}
+                    </div>
                   </CCol>
                   <CCol sm={6} md={3} className="border-end">
                     <div className="text-body-secondary small uppercase fw-bold">Apertura Registrada</div>
@@ -161,17 +171,23 @@ export default function Cajas() {
                         <CButton color="primary" size="sm" disabled onClick={() => {}}>
                           + Movimiento
                         </CButton>
-                        <CButton
-                          color="danger"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setCajaACerrar(itemCaja.id_cajas);
-                            setModalCerrarCajaOpen(true);
-                          }}
-                        >
-                          Cerrar esta Caja
-                        </CButton>
+                        {itemCaja.es_mia ? (
+                          <CButton
+                            color="danger"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setCajaACerrar(itemCaja);
+                              setModalCerrarCajaOpen(true);
+                            }}
+                          >
+                            Cerrar esta Caja
+                          </CButton>
+                        ) : (
+                          <CButton color="danger" variant="outline" size="sm" disabled>
+                            Caja asignada a otro usuario
+                          </CButton>
+                        )}
                       </>
                     ) : (
                       <span className="text-success small fw-bold">Arqueo Finalizado con Éxito</span>
@@ -187,8 +203,8 @@ export default function Cajas() {
       <NuevaCaja
         visible={modalNuevaCajaOpen}
         onClose={() => setModalNuevaCajaOpen(false)}
-        usuarios={usuarios}
         locales={locales}
+        cajasAbiertas={listaCajas.filter((item) => item.estado && !item.fecha_hora_cierre)}
         onSuccess={cargarCajas}
       />
       <CerrarCaja

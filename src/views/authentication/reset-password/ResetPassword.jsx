@@ -12,6 +12,7 @@ import {
   CRow,
 } from '@coreui/react'
 import api from '../../components/api/api'
+import { toast } from 'react-toastify'
 
 const ResetPassword = () => {
 
@@ -32,7 +33,6 @@ const ResetPassword = () => {
   const handleSubmit = async (e) => {
       e.preventDefault()
       setLoading(true)
-      console.log(data)
       try {
   
         await api.post(`/api/password-reset/`, data)
@@ -42,6 +42,11 @@ const ResetPassword = () => {
 
       } catch (error) {
         console.error('Error al enviar correo', error)
+        const mensaje =
+          error.response?.data?.error ||
+          error.response?.data?.detail ||
+          'No se pudo enviar el correo de recuperación.'
+        toast.error(mensaje)
       } finally {
         setLoading(false)
       }
