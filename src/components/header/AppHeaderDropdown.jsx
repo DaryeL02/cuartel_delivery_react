@@ -118,15 +118,10 @@ const AppHeaderDropdown = () => {
 
         <CDropdownDivider />
 
-        <CDropdownItem 
-          component="button" 
-          onClick={handleLogout}
-          className="me-2 text-danger"
-        >
+        <CDropdownItem component="button" onClick={handleLogout} className="me-2 text-danger">
           <CIcon icon={cilAccountLogout} className="me-2 text-danger" />
           Cerrar Sesión
         </CDropdownItem>
-
       </CDropdownMenu>
     </CDropdown>
   )

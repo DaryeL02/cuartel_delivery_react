@@ -64,7 +64,7 @@ const Login = () => {
               <div className="text-center">
                 <CIcon icon={logo} height={48} />
               </div>
-              <CCard className="p-4">   //estructura de la tarjeta
+              <CCard className="p-4">
                 <CCardBody className="d-flex flex-column gap-4">
 
                   {error && <CAlert color="danger">{error}</CAlert>}
@@ -75,18 +75,18 @@ const Login = () => {
                     onSubmit={handleSubmit}
                   >
                     <CCol xs={12}>
-                      <CFormLabel htmlFor="text">Usuario</CFormLabel> //campo de usuario
+                      <CFormLabel htmlFor="text">Usuario</CFormLabel>
                       <CFormInput
                         id="text"
                         type="text"
-                        placeholder="Introduce tu usuario"
+                        placeholder="Ingresa tu usuario"
                         autoComplete="current-usuario"
-                        value={usuario} // Vincula el valor
-                        onChange={(e) => setUsuario(e.target.value)} // Actualiza el estado
+                        value={usuario}
+                        onChange={(e) => setUsuario(e.target.value)}
                       />
                     </CCol>
                     <CCol xs={12}>
-                      <div className="d-flex justify-content-between"> //campo de contraseña
+                      <div className="d-flex justify-content-between">
                         <CFormLabel htmlFor="password">Contraseña</CFormLabel>
                         <Link to="/authentication/reset-password">¿Olvidaste tu contraseña?</Link>
                       </div>
@@ -94,10 +94,10 @@ const Login = () => {
                         <CFormInput
                           id="password"
                           type="password"
-                          placeholder="Introduce tu contraseña"
+                          placeholder="Ingresa tu contraseña"
                           autoComplete="current-password"
-                          value={password} // Vincula el valor
-                          onChange={(e) => setPassword(e.target.value)} // Actualiza el estado
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
                         />
                         <CInputGroupText>
                           <CTooltip content="Show password">
