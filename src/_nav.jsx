@@ -133,6 +133,15 @@ const _nav = [
     },
   },
   {
+    component: CNavItem,
+    name: 'Compras',
+    to: '/compras',
+    icon: <CIcon icon={cilCart} customClassName="nav-icon" />,
+    badge: {
+      color: 'info',
+    },
+  },
+  {
     component: CNavGroup,
     name: 'Cajas',
     to: '/cajas',

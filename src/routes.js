@@ -51,6 +51,7 @@ const Insumos = React.lazy(() => import('./views/components/insumos/Insumos'))
 const Empleados = React.lazy(() => import('./views/components/empleados/Empleados'))
 const Pedidos = React.lazy(() => import('./views/components/pedidos/Pedidos'))
 const Menus = React.lazy(() => import('./views/components/menus/Menus'))
+const Compras = React.lazy(() => import('./views/components/compras/Compras'))
 const AperturaCierre = React.lazy(() => import('./views/components/cajas/aperturaCierre/AperturaCierre.jsx'))
 
 
@@ -141,6 +142,7 @@ export const routes = [
   { path: '/empleados', name: 'Empleados', element: Empleados },
   { path: '/pedidos', name: 'Pedidos', element: Pedidos },
   { path: '/menus', name: 'Menus', element: Menus },
+  { path: '/compras', name: 'Compras', element: Compras },
   { path: '/cajas/aperturacierre', name: 'AperturaCierre', element: AperturaCierre },
 ]
 
