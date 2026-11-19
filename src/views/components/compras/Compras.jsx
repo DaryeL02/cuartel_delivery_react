@@ -112,6 +112,18 @@ const Compras = () => {
   }
 
   const filtrarHistorial = () => {
+    const hoy = fechaLocalActual()
+    if (
+      (fechaDesdeHistorial && fechaDesdeHistorial > hoy) ||
+      (fechaHastaHistorial && fechaHastaHistorial > hoy)
+    ) {
+      toast.warning('No puedes seleccionar fechas futuras.')
+      return
+    }
+    if (fechaDesdeHistorial && fechaHastaHistorial && fechaDesdeHistorial > fechaHastaHistorial) {
+      toast.warning('La fecha "Desde" no puede ser mayor que la fecha "Hasta".')
+      return
+    }
     cargarHistorial(1)
   }
 
@@ -389,6 +401,7 @@ const Compras = () => {
               <CFormInput
                 label="Desde"
                 type="date"
+                max={fechaHastaHistorial || fechaLocalActual()}
                 value={fechaDesdeHistorial}
                 onChange={(e) => setFechaDesdeHistorial(e.target.value)}
               />
@@ -397,6 +410,8 @@ const Compras = () => {
               <CFormInput
                 label="Hasta"
                 type="date"
+                min={fechaDesdeHistorial || undefined}
+                max={fechaLocalActual()}
                 value={fechaHastaHistorial}
                 onChange={(e) => setFechaHastaHistorial(e.target.value)}
               />

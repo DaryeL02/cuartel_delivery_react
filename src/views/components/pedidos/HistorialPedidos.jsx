@@ -22,6 +22,13 @@ import {
 import { toast } from 'react-toastify'
 import api from '../api/api'
 
+const fechaLocalActual = () => {
+  const hoy = new Date()
+  return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(
+    hoy.getDate(),
+  ).padStart(2, '0')}`
+}
+
 const HistorialPedidos = () => {
   const [pedidos, setPedidos] = useState([])
   const [busqueda, setBusqueda] = useState('')
@@ -59,6 +66,16 @@ const HistorialPedidos = () => {
   )
 
   const filtrar = () => {
+    const hoy = fechaLocalActual()
+    if ((fechaDesde && fechaDesde > hoy) || (fechaHasta && fechaHasta > hoy)) {
+      toast.warning('No puedes seleccionar fechas futuras.')
+      return
+    }
+    if (fechaDesde && fechaHasta && fechaDesde > fechaHasta) {
+      toast.warning('La fecha "Desde" no puede ser mayor que la fecha "Hasta".')
+      return
+    }
+
     setPedido(null)
     cargar(1, {
       fecha_desde: fechaDesde || undefined,
@@ -78,6 +95,7 @@ const HistorialPedidos = () => {
               <CFormInput
                 label="Desde"
                 type="date"
+                max={fechaHasta || fechaLocalActual()}
                 value={fechaDesde}
                 onChange={(e) => setFechaDesde(e.target.value)}
               />
@@ -86,6 +104,8 @@ const HistorialPedidos = () => {
               <CFormInput
                 label="Hasta"
                 type="date"
+                min={fechaDesde || undefined}
+                max={fechaLocalActual()}
                 value={fechaHasta}
                 onChange={(e) => setFechaHasta(e.target.value)}
               />

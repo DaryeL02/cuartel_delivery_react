@@ -14,17 +14,13 @@ import {
   CButton,
   CAvatar,
   CBadge,
-  CDropdown,
-  CDropdownToggle,
-  CDropdownMenu,
-  CDropdownItem,
   CPagination,
   CPaginationItem,
   CFormInput,
   CPlaceholder,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
-import { cilPlus, cilOptions, cilPencil, cilTrash, cilLayers } from '@coreui/icons'
+import { cilPlus, cilLayers } from '@coreui/icons'
 import api from '../api/api'
 import { toast } from 'react-toastify'
 import ModalFormInsumo from './ModalFormInsumo'
@@ -316,38 +312,30 @@ const Insumos = ({ onOpenModal }) => {
                             <CTableDataCell className="text-body-secondary">{insumo.unidad}</CTableDataCell>
                             <CTableDataCell className="text-body-secondary">{insumo.categoria_detalle?.nombre}</CTableDataCell>
 
-                            <CTableDataCell className="text-center">
-                              <CDropdown alignment="end">
-                                <CDropdownToggle
-                                  color="transparent"
-                                  caret={false}
-                                  className="p-0 border-0 shadow-none"
-                                >
-                                  <CIcon icon={cilOptions} className="text-body-secondary" size="lg" />
-                                </CDropdownToggle>
-                                <CDropdownMenu>
-                                  <CDropdownItem
-                                    onClick={() => {
-                                      setInsumoAEditar(insumo)
-                                      setModalOpen(true)
-                                    }}
-                                    className="d-flex align-items-center gap-2"
-                                  >
-                                    <CIcon icon={cilPencil} className="text-info" />
-                                    Editar
-                                  </CDropdownItem>
-                                  <CDropdownItem
-                                    onClick={() => {
-                                      setInsumoAEditar(insumo)
-                                      setDeleteModalOpen(true)
-                                    }}
-                                    className="d-flex align-items-center gap-2 text-danger"
-                                  >
-                                    <CIcon icon={cilTrash} />
-                                    Eliminar
-                                  </CDropdownItem>
-                                </CDropdownMenu>
-                              </CDropdown>
+                            <CTableDataCell className="text-center text-nowrap">
+                              <CButton
+                                size="sm"
+                                color="info"
+                                variant="outline"
+                                className="me-2"
+                                onClick={() => {
+                                  setInsumoAEditar(insumo)
+                                  setModalOpen(true)
+                                }}
+                              >
+                                Editar
+                              </CButton>
+                              <CButton
+                                size="sm"
+                                color="danger"
+                                variant="outline"
+                                onClick={() => {
+                                  setInsumoAEditar(insumo)
+                                  setDeleteModalOpen(true)
+                                }}
+                              >
+                                Eliminar
+                              </CButton>
                             </CTableDataCell>
                           </CTableRow>
                         ))}

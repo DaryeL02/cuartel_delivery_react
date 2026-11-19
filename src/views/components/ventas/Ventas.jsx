@@ -49,6 +49,13 @@ import { toast } from 'react-toastify'
 
 const MAX_DECIMAL_9_2 = 9999999.99
 
+const fechaLocalActual = () => {
+  const hoy = new Date()
+  return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(
+    hoy.getDate(),
+  ).padStart(2, '0')}`
+}
+
 const Ventas = () => {
   const [cajas, setCajas] = useState([])
   const [cajaSeleccionada, setCajaSeleccionada] = useState(null)
@@ -213,6 +220,15 @@ const Ventas = () => {
   }
 
   const filtrarVentasHistorial = () => {
+    const hoy = fechaLocalActual()
+    if ((fechaDesde && fechaDesde > hoy) || (fechaHasta && fechaHasta > hoy)) {
+      notificar('advertencia', 'No puedes seleccionar fechas futuras.')
+      return
+    }
+    if (fechaDesde && fechaHasta && fechaDesde > fechaHasta) {
+      notificar('advertencia', 'La fecha "Desde" no puede ser mayor que la fecha "Hasta".')
+      return
+    }
     cargarVentasHistorial(1)
   }
 
@@ -1109,6 +1125,7 @@ const Ventas = () => {
               <CFormInput
                 label="Desde"
                 type="date"
+                max={fechaHasta || fechaLocalActual()}
                 value={fechaDesde}
                 onChange={(e) => setFechaDesde(e.target.value)}
               />
@@ -1117,6 +1134,8 @@ const Ventas = () => {
               <CFormInput
                 label="Hasta"
                 type="date"
+                min={fechaDesde || undefined}
+                max={fechaLocalActual()}
                 value={fechaHasta}
                 onChange={(e) => setFechaHasta(e.target.value)}
               />

@@ -14,17 +14,13 @@ import {
   CButton,
   CBadge,
   CAvatar,
-  CDropdown,
-  CDropdownToggle,
-  CDropdownMenu,
-  CDropdownItem,
   CPagination,
   CPaginationItem,
   CFormInput,
   CPlaceholder,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
-import { cilPlus, cilOptions, cilPencil, cilTrash } from '@coreui/icons'
+import { cilPlus } from '@coreui/icons'
 import api from '../api/api'
 import ModalFormEmpleado from './ModalFormEmpleado'
 import ModalDeleteEmpleado from './ModalDeleteEmpleado'
@@ -303,38 +299,30 @@ const Empleados = ({ onOpenModal }) => {
                                 </CBadge>
                               </CTableDataCell>
 
-                              <CTableDataCell className="text-center">
-                                <CDropdown alignment="end">
-                                  <CDropdownToggle
-                                    color="transparent"
-                                    caret={false}
-                                    className="p-0 border-0 shadow-none"
-                                  >
-                                    <CIcon icon={cilOptions} className="text-body-secondary" size="lg" />
-                                  </CDropdownToggle>
-                                  <CDropdownMenu>
-                                    <CDropdownItem
-                                      onClick={() => {
-                                        setEmpleadoAEditar(empleado)
-                                        setModalOpen(true)
-                                      }}
-                                      className="d-flex align-items-center gap-2"
-                                    >
-                                      <CIcon icon={cilPencil} className="text-info" />
-                                      Editar
-                                    </CDropdownItem>
-                                    <CDropdownItem
-                                      onClick={() => {
-                                        setEmpleadoAEditar(empleado)
-                                        setDeleteModalOpen(true)
-                                      }}
-                                      className="d-flex align-items-center gap-2 text-danger"
-                                    >
-                                      <CIcon icon={cilTrash} />
-                                      Eliminar
-                                    </CDropdownItem>
-                                  </CDropdownMenu>
-                                </CDropdown>
+                              <CTableDataCell className="text-center text-nowrap">
+                                <CButton
+                                  size="sm"
+                                  color="info"
+                                  variant="outline"
+                                  className="me-2"
+                                  onClick={() => {
+                                    setEmpleadoAEditar(empleado)
+                                    setModalOpen(true)
+                                  }}
+                                >
+                                  Editar
+                                </CButton>
+                                <CButton
+                                  size="sm"
+                                  color="danger"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setEmpleadoAEditar(empleado)
+                                    setDeleteModalOpen(true)
+                                  }}
+                                >
+                                  Eliminar
+                                </CButton>
                               </CTableDataCell>
                             </CTableRow>
                           )
