@@ -264,7 +264,7 @@ const ModalFormProducto = ({ visible, onClose, producto, insumos_lista, onSucces
             <CCol md={8}>
               <CFormInput
                 type="text"
-                label="Nombre del Producto"
+                label={<span>Nombre del Producto <span className="text-danger">*</span></span>}
                 name="nombre"
                 maxLength={100}
                 value={data.nombre}
@@ -280,7 +280,7 @@ const ModalFormProducto = ({ visible, onClose, producto, insumos_lista, onSucces
               <CFormInput
                 type="text"
                 inputMode="decimal"
-                label="Precio Unitario ($)"
+                label={<span>Precio Unitario ($) <span className="text-danger">*</span></span>}
                 name="precio_unitario"
                 value={data.precio_unitario}
                 onKeyDown={handleKeyDownPrecio}
@@ -310,7 +310,9 @@ const ModalFormProducto = ({ visible, onClose, producto, insumos_lista, onSucces
 
             {/* Selección de Insumos Asociados */}
             <CCol md={12}>
-              <label className="form-label fw-medium text-body-secondary">Insumos del Producto</label>
+              <label className="form-label fw-medium text-body-secondary">
+                Insumos del Producto <span className="text-danger">*</span>
+              </label>
               <div
                 className={`border rounded p-3 bg-body-secondary ${
                   errores.insumos ? 'border-danger' : ''
@@ -374,6 +376,9 @@ const ModalFormProducto = ({ visible, onClose, producto, insumos_lista, onSucces
               />
             </CCol>
           </CRow>
+          <small className="text-body-secondary d-block mt-3">
+            <span className="text-danger">*</span> Campos obligatorios
+          </small>
         </CModalBody>
         <CModalFooter>
           <CButton color="secondary" variant="ghost" onClick={onClose} disabled={loading}>

@@ -9,6 +9,9 @@ import {
   cilLemon,
   cilCart,
   cilPeople,
+  cilDrink,
+  cilTruck,
+  
 } from '@coreui/icons'
 import { CNavGroup, CNavItem, CNavTitle } from '@coreui/react'
 
@@ -38,15 +41,21 @@ const _nav = [
     to: '/pedidos',
     icon: <CIcon icon={cilBasket} customClassName="nav-icon" />,
   },
-  // {
-  //   component: CNavItem,
-  //   name: 'Historial de Pedidos',
-  //   to: '/historial-pedidos',
-  //   icon: <CIcon icon={cilBasket} customClassName="nav-icon" />,
-  // },
+  {
+    component: CNavItem,
+    name: 'Compras',
+    to: '/compras',
+    icon: <CIcon icon={cilBasket} customClassName="nav-icon" />,
+  },
   {
     component: CNavTitle,
     name: 'Administración',
+  },
+  {
+    component: CNavItem,
+    name: 'Cajas',
+    to: '/cajas',
+    icon: <CIcon icon={cilCart} customClassName="nav-icon" />,
   },
   {
     component: CNavItem,
@@ -76,25 +85,13 @@ const _nav = [
     component: CNavItem,
     name: 'Bebidas',
     to: '/bebidas',
-    icon: <CIcon icon={cilLemon} customClassName="nav-icon" />,
+    icon: <CIcon icon={cilDrink} customClassName="nav-icon" />,
   },
   {
     component: CNavItem,
     name: 'Proveedores',
     to: '/proveedores',
-    icon: <CIcon icon={cilPeople} customClassName="nav-icon" />,
-  },
-  {
-    component: CNavItem,
-    name: 'Compras',
-    to: '/compras',
-    icon: <CIcon icon={cilBasket} customClassName="nav-icon" />,
-  },
-  {
-    component: CNavItem,
-    name: 'Cajas',
-    to: '/cajas',
-    icon: <CIcon icon={cilCart} customClassName="nav-icon" />,
+    icon: <CIcon icon={cilTruck} customClassName="nav-icon" />,
   },
   {
     component: CNavItem,

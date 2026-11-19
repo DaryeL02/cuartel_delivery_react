@@ -66,7 +66,7 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, bebidas = [], ca
   }
 
   const cajasActivas = Array.isArray(cajas)
-    ? cajas.filter((c) => c.empleado_detalle && c.estado !== false)
+    ? cajas.filter((c) => c.empleado_detalle && (c.estado || !c.fecha_hora_cierre))
     : []
 
   const productosActivos = Array.isArray(productos)
@@ -437,7 +437,11 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, bebidas = [], ca
               {!modoEditar && (
                 <CCol md={4}>
                   <CFormSelect
-                    label="Empleado / Caja Activa"
+                    label={
+                      <span>
+                        Empleado / Caja Activa {!modoEditar && <span className="text-danger">*</span>}
+                      </span>
+                    }
                     name="empleado"
                     value={data.empleado}
                     onChange={handleChange}
@@ -459,7 +463,12 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, bebidas = [], ca
               <CCol md={4}>
                 <CFormInput
                   type="text"
-                  label={modoEditar ? 'Cliente' : 'Nombre del Cliente'}
+                  label={
+                    <span>
+                      {modoEditar ? 'Cliente' : 'Nombre del Cliente'}{' '}
+                      <span className="text-danger">*</span>
+                    </span>
+                  }
                   name="cliente"
                   maxLength={50}
                   placeholder="Ej: Juan Pérez"
@@ -503,54 +512,59 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, bebidas = [], ca
           {!modoEditar && <hr className="my-3" />}
           <h6 className="fw-bold text-body-secondary mb-3">Agregar Productos o Bebidas al Pedido</h6>
 
-          {/* SELECTOR DE PRODUCTOS */}
+          {/* SELECTOR UNIFICADO DE PRODUCTOS Y BEBIDAS */}
           <CRow className="g-2 align-items-start mb-3">
             <CCol md={7}>
               <CFormSelect
-                className="mb-2"
-                label="Tipo de artículo"
-                name="tipo"
-                value={productoSeleccionado.tipo}
+                label={
+                  <span>
+                    Producto o bebida <span className="text-danger">*</span>
+                  </span>
+                }
+                name="articulo"
+                value={
+                  productoSeleccionado.articulo
+                    ? `${productoSeleccionado.tipo}:${productoSeleccionado.articulo}`
+                    : ''
+                }
                 onChange={(e) => {
-                  setProductoSeleccionado({ tipo: e.target.value, articulo: '', cantidad: '' })
+                  const [tipo, articulo] = e.target.value.split(':')
+                  setProductoSeleccionado((prev) => ({
+                    ...prev,
+                    tipo: tipo || 'producto',
+                    articulo: articulo || '',
+                  }))
                   setErroresItem((prev) => ({ ...prev, articulo: null }))
                 }}
-              >
-                <option value="producto">Producto</option>
-                <option value="bebida">Bebida</option>
-              </CFormSelect>
-              <CFormSelect
-                label={productoSeleccionado.tipo === 'bebida' ? 'Seleccionar Bebida' : 'Seleccionar Producto'}
-                name="articulo"
-                value={productoSeleccionado.articulo}
-                onChange={handleProductoChange}
                 invalid={!!erroresItem.articulo}
                 feedbackInvalid={erroresItem.articulo}
               >
-                <option value="">
-                  {productoSeleccionado.tipo === 'bebida'
-                    ? '-- Seleccione una bebida --'
-                    : '-- Seleccione un producto --'}
-                </option>
-                {(productoSeleccionado.tipo === 'bebida' ? bebidasActivas : productosActivos).map(
-                  (item) => {
-                    const id = productoSeleccionado.tipo === 'bebida'
-                      ? item.id_bebidas
-                      : item.id_productos
-                    return (
-                      <option key={id} value={id}>
-                        {item.nombre} (${formatearMoneda(item.precio_unitario)})
-                      </option>
-                    )
-                  },
-                )}
+                <option value="">-- Seleccione un artículo --</option>
+                <optgroup label="Productos">
+                  {productosActivos.map((item) => (
+                    <option key={`producto-${item.id_productos}`} value={`producto:${item.id_productos}`}>
+                      {item.nombre} (${formatearMoneda(item.precio_unitario)})
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Bebidas">
+                  {bebidasActivas.map((item) => (
+                    <option key={`bebida-${item.id_bebidas}`} value={`bebida:${item.id_bebidas}`}>
+                      {item.nombre} (${formatearMoneda(item.precio_unitario)})
+                    </option>
+                  ))}
+                </optgroup>
               </CFormSelect>
             </CCol>
             <CCol md={3}>
               <CFormInput
                 type="text"
                 inputMode="numeric"
-                label="Cantidad"
+                label={
+                  <span>
+                    Cantidad <span className="text-danger">*</span>
+                  </span>
+                }
                 placeholder="Ej: 1"
                 name="cantidad"
                 maxLength={3}
@@ -674,6 +688,9 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, bebidas = [], ca
               ${formatearMoneda(totalPedido)}
             </h4>
           </div>
+          <small className="text-body-secondary d-block mt-3">
+            <span className="text-danger">*</span> Campos obligatorios
+          </small>
         </CModalBody>
 
         <CModalFooter>

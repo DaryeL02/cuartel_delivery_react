@@ -103,7 +103,9 @@ export default function NuevaCaja({ visible, onClose, locales, cajasAbiertas = [
           <CRow className="g-3">
             {/* Campo: Local (Select) */}
             <CCol md={12}>
-              <CFormLabel htmlFor="local">Local / Sucursal</CFormLabel>
+              <CFormLabel htmlFor="local">
+                Local / Sucursal <span className="text-danger">*</span>
+              </CFormLabel>
               <CFormSelect
                 id="local"
                 name="local"
@@ -129,7 +131,9 @@ export default function NuevaCaja({ visible, onClose, locales, cajasAbiertas = [
 
             {/* Campo: Monto de Apertura */}
             <CCol md={12}>
-              <CFormLabel htmlFor="monto_apertura">Asignar Monto Inicial en Efectivo</CFormLabel>
+              <CFormLabel htmlFor="monto_apertura">
+                Asignar Monto Inicial en Efectivo <span className="text-danger">*</span>
+              </CFormLabel>
               <CFormInput
                 type="number"
                 id="monto_apertura"
@@ -142,6 +146,9 @@ export default function NuevaCaja({ visible, onClose, locales, cajasAbiertas = [
               />
             </CCol>
           </CRow>
+          <small className="text-body-secondary d-block mt-3">
+            <span className="text-danger">*</span> Campos obligatorios
+          </small>
         </CModalBody>
         <CModalFooter>
           <CButton color="secondary" type="button" onClick={onClose} disabled={loading}>

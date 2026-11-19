@@ -174,7 +174,7 @@ const Proveedores = () => {
         <form onSubmit={guardar}>
           <CModalBody className="d-grid gap-3">
             <CFormInput
-              label="Nombre"
+              label={<span>Nombre <span className="text-danger">*</span></span>}
               required
               maxLength={100}
               value={proveedor.nombre}
@@ -211,6 +211,9 @@ const Proveedores = () => {
               value={proveedor.descripcion || ''}
               onChange={(e) => setProveedor({ ...proveedor, descripcion: e.target.value })}
             />
+            <small className="text-body-secondary">
+              <span className="text-danger">*</span> Campos obligatorios
+            </small>
           </CModalBody>
           <CModalFooter>
             <CButton

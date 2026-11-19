@@ -320,7 +320,7 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
             <CCol md={8}>
               <CFormInput
                 type="text"
-                label="Nombre del Insumo"
+                label={<span>Nombre del Insumo <span className="text-danger">*</span></span>}
                 name="nombre"
                 maxLength={50}
                 value={data.nombre}
@@ -334,7 +334,7 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
             {/* Categoría - FK INT */}
             <CCol md={4}>
               <CFormSelect
-                label="Categoría"
+                label={<span>Categoría <span className="text-danger">*</span></span>}
                 name="categoria"
                 value={data.categoria}
                 onChange={handleChange}
@@ -369,7 +369,7 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
             {/* Proveedor - FK INT */}
             <CCol md={4}>
               <CFormSelect
-                label="Proveedor"
+                label={<span>Proveedor <span className="text-danger">*</span></span>}
                 name="proveedor"
                 value={data.proveedor}
                 onChange={handleChange}
@@ -396,7 +396,7 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
             {/* Unidad de Medida - VARCHAR(10) */}
             <CCol md={4}>
               <CFormSelect
-                label="Unidad de Medida"
+                label={<span>Unidad de Medida <span className="text-danger">*</span></span>}
                 name="unidad"
                 value={data.unidad}
                 onChange={handleChange}
@@ -417,7 +417,7 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
               <CFormInput
                 type="text"
                 inputMode="numeric"
-                label="Stock Actual"
+                label={<span>Stock Actual <span className="text-danger">*</span></span>}
                 name="stock_actual"
                 value={data.stock_actual}
                 onKeyDown={handleKeyDownDecimal}
@@ -435,7 +435,7 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
               <CFormInput
                 type="text"
                 inputMode="numeric"
-                label="Stock Mínimo"
+                label={<span>Stock Mínimo <span className="text-danger">*</span></span>}
                 name="stock_minimo"
                 value={data.stock_minimo}
                 onKeyDown={handleKeyDownDecimal}
@@ -456,6 +456,9 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
               </CCol>
             )}
           </CRow>
+          <small className="text-body-secondary d-block mt-3">
+            <span className="text-danger">*</span> Campos obligatorios
+          </small>
         </CModalBody>
         <CModalFooter>
           <CButton color="secondary" variant="ghost" onClick={onClose} disabled={loading}>
@@ -498,6 +501,9 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
           <CFormTextarea label="Descripción" value={nuevoProveedor.descripcion} maxLength={200}
             invalid={!!erroresProveedor.descripcion} feedbackInvalid={erroresProveedor.descripcion}
             onChange={(e) => setNuevoProveedor((prev) => ({ ...prev, descripcion: e.target.value }))} />
+          <small className="text-body-secondary">
+            <span className="text-danger">*</span> Campos obligatorios
+          </small>
         </CModalBody>
         <CModalFooter>
           <CButton color="secondary" variant="ghost" type="button" onClick={() => setModalProveedorVisible(false)}>Cancelar</CButton>

@@ -4,6 +4,7 @@ import {
   CCardHeader,
   CCardBody,
   CButton,
+  CTooltip,
   CRow,
   CCol,
   CBadge,
@@ -117,18 +118,25 @@ export default function Cajas() {
       {/* SECCIÓN SUPERIOR: BOTÓN SIEMPRE DISPONIBLE PARA ABRIR OTRA CAJA */}
       <div className="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
         <h4 className="m-0 fw-bold text-body-secondary">Cajas</h4>
-        <CButton
-          color="success"
-          onClick={() => setModalNuevaCajaOpen(true)}
-          disabled={!puedeAbrirCaja}
-          title={
+        <CTooltip
+          content={
             !puedeAbrirCaja
-              ? 'No tiene los permisos adecuados para abrir una caja'
+              ? 'Requiere permisos de Administrador o Dueño para abrir una caja'
               : 'Abrir una nueva caja'
           }
+          placement="left"
         >
-          + Abrir Nueva Caja
-        </CButton>
+          <span className="d-inline-block" tabIndex={0}>
+            <CButton
+              color="success"
+              onClick={() => setModalNuevaCajaOpen(true)}
+              disabled={!puedeAbrirCaja}
+              style={!puedeAbrirCaja ? { pointerEvents: 'none' } : undefined}
+            >
+              + Abrir Nueva Caja
+            </CButton>
+          </span>
+        </CTooltip>
       </div>
 
       {/* RENDERIZADO DINÁMICO DE TODAS LAS CAJAS EN EL SISTEMA */}
@@ -136,18 +144,31 @@ export default function Cajas() {
         <CCard className="text-center p-5 shadow-sm border-dashed">
           <CCardBody>
             <p className="text-body-secondary fs-5">No hay cajas creadas en este turno.</p>
-            <CButton
-              color="success"
-              size="lg"
-              onClick={() => setModalNuevaCajaOpen(true)}
-              disabled={!puedeAbrirCaja}
+            <CTooltip
+              content={
+                !puedeAbrirCaja
+                  ? 'Requiere permisos de Administrador o Dueño para abrir una caja'
+                  : 'Iniciar la primera apertura del turno'
+              }
+              placement="top"
             >
-              Iniciar Primera Apertura
-            </CButton>
+              <span className="d-inline-block" tabIndex={0}>
+                <CButton
+                  color="success"
+                  size="lg"
+                  onClick={() => setModalNuevaCajaOpen(true)}
+                  disabled={!puedeAbrirCaja}
+                  style={!puedeAbrirCaja ? { pointerEvents: 'none' } : undefined}
+                >
+                  Iniciar Primera Apertura
+                </CButton>
+              </span>
+            </CTooltip>
           </CCardBody>
         </CCard>
       ) : (
         listaCajas.map((itemCaja) => {
+          const cajaAbierta = itemCaja.estado || !itemCaja.fecha_hora_cierre;
           return (
             <CCard
               key={itemCaja.id_cajas}
@@ -162,8 +183,8 @@ export default function Cajas() {
                       : itemCaja.usuario_nombre}
                   </div>
                 </div>
-                <CBadge color={itemCaja.estado ? 'success' : 'secondary'} shape="rounded-pill">
-                  {itemCaja.estado ? 'ACTIVA / ABIERTA' : 'CERRADA'}
+                <CBadge color={cajaAbierta ? 'success' : 'secondary'} shape="rounded-pill">
+                  {cajaAbierta ? 'ACTIVA / ABIERTA' : 'CERRADA'}
                 </CBadge>
               </CCardHeader>
 
@@ -201,7 +222,7 @@ export default function Cajas() {
                 <div className="d-flex gap-2 justify-content-between align-items-center pt-2 border-top">
                   <div className="small text-body-secondary"></div>
                   <div className="d-flex gap-2">
-                    {itemCaja.estado ? (
+                    {cajaAbierta ? (
                       <>
                         <CButton
                           color="info"
@@ -257,7 +278,7 @@ export default function Cajas() {
         visible={modalNuevaCajaOpen}
         onClose={() => setModalNuevaCajaOpen(false)}
         locales={locales}
-        cajasAbiertas={listaCajas.filter((item) => item.estado && !item.fecha_hora_cierre)}
+        cajasAbiertas={listaCajas.filter((item) => item.estado || !item.fecha_hora_cierre)}
         onSuccess={cargarCajas}
       />
       <CerrarCaja

@@ -21,6 +21,8 @@ import {
   CModalTitle,
   CModalBody,
   CModalFooter,
+  CPagination,
+  CPaginationItem,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import {
@@ -33,6 +35,7 @@ import {
   cilPencil,
 } from '@coreui/icons'
 import api from '../api/api'
+import { cargarResultadosPaginados } from '../api/paginacion'
 import ModalFormPedido from './ModalFormPedido'
 import { toast } from 'react-toastify'
 
@@ -47,6 +50,10 @@ const Pedidos = () => {
   const [historialPedidos, setHistorialPedidos] = useState([])
   const [pedidoDetalleHistorial, setPedidoDetalleHistorial] = useState(null)
   const [cargandoHistorial, setCargandoHistorial] = useState(false)
+  const [fechaDesdeHistorial, setFechaDesdeHistorial] = useState('')
+  const [fechaHastaHistorial, setFechaHastaHistorial] = useState('')
+  const [paginaHistorial, setPaginaHistorial] = useState(1)
+  const [totalPaginasHistorial, setTotalPaginasHistorial] = useState(1)
 
   // Filtros en tabla
   const [busqueda, setBusqueda] = useState('')
@@ -90,8 +97,11 @@ const Pedidos = () => {
   const cargarPedidos = async () => {
     setLoading(true)
     try {
-      const respuesta = await api.get('/api/pedidos/?date=today', getAuthConfig())
-      setPedidos(Array.isArray(respuesta.data) ? respuesta.data : respuesta.data.results || [])
+      const lista = await cargarResultadosPaginados('/api/pedidos/', {
+        ...getAuthConfig(),
+        params: { date: 'today' },
+      })
+      setPedidos(lista)
     } catch (error) {
       console.error('Error al cargar pedidos:', error)
       notificar('error', 'No se pudieron cargar los pedidos del día.')
@@ -119,18 +129,40 @@ const Pedidos = () => {
     }
   }
 
-  const abrirHistorial = async () => {
-    setHistorialVisible(true)
+  const cargarHistorial = async (pagina = 1) => {
     setCargandoHistorial(true)
     try {
-      const respuesta = await api.get('/api/pedidos/', getAuthConfig())
-      setHistorialPedidos(Array.isArray(respuesta.data) ? respuesta.data : respuesta.data.results || [])
+      const respuesta = await api.get('/api/pedidos/', {
+        ...getAuthConfig(),
+        params: {
+          page: pagina,
+          fecha_desde: fechaDesdeHistorial || undefined,
+          fecha_hasta: fechaHastaHistorial || undefined,
+        },
+      })
+      const data = respuesta.data
+      setHistorialPedidos(Array.isArray(data) ? data : data.results || [])
+      setPaginaHistorial(pagina)
+      setTotalPaginasHistorial(
+        Array.isArray(data) ? 1 : Math.max(1, Math.ceil((data.count || 0) / 20)),
+      )
     } catch (error) {
       console.error('Error al cargar el historial de pedidos:', error)
       notificar('error', error.response?.data?.detail || 'No se pudo cargar el historial de pedidos.')
     } finally {
       setCargandoHistorial(false)
     }
+  }
+
+  const abrirHistorial = () => {
+    setHistorialVisible(true)
+    setPedidoDetalleHistorial(null)
+    cargarHistorial(1)
+  }
+
+  const filtrarHistorial = () => {
+    setPedidoDetalleHistorial(null)
+    cargarHistorial(1)
   }
 
   const cargarCajas = async () => {
@@ -441,6 +473,29 @@ const Pedidos = () => {
             <p className="text-center text-body-secondary">Cargando pedidos...</p>
           ) : (
             <>
+              <CRow className="g-2 align-items-end mb-3">
+                <CCol md={4}>
+                  <CFormInput
+                    label="Desde"
+                    type="date"
+                    value={fechaDesdeHistorial}
+                    onChange={(e) => setFechaDesdeHistorial(e.target.value)}
+                  />
+                </CCol>
+                <CCol md={4}>
+                  <CFormInput
+                    label="Hasta"
+                    type="date"
+                    value={fechaHastaHistorial}
+                    onChange={(e) => setFechaHastaHistorial(e.target.value)}
+                  />
+                </CCol>
+                <CCol md={4}>
+                  <CButton color="secondary" className="w-100" onClick={filtrarHistorial}>
+                    Filtrar
+                  </CButton>
+                </CCol>
+              </CRow>
               <CTable responsive hover bordered>
                 <CTableHead>
                   <CTableRow>
@@ -530,6 +585,31 @@ const Pedidos = () => {
                     Total: ${formatearMoneda(pedidoDetalleHistorial.precio_total)}
                   </div>
                 </div>
+              )}
+              {totalPaginasHistorial > 1 && (
+                <CPagination aria-label="Paginación del historial de pedidos">
+                  <CPaginationItem
+                    disabled={paginaHistorial <= 1}
+                    onClick={(event) => {
+                      event.preventDefault()
+                      cargarHistorial(paginaHistorial - 1)
+                    }}
+                  >
+                    Anterior
+                  </CPaginationItem>
+                  <CPaginationItem active>
+                    {paginaHistorial} / {totalPaginasHistorial}
+                  </CPaginationItem>
+                  <CPaginationItem
+                    disabled={paginaHistorial >= totalPaginasHistorial}
+                    onClick={(event) => {
+                      event.preventDefault()
+                      cargarHistorial(paginaHistorial + 1)
+                    }}
+                  >
+                    Siguiente
+                  </CPaginationItem>
+                </CPagination>
               )}
             </>
           )}

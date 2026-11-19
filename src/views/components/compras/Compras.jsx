@@ -17,12 +17,21 @@ import {
   CTableHead,
   CTableHeaderCell,
   CTableRow,
+  CPagination,
+  CPaginationItem,
 } from '@coreui/react'
 import { toast } from 'react-toastify'
 import api from '../api/api'
+import { cargarResultadosPaginados } from '../api/paginacion'
 
 const nuevaLinea = () => ({ tipo: 'insumo', articulo: '', cantidad: 1, precio_unitario: '' })
 const listaDesde = (data) => (Array.isArray(data) ? data : data?.results || [])
+const fechaLocalActual = () => {
+  const hoy = new Date()
+  return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(
+    hoy.getDate(),
+  ).padStart(2, '0')}`
+}
 
 const Compras = () => {
   const [compras, setCompras] = useState([])
@@ -33,26 +42,38 @@ const Compras = () => {
   const [proveedor, setProveedor] = useState('')
   const [metodo, setMetodo] = useState('')
   const [lineas, setLineas] = useState([nuevaLinea()])
-  const [desde, setDesde] = useState('')
-  const [hasta, setHasta] = useState('')
-  const [filtroProveedor, setFiltroProveedor] = useState('')
+  const [cajas, setCajas] = useState([])
+  const [historialVisible, setHistorialVisible] = useState(false)
+  const [historialCompras, setHistorialCompras] = useState([])
+  const [historialCargando, setHistorialCargando] = useState(false)
+  const [fechaDesdeHistorial, setFechaDesdeHistorial] = useState('')
+  const [fechaHastaHistorial, setFechaHastaHistorial] = useState('')
+  const [proveedorHistorial, setProveedorHistorial] = useState('')
+  const [cajaHistorial, setCajaHistorial] = useState('')
+  const [paginaHistorial, setPaginaHistorial] = useState(1)
+  const [totalPaginasHistorial, setTotalPaginasHistorial] = useState(1)
   const [detalle, setDetalle] = useState(null)
   const [guardando, setGuardando] = useState(false)
 
   const cargarListas = async () => {
     try {
-      const [comprasR, proveedoresR, metodosR, insumosR, bebidasR] = await Promise.all([
-        api.get('/api/compras/'),
+      const hoy = fechaLocalActual()
+      const [comprasDia, proveedoresR, metodosR, insumosR, bebidasR, cajasR] = await Promise.all([
+        cargarResultadosPaginados('/api/compras/', {
+          params: { fecha_desde: hoy, fecha_hasta: hoy },
+        }),
         api.get('/api/proveedores/'),
         api.get('/api/metodos/'),
         api.get('/api/insumos/'),
         api.get('/api/bebidas/'),
+        api.get('/api/cajas/'),
       ])
-      setCompras(listaDesde(comprasR.data))
+      setCompras(comprasDia)
       setProveedores(listaDesde(proveedoresR.data))
       setMetodos(listaDesde(metodosR.data))
       setInsumos(listaDesde(insumosR.data))
       setBebidas(listaDesde(bebidasR.data))
+      setCajas(listaDesde(cajasR.data))
     } catch (error) {
       toast.error(error.response?.data?.detail || 'No se pudieron cargar los datos de compras.')
     }
@@ -60,6 +81,39 @@ const Compras = () => {
   useEffect(() => {
     cargarListas()
   }, [])
+
+  const cargarHistorial = async (pagina = 1) => {
+    setHistorialCargando(true)
+    try {
+      const { data } = await api.get('/api/compras/', {
+        params: {
+          page: pagina,
+          fecha_desde: fechaDesdeHistorial || undefined,
+          fecha_hasta: fechaHastaHistorial || undefined,
+          proveedor: proveedorHistorial || undefined,
+          id_cajas: cajaHistorial || undefined,
+        },
+      })
+      setHistorialCompras(listaDesde(data))
+      setPaginaHistorial(pagina)
+      setTotalPaginasHistorial(
+        Array.isArray(data) ? 1 : Math.max(1, Math.ceil((data.count || 0) / 20)),
+      )
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'No se pudo cargar el historial de compras.')
+    } finally {
+      setHistorialCargando(false)
+    }
+  }
+
+  const abrirHistorial = () => {
+    setHistorialVisible(true)
+    cargarHistorial(1)
+  }
+
+  const filtrarHistorial = () => {
+    cargarHistorial(1)
+  }
 
   const total = useMemo(
     () =>
@@ -76,17 +130,23 @@ const Compras = () => {
     )
   }
 
-  const elegirArticulo = (index, idArticulo) => {
+  const elegirArticulo = (index, seleccion) => {
+    if (!seleccion) {
+      actualizarLinea(index, { articulo: '', precio_unitario: '' })
+      return
+    }
+
+    const [tipo, idArticulo] = seleccion.split(':')
     const linea = lineas[index]
-    const item = (linea.tipo === 'insumo' ? insumos : bebidas).find(
+    const item = (tipo === 'insumo' ? insumos : bebidas).find(
       (registro) =>
-        String(registro[linea.tipo === 'insumo' ? 'id_insumos' : 'id_bebidas']) ===
-        String(idArticulo),
+        String(registro[tipo === 'insumo' ? 'id_insumos' : 'id_bebidas']) === idArticulo,
     )
     actualizarLinea(index, {
+      tipo,
       articulo: idArticulo,
       precio_unitario:
-        linea.tipo === 'bebida' ? String(item?.precio_unitario || '') : linea.precio_unitario,
+        tipo === 'bebida' ? String(item?.precio_unitario || '') : linea.precio_unitario,
     })
   }
 
@@ -131,21 +191,6 @@ const Compras = () => {
     }
   }
 
-  const buscarCompras = async () => {
-    try {
-      const { data } = await api.get('/api/compras/', {
-        params: {
-          proveedor: filtroProveedor || undefined,
-          desde: desde || undefined,
-          hasta: hasta || undefined,
-        },
-      })
-      setCompras(listaDesde(data))
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'No se pudo filtrar el historial.')
-    }
-  }
-
   const nombreDetalle = (item) =>
     item.insumo?.nombre || item.bebida?.nombre || `Bebida #${item.bebida}`
 
@@ -160,7 +205,7 @@ const Compras = () => {
             <div className="row g-3 mb-3">
               <div className="col-md-6">
                 <CFormSelect
-                  label="Proveedor"
+                  label={<span>Proveedor <span className="text-danger">*</span></span>}
                   value={proveedor}
                   onChange={(e) => setProveedor(e.target.value)}
                   required
@@ -175,7 +220,7 @@ const Compras = () => {
               </div>
               <div className="col-md-6">
                 <CFormSelect
-                  label="Método de pago"
+                  label={<span>Método de pago <span className="text-danger">*</span></span>}
                   value={metodo}
                   onChange={(e) => setMetodo(e.target.value)}
                   required
@@ -190,44 +235,35 @@ const Compras = () => {
               </div>
             </div>
             {lineas.map((item, index) => {
-              const articulos = item.tipo === 'insumo' ? insumos : bebidas
-              const idCampo = item.tipo === 'insumo' ? 'id_insumos' : 'id_bebidas'
               return (
                 <div className="row g-2 align-items-end mb-3" key={index}>
-                  <div className="col-md-2">
+                  <div className="col-md-6">
                     <CFormSelect
-                      label="Tipo"
-                      value={item.tipo}
-                      onChange={(e) =>
-                        actualizarLinea(index, {
-                          tipo: e.target.value,
-                          articulo: '',
-                          precio_unitario: '',
-                        })
-                      }
-                    >
-                      <option value="insumo">Insumo</option>
-                      <option value="bebida">Bebida</option>
-                    </CFormSelect>
-                  </div>
-                  <div className="col-md-4">
-                    <CFormSelect
-                      label="Artículo"
-                      value={item.articulo}
+                      label={<span>Insumo o bebida <span className="text-danger">*</span></span>}
+                      value={item.articulo ? `${item.tipo}:${item.articulo}` : ''}
                       onChange={(e) => elegirArticulo(index, e.target.value)}
                       required
                     >
                       <option value="">Seleccionar...</option>
-                      {articulos.map((registro) => (
-                        <option key={registro[idCampo]} value={registro[idCampo]}>
-                          {registro.nombre}
-                        </option>
-                      ))}
+                      <optgroup label="Insumos">
+                        {insumos.map((registro) => (
+                          <option key={registro.id_insumos} value={`insumo:${registro.id_insumos}`}>
+                            {registro.nombre}
+                          </option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="Bebidas">
+                        {bebidas.map((registro) => (
+                          <option key={registro.id_bebidas} value={`bebida:${registro.id_bebidas}`}>
+                            {registro.nombre}
+                          </option>
+                        ))}
+                      </optgroup>
                     </CFormSelect>
                   </div>
                   <div className="col-md-2">
                     <CFormInput
-                      label="Cantidad"
+                      label={<span>Cantidad <span className="text-danger">*</span></span>}
                       type="number"
                       min="1"
                       step="1"
@@ -238,7 +274,7 @@ const Compras = () => {
                   </div>
                   <div className="col-md-2">
                     <CFormInput
-                      label="Precio unitario"
+                      label={<span>Precio unitario <span className="text-danger">*</span></span>}
                       type="number"
                       min="0.01"
                       step="0.01"
@@ -263,6 +299,9 @@ const Compras = () => {
                 </div>
               )
             })}
+            <small className="text-body-secondary">
+              <span className="text-danger">*</span> Campos obligatorios
+            </small>
             <div className="d-flex justify-content-between align-items-center border-top pt-3">
               <CButton
                 type="button"
@@ -282,47 +321,13 @@ const Compras = () => {
       </CCard>
 
       <CCard>
-        <CCardHeader>
-          <strong>Historial de Compras</strong>
+        <CCardHeader className="d-flex justify-content-between align-items-center gap-2">
+          <strong>Compras de hoy</strong>
+          <CButton color="primary" onClick={abrirHistorial}>
+            Historial Completo
+          </CButton>
         </CCardHeader>
         <CCardBody>
-          <div className="row g-2 align-items-end mb-3">
-            <div className="col-md-3">
-              <CFormInput
-                label="Desde"
-                type="date"
-                value={desde}
-                onChange={(e) => setDesde(e.target.value)}
-              />
-            </div>
-            <div className="col-md-3">
-              <CFormInput
-                label="Hasta"
-                type="date"
-                value={hasta}
-                onChange={(e) => setHasta(e.target.value)}
-              />
-            </div>
-            <div className="col-md-4">
-              <CFormSelect
-                label="Proveedor"
-                value={filtroProveedor}
-                onChange={(e) => setFiltroProveedor(e.target.value)}
-              >
-                <option value="">Todos</option>
-                {proveedores.map((item) => (
-                  <option key={item.id_proveedores} value={item.id_proveedores}>
-                    {item.nombre}
-                  </option>
-                ))}
-              </CFormSelect>
-            </div>
-            <div className="col-md-2">
-              <CButton color="secondary" onClick={buscarCompras}>
-                Filtrar
-              </CButton>
-            </div>
-          </div>
           <CTable responsive hover>
             <CTableHead>
               <CTableRow>
@@ -363,10 +368,155 @@ const Compras = () => {
             </CTableBody>
           </CTable>
           {!compras.length && (
-            <p className="text-center text-body-secondary mb-0">No hay compras registradas.</p>
+            <p className="text-center text-body-secondary mb-0">
+              No hay compras registradas hoy.
+            </p>
           )}
         </CCardBody>
       </CCard>
+
+      <CModal
+        visible={historialVisible}
+        onClose={() => setHistorialVisible(false)}
+        size="xl"
+      >
+        <CModalHeader>
+          <CModalTitle>Historial Completo de Compras</CModalTitle>
+        </CModalHeader>
+        <CModalBody>
+          <div className="row g-2 align-items-end mb-3">
+            <div className="col-md-3">
+              <CFormInput
+                label="Desde"
+                type="date"
+                value={fechaDesdeHistorial}
+                onChange={(e) => setFechaDesdeHistorial(e.target.value)}
+              />
+            </div>
+            <div className="col-md-3">
+              <CFormInput
+                label="Hasta"
+                type="date"
+                value={fechaHastaHistorial}
+                onChange={(e) => setFechaHastaHistorial(e.target.value)}
+              />
+            </div>
+            <div className="col-md-2">
+              <CFormSelect
+                label="Caja"
+                value={cajaHistorial}
+                onChange={(e) => setCajaHistorial(e.target.value)}
+              >
+                <option value="">Todas</option>
+                {cajas.map((item) => (
+                  <option key={item.id_cajas} value={item.id_cajas}>
+                    Caja #{item.id_cajas}
+                  </option>
+                ))}
+              </CFormSelect>
+            </div>
+            <div className="col-md-2">
+              <CFormSelect
+                label="Proveedor"
+                value={proveedorHistorial}
+                onChange={(e) => setProveedorHistorial(e.target.value)}
+              >
+                <option value="">Todos</option>
+                {proveedores.map((item) => (
+                  <option key={item.id_proveedores} value={item.id_proveedores}>
+                    {item.nombre}
+                  </option>
+                ))}
+              </CFormSelect>
+            </div>
+            <div className="col-md-2">
+              <CButton color="secondary" className="w-100" onClick={filtrarHistorial}>
+                Filtrar
+              </CButton>
+            </div>
+          </div>
+          {historialCargando ? (
+            <p className="text-center text-body-secondary">Cargando compras...</p>
+          ) : (
+            <>
+              <CTable responsive hover>
+                <CTableHead>
+                  <CTableRow>
+                    <CTableHeaderCell>Compra</CTableHeaderCell>
+                    <CTableHeaderCell>Fecha</CTableHeaderCell>
+                    <CTableHeaderCell>Proveedor</CTableHeaderCell>
+                    <CTableHeaderCell>Método</CTableHeaderCell>
+                    <CTableHeaderCell className="text-end">Total</CTableHeaderCell>
+                    <CTableHeaderCell>Detalle</CTableHeaderCell>
+                  </CTableRow>
+                </CTableHead>
+                <CTableBody>
+                  {historialCompras.map((item) => (
+                    <CTableRow key={item.id_compras}>
+                      <CTableDataCell>#{item.id_compras}</CTableDataCell>
+                      <CTableDataCell>
+                        {item.fecha_hora_creacion
+                          ? new Date(item.fecha_hora_creacion).toLocaleString()
+                          : '-'}
+                      </CTableDataCell>
+                      <CTableDataCell>{item.proveedor_detalle?.nombre || '-'}</CTableDataCell>
+                      <CTableDataCell>{item.metodo_detalle || '-'}</CTableDataCell>
+                      <CTableDataCell className="text-end">
+                        ${Number(item.precio_total || 0).toFixed(2)}
+                      </CTableDataCell>
+                      <CTableDataCell>
+                        <CButton
+                          size="sm"
+                          color="info"
+                          variant="outline"
+                          onClick={() => setDetalle(item)}
+                        >
+                          Ver detalle
+                        </CButton>
+                      </CTableDataCell>
+                    </CTableRow>
+                  ))}
+                </CTableBody>
+              </CTable>
+              {!historialCompras.length && (
+                <p className="text-center text-body-secondary mb-0">
+                  No hay compras para mostrar.
+                </p>
+              )}
+              {totalPaginasHistorial > 1 && (
+                <CPagination aria-label="Paginación del historial de compras">
+                  <CPaginationItem
+                    disabled={paginaHistorial <= 1}
+                    onClick={(event) => {
+                      event.preventDefault()
+                      cargarHistorial(paginaHistorial - 1)
+                    }}
+                  >
+                    Anterior
+                  </CPaginationItem>
+                  <CPaginationItem active>
+                    {paginaHistorial} / {totalPaginasHistorial}
+                  </CPaginationItem>
+                  <CPaginationItem
+                    disabled={paginaHistorial >= totalPaginasHistorial}
+                    onClick={(event) => {
+                      event.preventDefault()
+                      cargarHistorial(paginaHistorial + 1)
+                    }}
+                  >
+                    Siguiente
+                  </CPaginationItem>
+                </CPagination>
+              )}
+            </>
+          )}
+        </CModalBody>
+        <CModalFooter>
+          <CButton color="secondary" onClick={() => setHistorialVisible(false)}>
+            Cerrar
+          </CButton>
+        </CModalFooter>
+      </CModal>
 
       <CModal visible={!!detalle} onClose={() => setDetalle(null)}>
         <CModalHeader>

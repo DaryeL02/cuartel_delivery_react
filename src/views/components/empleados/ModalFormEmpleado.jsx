@@ -273,7 +273,7 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
             <CCol md={6}>
               <CFormInput
                 type="text"
-                label="Usuario"
+                label={<span>Usuario <span className="text-danger">*</span></span>}
                 name="usuario"
                 maxLength={30}
                 value={data.usuario}
@@ -285,7 +285,7 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
             </CCol>
             <CCol md={6}>
               <CFormSelect
-                label="Rol"
+                label={<span>Rol <span className="text-danger">*</span></span>}
                 name="rol"
                 value={data.rol}
                 onChange={handleChange}
@@ -306,7 +306,7 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
             <CCol md={6}>
               <CFormInput
                 type="email"
-                label="Correo electrónico"
+                label={<span>Correo electrónico <span className="text-danger">*</span></span>}
                 name="email"
                 maxLength={50}
                 value={data.email}
@@ -318,7 +318,7 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
             </CCol>
             <CCol md={6}>
               <CFormSelect
-                label="Local"
+                label={<span>Local <span className="text-danger">*</span></span>}
                 name="local"
                 value={data.local}
                 onChange={handleChange}
@@ -348,7 +348,7 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
             <CCol md={6}>
               <CFormInput
                 type="text"
-                label="Nombre"
+                label={<span>Nombre <span className="text-danger">*</span></span>}
                 name="nombre"
                 maxLength={50}
                 value={data.nombre}
@@ -361,7 +361,7 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
             <CCol md={6}>
               <CFormInput
                 type="text"
-                label="Apellido"
+                label={<span>Apellido <span className="text-danger">*</span></span>}
                 name="apellido"
                 maxLength={50}
                 value={data.apellido}
@@ -377,7 +377,7 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
               <CFormInput
                 type="text"
                 inputMode="numeric"
-                label="DNI"
+                label={<span>DNI <span className="text-danger">*</span></span>}
                 name="dni"
                 maxLength={8}
                 value={data.dni}
@@ -443,6 +443,9 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
               />
             </CCol>
           </CRow>
+          <small className="text-body-secondary d-block mt-3">
+            <span className="text-danger">*</span> Campos obligatorios
+          </small>
         </CModalBody>
 
         <CModalFooter>

@@ -188,7 +188,7 @@ const Bebidas = () => {
         <form onSubmit={guardar}>
           <CModalBody className="d-grid gap-3">
             <CFormInput
-              label="Nombre"
+              label={<span>Nombre <span className="text-danger">*</span></span>}
               required
               maxLength={200}
               value={bebida.nombre}
@@ -203,7 +203,7 @@ const Bebidas = () => {
             <div className="row g-3">
               <div className="col">
                 <CFormInput
-                  label="Stock actual"
+                  label={<span>Stock actual <span className="text-danger">*</span></span>}
                   type="number"
                   min="0"
                   step="1"
@@ -214,7 +214,7 @@ const Bebidas = () => {
               </div>
               <div className="col">
                 <CFormInput
-                  label="Stock mínimo"
+                  label={<span>Stock mínimo <span className="text-danger">*</span></span>}
                   type="number"
                   min="0"
                   step="1"
@@ -227,7 +227,7 @@ const Bebidas = () => {
             <div className="row g-3">
               <div className="col">
                 <CFormInput
-                  label="Precio unitario"
+                  label={<span>Precio unitario <span className="text-danger">*</span></span>}
                   type="number"
                   min="0.01"
                   step="0.01"
@@ -238,7 +238,7 @@ const Bebidas = () => {
               </div>
               <div className="col">
                 <CFormSelect
-                  label="Unidad"
+                  label={<span>Unidad <span className="text-danger">*</span></span>}
                   value={bebida.unidad}
                   onChange={(e) => campo('unidad', e.target.value)}
                 >
@@ -248,6 +248,9 @@ const Bebidas = () => {
                 </CFormSelect>
               </div>
             </div>
+            <small className="text-body-secondary">
+              <span className="text-danger">*</span> Campos obligatorios
+            </small>
             <CFormSwitch
               label={bebida.estado ? 'Activa' : 'Inactiva'}
               checked={!!bebida.estado}

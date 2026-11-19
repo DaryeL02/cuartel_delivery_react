@@ -19,40 +19,21 @@
  * )
  */
 
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import {
-  CBadge,
   CContainer,
   CDropdown,
   CDropdownItem,
   CDropdownMenu,
   CDropdownToggle,
-  CFormInput,
   CHeader,
   CHeaderNav,
   CHeaderToggler,
-  CListGroup,
-  CListGroupItem,
-  CModal,
-  CModalBody,
-  CModalHeader,
-  CModalTitle,
-  CNavLink,
-  CNavItem,
-  CSearchButton,
   useColorModes,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
-import {
-  cilBell,
-  cilContrast,
-  cilEnvelopeOpen,
-  cilList,
-  cilMenu,
-  cilMoon,
-  cilSun,
-} from '@coreui/icons'
+import { cilContrast, cilMenu, cilMoon, cilSun } from '@coreui/icons'
 
 import { AppBreadcrumb } from './index'
 import { AppHeaderDropdown } from './header/index'
@@ -71,10 +52,15 @@ import { AppHeaderDropdown } from './header/index'
 const AppHeader = () => {
   const headerRef = useRef()
   const { colorMode, setColorMode } = useColorModes('coreui-free-react-admin-template-theme')
-  const [searchVisible, setSearchVisible] = useState(false)
-
   const dispatch = useDispatch()
   const sidebarShow = useSelector((state) => state.sidebarShow)
+  const usuarioActual = JSON.parse(localStorage.getItem('user') || '{}')
+  const nombreUsuario =
+    usuarioActual.empleado?.nombre ||
+    usuarioActual.empleado_nombre ||
+    usuarioActual.usuario ||
+    'Usuario'
+  const rolUsuario = usuarioActual.roles_nombres?.[0] || usuarioActual.rol_nombre || 'Sin rol'
 
   useEffect(() => {
     const handleScroll = () => {
@@ -174,6 +160,14 @@ const AppHeader = () => {
 
         {/* Agregué la clase para que los botones se acomoden automaticamente */}
         <CHeaderNav className="ms-auto"> 
+          <li className="nav-item py-1">
+            <div className="vr h-100 mx-2 text-body text-opacity-75"></div>
+          </li>
+
+          <li className="nav-item d-flex align-items-center px-2 text-body-secondary text-nowrap">
+            {nombreUsuario} - {rolUsuario}
+          </li>
+
           <li className="nav-item py-1">
             <div className="vr h-100 mx-2 text-body text-opacity-75"></div>
           </li>

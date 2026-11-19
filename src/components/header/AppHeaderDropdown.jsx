@@ -1,26 +1,14 @@
 import React from 'react'
 import {
   CAvatar,
-  CBadge,
   CDropdown,
   CDropdownDivider,
-  CDropdownHeader,
   CDropdownItem,
   CDropdownMenu,
   CDropdownToggle,
+  CDropdownHeader,
 } from '@coreui/react'
-import {
-  cilBell,
-  cilCreditCard,
-  cilCommentSquare,
-  cilEnvelopeOpen,
-  cilFile,
-  cilLockLocked,
-  cilSettings,
-  cilTask,
-  cilUser,
-  cilAccountLogout,
-} from '@coreui/icons'
+import { cilUser, cilAccountLogout } from '@coreui/icons'
 import CIcon from '@coreui/icons-react'
 
 import avatar8 from './../../assets/images/avatars/8.jpg'
@@ -34,12 +22,6 @@ import { toast } from 'react-toastify'
 const AppHeaderDropdown = () => {
   const navigate = useNavigate()
   const dispatch = useDispatch()
-  const usuarioActual = JSON.parse(localStorage.getItem('user') || '{}')
-  const nombreUsuario =
-    usuarioActual.usuario ||
-    usuarioActual.empleado?.nombre ||
-    usuarioActual.empleado_nombre ||
-    'Usuario'
 
   const handleLogout = async () => {
     try {
@@ -69,34 +51,11 @@ const AppHeaderDropdown = () => {
         <CAvatar src={avatar8} size="md" />
       </CDropdownToggle>
       <CDropdownMenu className="pt-0" placement="bottom-end">
-        
-        <CDropdownHeader className="bg-body-secondary fw-semibold">
-          {nombreUsuario}
-        </CDropdownHeader>
         <CDropdownHeader className="bg-body-secondary fw-semibold my-2">Configuración</CDropdownHeader>
         <CDropdownItem onClick={handleNavigate} style={{ cursor: 'pointer' }}>
           <CIcon icon={cilUser} className="me-2" onClick={handleNavigate} />
           Perfil
         </CDropdownItem>
-        {/* <CDropdownItem href="#">
-          <CIcon icon={cilSettings} className="me-2" />
-          Configuración
-        </CDropdownItem>
-        <CDropdownItem href="#">
-          <CIcon icon={cilCreditCard} className="me-2" />
-          Pagos
-          <CBadge color="secondary" className="ms-2">
-            42
-          </CBadge>
-        </CDropdownItem>
-        <CDropdownItem href="#">
-          <CIcon icon={cilFile} className="me-2" />
-          Proyectos
-          <CBadge color="primary" className="ms-2">
-            42
-          </CBadge>
-        </CDropdownItem> */}
-
         <CDropdownDivider />
 
         <CDropdownItem 

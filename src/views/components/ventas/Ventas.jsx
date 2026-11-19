@@ -29,6 +29,8 @@ import {
   CModalBody,
   CModalFooter,
   CBadge,
+  CPagination,
+  CPaginationItem,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import {
@@ -42,6 +44,7 @@ import {
   cilCheckCircle,
 } from '@coreui/icons'
 import api from '../api/api'
+import { cargarResultadosPaginados } from '../api/paginacion'
 import { toast } from 'react-toastify'
 
 const MAX_DECIMAL_9_2 = 9999999.99
@@ -68,6 +71,15 @@ const Ventas = () => {
   const [metodoSeleccionado, setMetodoSeleccionado] = useState('')
   const [bebidas, setBebidas] = useState([])
   const [ventas, setVentas] = useState([])
+  const [ventasHistorial, setVentasHistorial] = useState([])
+  const [cajasHistorial, setCajasHistorial] = useState([])
+  const [fechaDesde, setFechaDesde] = useState('')
+  const [fechaHasta, setFechaHasta] = useState('')
+  const [cajaFiltro, setCajaFiltro] = useState('')
+  const [historialVentasVisible, setHistorialVentasVisible] = useState(false)
+  const [cargandoHistorialVentas, setCargandoHistorialVentas] = useState(false)
+  const [paginaHistorialVentas, setPaginaHistorialVentas] = useState(1)
+  const [totalPaginasVentas, setTotalPaginasVentas] = useState(1)
   const [ventaDetalle, setVentaDetalle] = useState(null)
 
   const [errores, setErrores] = useState({})
@@ -103,11 +115,12 @@ const Ventas = () => {
     try {
       const respuesta = await api.get('/api/cajas/?status=active', getAuthConfig())
       const lista = Array.isArray(respuesta.data) ? respuesta.data : respuesta.data.results || []
-      const cajasActivas = lista.filter((c) => c.estado !== false)
+      const cajasActivas = lista.filter((c) => c.estado || !c.fecha_hora_cierre)
       setCajas(cajasActivas)
 
       if (cajasActivas.length === 1) {
         setCajaSeleccionada(cajasActivas[0])
+        cargarVentasCaja(cajasActivas[0].id_cajas)
       }
     } catch (error) {
       console.error('Error al cargar cajas:', error)
@@ -117,8 +130,10 @@ const Ventas = () => {
 
   const cargarPedidos = async () => {
     try {
-      const respuesta = await api.get('/api/pedidos/?date=today&pagado=false', getAuthConfig())
-      const lista = Array.isArray(respuesta.data) ? respuesta.data : respuesta.data.results || []
+      const lista = await cargarResultadosPaginados('/api/pedidos/', {
+        ...getAuthConfig(),
+        params: { date: 'today', pagado: false },
+      })
       setPedidos(lista)
     } catch (error) {
       console.error('Error al cargar pedidos:', error)
@@ -147,14 +162,58 @@ const Ventas = () => {
     }
   }
 
-  const cargarVentas = async () => {
+  const cargarVentasCaja = async (cajaId) => {
+    if (!cajaId) {
+      setVentas([])
+      return
+    }
+
+    setVentas([])
     try {
-      const respuesta = await api.get('/api/ventas/', getAuthConfig())
+      const respuesta = await api.get('/api/ventas/', {
+        ...getAuthConfig(),
+        params: { id_cajas: cajaId },
+      })
       setVentas(Array.isArray(respuesta.data) ? respuesta.data : respuesta.data.results || [])
     } catch (error) {
-      console.error('Error al cargar el historial de ventas:', error)
-      notificar('error', error.response?.data?.detail || 'No se pudo cargar el historial de ventas.')
+      console.error('Error al cargar las ventas de la caja:', error)
+      notificar('error', error.response?.data?.detail || 'No se pudieron cargar las ventas de la caja.')
     }
+  }
+
+  const cargarVentasHistorial = async (pagina = 1) => {
+    setCargandoHistorialVentas(true)
+    try {
+      const respuesta = await api.get('/api/ventas/', {
+        ...getAuthConfig(),
+        params: {
+          page: pagina,
+          fecha_desde: fechaDesde || undefined,
+          fecha_hasta: fechaHasta || undefined,
+          id_cajas: cajaFiltro || undefined,
+        },
+      })
+      const data = respuesta.data
+      setVentasHistorial(Array.isArray(data) ? data : data.results || [])
+      setPaginaHistorialVentas(pagina)
+      setTotalPaginasVentas(
+        Array.isArray(data) ? 1 : Math.max(1, Math.ceil((data.count || 0) / 20)),
+      )
+    } catch (error) {
+      console.error('Error al cargar el historial completo de ventas:', error)
+      notificar('error', error.response?.data?.detail || 'No se pudo cargar el historial de ventas.')
+    } finally {
+      setCargandoHistorialVentas(false)
+    }
+  }
+
+  const abrirHistorialVentas = () => {
+    setHistorialVentasVisible(true)
+    cargarVentasHistorial(1)
+  }
+
+  const filtrarVentasHistorial = () => {
+    cargarVentasHistorial(1)
   }
 
   const cargarMetodos = async () => {
@@ -516,7 +575,7 @@ const Ventas = () => {
       setNuevoPedido({ cliente: '', direccion: '', detalles: [] })
       setErrores({})
       cargarPedidos()
-      cargarVentas()
+      cargarVentasCaja(cajaSeleccionada?.id_cajas)
     } catch (error) {
       console.error('Error al procesar la venta:', error.response?.data || error)
       const mensajeBackend =
@@ -535,7 +594,18 @@ const Ventas = () => {
     cargarProductos()
     cargarBebidas()
     cargarMetodos()
-    cargarVentas()
+    const cargarCajasHistorial = async () => {
+      try {
+        const respuesta = await api.get('/api/cajas/', getAuthConfig())
+        setCajasHistorial(
+          Array.isArray(respuesta.data) ? respuesta.data : respuesta.data.results || [],
+        )
+      } catch (error) {
+        console.error('Error al cargar cajas para filtrar ventas:', error)
+        notificar('error', error.response?.data?.detail || 'No se pudieron cargar las cajas.')
+      }
+    }
+    cargarCajasHistorial()
   }, [])
 
   const formatearMoneda = (valor) => {
@@ -598,6 +668,7 @@ const Ventas = () => {
                     type="button"
                     onClick={() => {
                       setCajaSeleccionada(item)
+                      cargarVentasCaja(item.id_cajas)
                       setErrores((prev) => ({ ...prev, caja: null }))
                     }}
                   >
@@ -627,7 +698,8 @@ const Ventas = () => {
               {/* Opción 1: Cargar Pedido pendiente de pago */}
               <div className="p-3 mb-3 bg-body-secondary border rounded">
                 <label htmlFor="importarPedido" className="form-label fw-bold text-body-secondary">
-                  <CIcon icon={cilFindInPage} className="me-1" /> Importar Pedido Pendiente de Cobro
+                  <CIcon icon={cilFindInPage} className="me-1" /> Importar Pedido Pendiente de Cobro{' '}
+                  <span className="text-danger">*</span>
                 </label>
                 <CInputGroup>
                   <CFormSelect
@@ -704,52 +776,46 @@ const Ventas = () => {
               {modoVenta === 'nuevo' && (
                 <div>
                   <CRow className="g-2 mb-3 align-items-start">
-                    <CCol md={3}>
-                      <CFormSelect
-                        label="Tipo"
-                        value={productoSeleccionado.tipo}
-                        onChange={(e) =>
-                          {
-                            setProductoSeleccionado({
-                              tipo: e.target.value,
-                              articulo: '',
-                              cantidad: productoSeleccionado.cantidad,
-                            })
-                            setErrores((prev) => ({ ...prev, articulo: null }))
-                          }
-                        }
-                      >
-                        <option value="producto">Producto</option>
-                        <option value="bebida">Bebida</option>
-                      </CFormSelect>
-                    </CCol>
-                    <CCol md={5}>
+                    <CCol md={8}>
                       <CFormSelect
                         name="articulo"
-                        label={productoSeleccionado.tipo === 'bebida' ? 'Bebida directa' : 'Producto directo'}
-                        value={productoSeleccionado.articulo}
-                        onChange={handleChange}
+                        label={
+                          <span>
+                            Producto o bebida <span className="text-danger">*</span>
+                          </span>
+                        }
+                        value={
+                          productoSeleccionado.articulo
+                            ? `${productoSeleccionado.tipo}:${productoSeleccionado.articulo}`
+                            : ''
+                        }
+                        onChange={(e) => {
+                          const [tipo, articulo] = e.target.value.split(':')
+                          setProductoSeleccionado((prev) => ({
+                            ...prev,
+                            tipo: tipo || 'producto',
+                            articulo: articulo || '',
+                          }))
+                          setErrores((prev) => ({ ...prev, articulo: null }))
+                        }}
                         invalid={!!errores.articulo}
                         feedbackInvalid={errores.articulo}
                       >
-                        <option value="">
-                          {productoSeleccionado.tipo === 'bebida'
-                            ? '-- Seleccione una bebida --'
-                            : '-- Seleccione un producto --'}
-                        </option>
-                        {(productoSeleccionado.tipo === 'bebida' ? bebidasActivas : productosActivos).map(
-                          (item) => {
-                            const id =
-                              productoSeleccionado.tipo === 'bebida'
-                                ? item.id_bebidas
-                                : item.id_productos
-                            return (
-                              <option key={id} value={id}>
-                                {item.nombre} (${formatearMoneda(item.precio_unitario)})
-                              </option>
-                            )
-                          },
-                        )}
+                        <option value="">-- Seleccione un artículo --</option>
+                        <optgroup label="Productos">
+                          {productosActivos.map((item) => (
+                            <option key={`producto-${item.id_productos}`} value={`producto:${item.id_productos}`}>
+                              {item.nombre} (${formatearMoneda(item.precio_unitario)})
+                            </option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="Bebidas">
+                          {bebidasActivas.map((item) => (
+                            <option key={`bebida-${item.id_bebidas}`} value={`bebida:${item.id_bebidas}`}>
+                              {item.nombre} (${formatearMoneda(item.precio_unitario)})
+                            </option>
+                          ))}
+                        </optgroup>
                       </CFormSelect>
                     </CCol>
                     <CCol md={3}>
@@ -757,7 +823,11 @@ const Ventas = () => {
                         type="text"
                         inputMode="numeric"
                         name="cantidad"
-                        label="Cantidad"
+                        label={
+                          <span>
+                            Cantidad <span className="text-danger">*</span>
+                          </span>
+                        }
                         placeholder="Ej: 1"
                         maxLength={4}
                         value={productoSeleccionado.cantidad}
@@ -867,7 +937,11 @@ const Ventas = () => {
                     <CCol md={6}>
                       <CFormInput
                         type="text"
-                        label="Nombre del cliente"
+                        label={
+                          <span>
+                            Nombre del cliente <span className="text-danger">*</span>
+                          </span>
+                        }
                         name="cliente"
                         placeholder="Ej: Juan Pérez"
                         value={nuevoPedido.cliente}
@@ -898,7 +972,11 @@ const Ventas = () => {
                   <CCol md={6}>
                     <CFormSelect
                       id="selectMetodoPago"
-                      label="Método de Pago"
+                      label={
+                        <span>
+                          Método de Pago <span className="text-danger">*</span>
+                        </span>
+                      }
                       className="fw-bold"
                       value={metodoSeleccionado}
                       invalid={!!errores.metodo}
@@ -929,6 +1007,10 @@ const Ventas = () => {
                 </CRow>
               </div>
 
+              <CFormText className="d-block mt-3">
+                <span className="text-danger">*</span> Campos obligatorios
+              </CFormText>
+
               {/* Botón Principal de Confirmación */}
               <div className="d-grid gap-2 mt-4">
                 <CButton
@@ -950,23 +1032,26 @@ const Ventas = () => {
 
       <CCol xs={12} lg={4}>
         <CCard className="mb-4 shadow-sm">
-          <CCardHeader className="bg-body-secondary fw-bold">Historial de ventas</CCardHeader>
+          <CCardHeader className="bg-body-secondary d-flex justify-content-between align-items-center gap-2">
+            <strong>Ventas de la caja</strong>
+            <CButton size="sm" color="primary" onClick={abrirHistorialVentas}>
+              Historial Completo
+            </CButton>
+          </CCardHeader>
           <CCardBody>
-            {ventas.length ? (
+            {cajaSeleccionada && ventas.length ? (
               <div style={{ maxHeight: '65vh', overflowY: 'auto' }}>
                 <CTable responsive hover small>
-                <CTableHead>
-                  <CTableRow>
-                    <CTableHeaderCell>Venta</CTableHeaderCell>
-                    <CTableHeaderCell>Fecha</CTableHeaderCell>
-                    <CTableHeaderCell className="text-end">Total</CTableHeaderCell>
-                    <CTableHeaderCell>Detalle</CTableHeaderCell>
-                  </CTableRow>
-                </CTableHead>
-                <CTableBody>
-                  {[...ventas]
-                    .sort((a, b) => Number(b.id_ventas) - Number(a.id_ventas))
-                    .map((venta) => (
+                  <CTableHead>
+                    <CTableRow>
+                      <CTableHeaderCell>Venta</CTableHeaderCell>
+                      <CTableHeaderCell>Fecha</CTableHeaderCell>
+                      <CTableHeaderCell className="text-end">Total</CTableHeaderCell>
+                      <CTableHeaderCell>Detalle</CTableHeaderCell>
+                    </CTableRow>
+                  </CTableHead>
+                  <CTableBody>
+                    {ventas.map((venta) => (
                       <CTableRow key={venta.id_ventas}>
                         <CTableDataCell>
                           #{venta.id_ventas}
@@ -994,15 +1079,155 @@ const Ventas = () => {
                         </CTableDataCell>
                       </CTableRow>
                     ))}
-                </CTableBody>
+                  </CTableBody>
                 </CTable>
               </div>
+            ) : !cajaSeleccionada ? (
+              <p className="text-center text-body-secondary mb-0">
+                Selecciona una caja abierta para consultar sus ventas.
+              </p>
             ) : (
-              <p className="text-center text-body-secondary mb-0">No hay ventas registradas.</p>
+              <p className="text-center text-body-secondary mb-0">
+                No hay ventas registradas en esta caja.
+              </p>
             )}
           </CCardBody>
         </CCard>
       </CCol>
+
+      <CModal
+        visible={historialVentasVisible}
+        onClose={() => setHistorialVentasVisible(false)}
+        size="xl"
+      >
+        <CModalHeader>
+          <CModalTitle>Historial Completo de Ventas</CModalTitle>
+        </CModalHeader>
+        <CModalBody>
+          <CRow className="g-2 align-items-end mb-3">
+            <CCol md={3}>
+              <CFormInput
+                label="Desde"
+                type="date"
+                value={fechaDesde}
+                onChange={(e) => setFechaDesde(e.target.value)}
+              />
+            </CCol>
+            <CCol md={3}>
+              <CFormInput
+                label="Hasta"
+                type="date"
+                value={fechaHasta}
+                onChange={(e) => setFechaHasta(e.target.value)}
+              />
+            </CCol>
+            <CCol md={4}>
+              <CFormSelect
+                label="Caja"
+                value={cajaFiltro}
+                onChange={(e) => setCajaFiltro(e.target.value)}
+              >
+                <option value="">Todas las cajas</option>
+                {cajasHistorial.map((caja) => (
+                  <option key={caja.id_cajas} value={caja.id_cajas}>
+                    Caja #{caja.id_cajas}
+                  </option>
+                ))}
+              </CFormSelect>
+            </CCol>
+            <CCol md={2}>
+              <CButton color="secondary" className="w-100" onClick={filtrarVentasHistorial}>
+                Filtrar
+              </CButton>
+            </CCol>
+          </CRow>
+          {cargandoHistorialVentas ? (
+            <p className="text-center text-body-secondary">Cargando ventas...</p>
+          ) : (
+            <>
+              <CTable responsive hover>
+                <CTableHead>
+                  <CTableRow>
+                    <CTableHeaderCell>Venta</CTableHeaderCell>
+                    <CTableHeaderCell>Fecha</CTableHeaderCell>
+                    <CTableHeaderCell>Caja</CTableHeaderCell>
+                    <CTableHeaderCell className="text-end">Total</CTableHeaderCell>
+                    <CTableHeaderCell>Detalle</CTableHeaderCell>
+                  </CTableRow>
+                </CTableHead>
+                <CTableBody>
+                  {ventasHistorial.map((venta) => (
+                    <CTableRow key={venta.id_ventas}>
+                      <CTableDataCell>
+                        #{venta.id_ventas}
+                        <small className="d-block text-body-secondary">
+                          {venta.metodo_detalle?.nombre || 'Sin método'}
+                        </small>
+                      </CTableDataCell>
+                      <CTableDataCell>
+                        {venta.fecha_hora_creacion
+                          ? new Date(venta.fecha_hora_creacion).toLocaleString()
+                          : '-'}
+                      </CTableDataCell>
+                      <CTableDataCell>
+                        {venta.caja_detalle?.id_cajas
+                          ? `Caja #${venta.caja_detalle.id_cajas}`
+                          : '-'}
+                      </CTableDataCell>
+                      <CTableDataCell className="text-end">
+                        ${formatearMoneda(venta.precio_total)}
+                      </CTableDataCell>
+                      <CTableDataCell>
+                        <CButton
+                          size="sm"
+                          color="info"
+                          variant="outline"
+                          onClick={() => setVentaDetalle(venta)}
+                        >
+                          Detalles
+                        </CButton>
+                      </CTableDataCell>
+                    </CTableRow>
+                  ))}
+                </CTableBody>
+              </CTable>
+              {!ventasHistorial.length && (
+                <p className="text-center text-body-secondary mb-0">No hay ventas para mostrar.</p>
+              )}
+              {totalPaginasVentas > 1 && (
+                <CPagination aria-label="Paginación del historial de ventas">
+                  <CPaginationItem
+                    disabled={paginaHistorialVentas <= 1}
+                    onClick={(event) => {
+                      event.preventDefault()
+                      cargarVentasHistorial(paginaHistorialVentas - 1)
+                    }}
+                  >
+                    Anterior
+                  </CPaginationItem>
+                  <CPaginationItem active>
+                    {paginaHistorialVentas} / {totalPaginasVentas}
+                  </CPaginationItem>
+                  <CPaginationItem
+                    disabled={paginaHistorialVentas >= totalPaginasVentas}
+                    onClick={(event) => {
+                      event.preventDefault()
+                      cargarVentasHistorial(paginaHistorialVentas + 1)
+                    }}
+                  >
+                    Siguiente
+                  </CPaginationItem>
+                </CPagination>
+              )}
+            </>
+          )}
+        </CModalBody>
+        <CModalFooter>
+          <CButton color="secondary" onClick={() => setHistorialVentasVisible(false)}>
+            Cerrar
+          </CButton>
+        </CModalFooter>
+      </CModal>
 
       {/* MODAL DE CONFIRMACIÓN DE COBRO */}
       <CModal
@@ -1076,6 +1301,18 @@ const Ventas = () => {
             </span>
             <span>
               Método: <strong>{ventaDetalle?.metodo_detalle?.nombre || '-'}</strong>
+            </span>
+            <span>
+              Caja:{' '}
+              <strong>
+                {ventaDetalle?.caja_detalle?.id_cajas
+                  ? `#${ventaDetalle.caja_detalle.id_cajas}`
+                  : '-'}
+              </strong>
+            </span>
+            <span>
+              Empleado:{' '}
+              <strong>{ventaDetalle?.caja_detalle?.empleado_nombre || '-'}</strong>
             </span>
             <span>
               Total: <strong>${formatearMoneda(ventaDetalle?.precio_total)}</strong>
