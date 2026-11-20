@@ -40,6 +40,7 @@ import { AppSidebarNav } from './AppSidebarNav'
 import miLogo from '../assets/brand/logo-cuartel.svg'
 import miIsotipo from '../assets/brand/isotipo-cuartel.svg'
 import { Link } from 'react-router-dom'
+import { hasFullAccess, isOperationalUser, readCurrentUser } from '../utils/roles'
 
 
 // sidebar nav config
@@ -61,6 +62,12 @@ const AppSidebar = () => {
   const dispatch = useDispatch()
   const unfoldable = useSelector((state) => state.sidebarUnfoldable)
   const sidebarShow = useSelector((state) => state.sidebarShow)
+  const usuarioActual = readCurrentUser()
+  const navigationPermitida = hasFullAccess(usuarioActual)
+    ? navigation
+    : isOperationalUser(usuarioActual)
+      ? navigation.filter((item) => item.to === '/pedidos')
+      : []
 
   return (
     <CSidebar
@@ -95,7 +102,7 @@ const AppSidebar = () => {
           onClick={() => dispatch({ type: 'set', sidebarShow: false })}
         />
       </CSidebarHeader>
-      <AppSidebarNav items={navigation} />
+      <AppSidebarNav items={navigationPermitida} />
       <CSidebarFooter className="border-top d-none d-lg-flex">
         <CSidebarToggler
           onClick={() => dispatch({ type: 'set', sidebarUnfoldable: !unfoldable })}

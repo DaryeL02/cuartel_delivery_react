@@ -5,6 +5,7 @@ import {
   CFormInput,
   CFormSelect,
   CFormLabel,
+  CFormText,
   CRow,
   CCol,
   CModal,
@@ -21,6 +22,7 @@ export default function NuevaCaja({ visible, onClose, locales, cajasAbiertas = [
     local: '',
     monto_apertura: '',
     estado: true,
+    password: '',
   });
 
   const [loading, setLoading] = useState(false);
@@ -47,6 +49,7 @@ export default function NuevaCaja({ visible, onClose, locales, cajasAbiertas = [
         local: '',
         monto_apertura: '',
         estado: true,
+        password: '',
       });
     }
   }, [visible]);
@@ -70,6 +73,10 @@ export default function NuevaCaja({ visible, onClose, locales, cajasAbiertas = [
       notificar('advertencia', 'Ingresa un monto inicial válido igual o mayor a 0.');
       return;
     }
+    if (!data.password) {
+      notificar('advertencia', 'Ingresa tu contraseña para confirmar la apertura.');
+      return;
+    }
 
     setLoading(true);
 
@@ -86,6 +93,7 @@ export default function NuevaCaja({ visible, onClose, locales, cajasAbiertas = [
       console.error('Error al abrir la caja:', error);
       const mensaje =
         error.response?.data?.detail ||
+        error.response?.data?.password ||
         'No se pudo abrir la caja. Verifica los datos e intenta nuevamente.';
       notificar(error.response?.status === 409 ? 'advertencia' : 'error', mensaje);
     } finally {
@@ -144,6 +152,24 @@ export default function NuevaCaja({ visible, onClose, locales, cajasAbiertas = [
                 onChange={handleChange}
                 required
               />
+            </CCol>
+            <CCol md={12}>
+              <CFormLabel htmlFor="password">
+                Contraseña para validar tu identidad <span className="text-danger">*</span>
+              </CFormLabel>
+              <CFormInput
+                type="password"
+                id="password"
+                name="password"
+                placeholder="Ingresa tu contraseña actual"
+                autoComplete="current-password"
+                value={data.password}
+                onChange={handleChange}
+                required
+              />
+              <CFormText>
+                Necesitamos confirmar tu identidad antes de abrir la caja.
+              </CFormText>
             </CCol>
           </CRow>
           <small className="text-body-secondary d-block mt-3">

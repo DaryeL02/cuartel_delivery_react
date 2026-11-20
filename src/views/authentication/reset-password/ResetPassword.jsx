@@ -57,6 +57,17 @@ const ResetPassword = () => {
       <CContainer>
         <CRow className="justify-content-center">
           <CCol md={6}>
+            <div className="mx-4 mb-3">
+              <CButton
+                color="secondary"
+                variant="outline"
+                type="button"
+                onClick={() => navigate(-1)}
+                disabled={loading}
+              >
+                Volver
+              </CButton>
+            </div>
             <CCard className="mx-4">
               <CCardBody className="p-4">
                 <CForm onSubmit={handleSubmit}>

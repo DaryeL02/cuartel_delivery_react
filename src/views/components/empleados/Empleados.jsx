@@ -72,7 +72,8 @@ const Empleados = ({ onOpenModal }) => {
       })
 
       if (Array.isArray(respuesta.data)) {
-        setEmpleados(respuesta.data)
+        const inicio = (pagina - 1) * registrosPorPagina
+        setEmpleados(respuesta.data.slice(inicio, inicio + registrosPorPagina))
         setTotalEmpleados(respuesta.data.length)
       } else {
         setEmpleados(respuesta.data.results || [])

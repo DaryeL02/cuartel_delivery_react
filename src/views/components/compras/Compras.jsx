@@ -1,11 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import {
   CButton,
+  CAlert,
   CCard,
   CCardBody,
   CCardHeader,
   CFormInput,
   CFormSelect,
+  CInputGroup,
+  CInputGroupText,
   CModal,
   CModalBody,
   CModalFooter,
@@ -24,7 +27,13 @@ import { toast } from 'react-toastify'
 import api from '../api/api'
 import { cargarResultadosPaginados } from '../api/paginacion'
 
-const nuevaLinea = () => ({ tipo: 'insumo', articulo: '', cantidad: 1, precio_unitario: '' })
+const nuevaLinea = () => ({
+  tipo: 'insumo',
+  articulo: '',
+  cantidad: 1,
+  precio_unitario: '',
+  unidad: '',
+})
 const listaDesde = (data) => (Array.isArray(data) ? data : data?.results || [])
 const fechaLocalActual = () => {
   const hoy = new Date()
@@ -135,6 +144,13 @@ const Compras = () => {
       ),
     [lineas],
   )
+  const cajaAbierta = useMemo(
+    () =>
+      cajas
+        .filter((caja) => caja.estado && !caja.fecha_hora_cierre)
+        .sort((a, b) => a.id_cajas - b.id_cajas)[0],
+    [cajas],
+  )
 
   const actualizarLinea = (index, cambios) => {
     setLineas((actuales) =>
@@ -144,7 +160,7 @@ const Compras = () => {
 
   const elegirArticulo = (index, seleccion) => {
     if (!seleccion) {
-      actualizarLinea(index, { articulo: '', precio_unitario: '' })
+      actualizarLinea(index, { articulo: '', precio_unitario: '', unidad: '' })
       return
     }
 
@@ -157,6 +173,7 @@ const Compras = () => {
     actualizarLinea(index, {
       tipo,
       articulo: idArticulo,
+      unidad: item?.unidad || '',
       precio_unitario:
         tipo === 'bebida' ? String(item?.precio_unitario || '') : linea.precio_unitario,
     })
@@ -164,6 +181,14 @@ const Compras = () => {
 
   const registrarCompra = async (event) => {
     event.preventDefault()
+    if (!cajaAbierta) {
+      toast.warning('Debes tener una caja abierta para registrar una compra.')
+      return
+    }
+    if (total > Number(cajaAbierta.saldo_actual || 0)) {
+      toast.warning('El total de la compra supera el saldo disponible en caja.')
+      return
+    }
     if (
       !proveedor ||
       !metodo ||
@@ -214,6 +239,14 @@ const Compras = () => {
         </CCardHeader>
         <CCardBody>
           <form onSubmit={registrarCompra}>
+            {!cajaAbierta ? (
+              <CAlert color="warning">Abre una caja antes de registrar una compra.</CAlert>
+            ) : total > Number(cajaAbierta.saldo_actual || 0) ? (
+              <CAlert color="danger">
+                Saldo insuficiente en caja. Disponible: $
+                {Number(cajaAbierta.saldo_actual || 0).toFixed(2)}.
+              </CAlert>
+            ) : null}
             <div className="row g-3 mb-3">
               <div className="col-md-6">
                 <CFormSelect
@@ -246,6 +279,16 @@ const Compras = () => {
                 </CFormSelect>
               </div>
             </div>
+            <div className="mb-3">
+              <CButton
+                type="button"
+                color="info"
+                variant="outline"
+                onClick={() => setLineas((actuales) => [...actuales, nuevaLinea()])}
+              >
+                Agregar insumo o bebida
+              </CButton>
+            </div>
             {lineas.map((item, index) => {
               return (
                 <div className="row g-2 align-items-end mb-3" key={index}>
@@ -274,15 +317,20 @@ const Compras = () => {
                     </CFormSelect>
                   </div>
                   <div className="col-md-2">
-                    <CFormInput
-                      label={<span>Cantidad <span className="text-danger">*</span></span>}
-                      type="number"
-                      min="1"
-                      step="1"
-                      value={item.cantidad}
-                      onChange={(e) => actualizarLinea(index, { cantidad: e.target.value })}
-                      required
-                    />
+                    <label className="form-label">
+                      Cantidad <span className="text-danger">*</span>
+                    </label>
+                    <CInputGroup>
+                      <CFormInput
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={item.cantidad}
+                        onChange={(e) => actualizarLinea(index, { cantidad: e.target.value })}
+                        required
+                      />
+                      <CInputGroupText>{item.unidad || '-'}</CInputGroupText>
+                    </CInputGroup>
                   </div>
                   <div className="col-md-2">
                     <CFormInput
@@ -315,16 +363,14 @@ const Compras = () => {
               <span className="text-danger">*</span> Campos obligatorios
             </small>
             <div className="d-flex justify-content-between align-items-center border-top pt-3">
-              <CButton
-                type="button"
-                color="info"
-                variant="outline"
-                onClick={() => setLineas((actuales) => [...actuales, nuevaLinea()])}
-              >
-                Agregar ítem
-              </CButton>
               <div className="fs-5 fw-bold">Total: ${total.toFixed(2)}</div>
-              <CButton type="submit" color="primary" disabled={guardando}>
+              <CButton
+                type="submit"
+                color="primary"
+                disabled={
+                  guardando || !cajaAbierta || total > Number(cajaAbierta.saldo_actual || 0)
+                }
+              >
                 {guardando ? 'Registrando...' : 'Registrar compra'}
               </CButton>
             </div>

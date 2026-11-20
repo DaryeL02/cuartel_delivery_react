@@ -18,10 +18,12 @@ import api from '../../views/components/api/api'
 import { useNavigate } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 import { toast } from 'react-toastify'
+import { isOperationalUser, readCurrentUser } from '../../utils/roles'
 
 const AppHeaderDropdown = () => {
   const navigate = useNavigate()
   const dispatch = useDispatch()
+  const puedeVerPerfil = !isOperationalUser(readCurrentUser())
 
   const handleLogout = async () => {
     try {
@@ -51,12 +53,18 @@ const AppHeaderDropdown = () => {
         <CAvatar src={avatar8} size="md" />
       </CDropdownToggle>
       <CDropdownMenu className="pt-0" placement="bottom-end">
-        <CDropdownHeader className="bg-body-secondary fw-semibold my-2">Configuración</CDropdownHeader>
-        <CDropdownItem onClick={handleNavigate} style={{ cursor: 'pointer' }}>
-          <CIcon icon={cilUser} className="me-2" onClick={handleNavigate} />
-          Perfil
-        </CDropdownItem>
-        <CDropdownDivider />
+        {puedeVerPerfil && (
+          <>
+            <CDropdownHeader className="bg-body-secondary fw-semibold my-2">
+              Configuración
+            </CDropdownHeader>
+            <CDropdownItem onClick={handleNavigate} style={{ cursor: 'pointer' }}>
+              <CIcon icon={cilUser} className="me-2" />
+              Perfil
+            </CDropdownItem>
+            <CDropdownDivider />
+          </>
+        )}
 
         <CDropdownItem 
           component="button" 

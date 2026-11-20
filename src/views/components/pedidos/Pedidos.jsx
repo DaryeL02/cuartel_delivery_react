@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import {
   CCard,
   CCardBody,
@@ -38,13 +38,18 @@ import api from '../api/api'
 import { cargarResultadosPaginados } from '../api/paginacion'
 import ModalFormPedido from './ModalFormPedido'
 import { toast } from 'react-toastify'
+import { isOperationalUser, readCurrentUser } from '../../../utils/roles'
 
 const Pedidos = () => {
+  const usuarioActual = readCurrentUser()
+  const esOperativo = isOperationalUser(usuarioActual)
   // Estados de datos desde API
   const [pedidos, setPedidos] = useState([])
   const [productos, setProductos] = useState([])
   const [bebidas, setBebidas] = useState([])
   const [cajas, setCajas] = useState([])
+  const [empleadoActual, setEmpleadoActual] = useState(null)
+  const [empleadoActualCargado, setEmpleadoActualCargado] = useState(!esOperativo)
   const [loading, setLoading] = useState(true)
   const [historialVisible, setHistorialVisible] = useState(false)
   const [historialPedidos, setHistorialPedidos] = useState([])
@@ -67,8 +72,10 @@ const Pedidos = () => {
   const [confirmModalOpen, setConfirmModalOpen] = useState(false)
   const [pedidoACompletar, setPedidoACompletar] = useState(null)
   const [completando, setCompletando] = useState(false)
+  const [pedidoACancelar, setPedidoACancelar] = useState(null)
+  const [cancelando, setCancelando] = useState(false)
 
-  const notificar = (tipo, mensaje) => {
+  const notificar = useCallback((tipo, mensaje) => {
     switch (tipo) {
       case 'exito':
         toast.success(mensaje)
@@ -82,19 +89,19 @@ const Pedidos = () => {
       default:
         toast(mensaje)
     }
-  }
+  }, [])
 
   // --- CARGA DE DATOS ---
-  const getAuthConfig = () => {
+  const getAuthConfig = useCallback(() => {
     const token = localStorage.getItem('token')
     return {
       headers: {
         Authorization: `Token ${token}`,
       },
     }
-  }
+  }, [])
 
-  const cargarPedidos = async () => {
+  const cargarPedidos = useCallback(async () => {
     setLoading(true)
     try {
       const lista = await cargarResultadosPaginados('/api/pedidos/', {
@@ -108,18 +115,18 @@ const Pedidos = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [getAuthConfig, notificar])
 
-  const cargarProductos = async () => {
+  const cargarProductos = useCallback(async () => {
     try {
       const respuesta = await api.get('/api/productos-listado/', getAuthConfig())
       setProductos(Array.isArray(respuesta.data) ? respuesta.data : respuesta.data.results || [])
     } catch (error) {
       console.error('Error al cargar productos:', error)
     }
-  }
+  }, [getAuthConfig])
 
-  const cargarBebidas = async () => {
+  const cargarBebidas = useCallback(async () => {
     try {
       const respuesta = await api.get('/api/bebidas/', getAuthConfig())
       setBebidas(Array.isArray(respuesta.data) ? respuesta.data : respuesta.data.results || [])
@@ -127,7 +134,7 @@ const Pedidos = () => {
       console.error('Error al cargar bebidas:', error)
       notificar('error', error.response?.data?.detail || 'No se pudieron cargar las bebidas.')
     }
-  }
+  }, [getAuthConfig, notificar])
 
   const cargarHistorial = async (pagina = 1) => {
     setCargandoHistorial(true)
@@ -165,21 +172,47 @@ const Pedidos = () => {
     cargarHistorial(1)
   }
 
-  const cargarCajas = async () => {
+  const cargarCajas = useCallback(async () => {
     try {
       const respuesta = await api.get('/api/cajas/?status=active', getAuthConfig())
       setCajas(Array.isArray(respuesta.data) ? respuesta.data : respuesta.data.results || [])
     } catch (error) {
       console.error('Error al cargar cajas:', error)
     }
-  }
+  }, [getAuthConfig])
+
+  const cargarEmpleadoActual = useCallback(async () => {
+    try {
+      const respuesta = await api.get('/api/pedidos/contexto/', getAuthConfig())
+      setEmpleadoActual(respuesta.data.empleado)
+    } catch (error) {
+      console.error('Error al cargar los datos del empleado actual:', error)
+      notificar(
+        'error',
+        error.response?.data?.detail || 'No se pudieron cargar los datos para crear el pedido.',
+      )
+    } finally {
+      setEmpleadoActualCargado(true)
+    }
+  }, [getAuthConfig, notificar])
 
   useEffect(() => {
     cargarPedidos()
     cargarProductos()
     cargarBebidas()
-    cargarCajas()
-  }, [])
+    if (esOperativo) {
+      cargarEmpleadoActual()
+    } else {
+      cargarCajas()
+    }
+  }, [
+    esOperativo,
+    cargarBebidas,
+    cargarCajas,
+    cargarEmpleadoActual,
+    cargarPedidos,
+    cargarProductos,
+  ])
 
   const formatearMoneda = (valor) => {
     return Number(valor || 0).toLocaleString('es-AR', {
@@ -209,6 +242,26 @@ const Pedidos = () => {
       notificar('error', 'No se pudo cambiar el estado del pedido.')
     } finally {
       setCompletando(false)
+    }
+  }
+
+  const confirmarCancelarPedido = async () => {
+    if (!pedidoACancelar) return
+    setCancelando(true)
+    try {
+      await api.patch(
+        `/api/pedidos/${pedidoACancelar.id_pedidos}/`,
+        { estado: 'Cancelado' },
+        getAuthConfig(),
+      )
+      notificar('exito', `Pedido #${pedidoACancelar.id_pedidos} cancelado.`)
+      setPedidoACancelar(null)
+      cargarPedidos()
+    } catch (error) {
+      console.error('Error al cancelar pedido:', error.response?.data || error)
+      notificar('error', error.response?.data?.detail || 'No se pudo cancelar el pedido.')
+    } finally {
+      setCancelando(false)
     }
   }
 
@@ -262,8 +315,10 @@ const Pedidos = () => {
                   setPedidoAEditar(null)
                   setModalOpen(true)
                 }}
+                disabled={esOperativo && !empleadoActualCargado}
               >
-                <CIcon icon={cilPlus} className="me-1" /> Nuevo Pedido
+                <CIcon icon={cilPlus} className="me-1" />
+                {esOperativo && !empleadoActualCargado ? 'Cargando...' : 'Nuevo Pedido'}
               </CButton>
             </div>
           </div>
@@ -377,8 +432,10 @@ const Pedidos = () => {
                               .join(', ')}`
                           : 'Sin detalles'
 
-                      const esCancelado = (pedido.estado || '').toLowerCase() === 'cancelado'
+                      const estadoPedido = (pedido.estado || '').toLowerCase()
+                      const esCancelado = estadoPedido === 'cancelado'
                       const esFinalizado = (pedido.estado || '').toLowerCase() === 'finalizado'
+                      const esEnProceso = estadoPedido === 'en proceso'
                       const bloquearEdicion = esCancelado || (esFinalizado && pedido.pagado)
 
                       return (
@@ -426,12 +483,24 @@ const Pedidos = () => {
                                 color="success"
                                 size="sm"
                                 variant="outline"
+                                className="ms-1"
                                 onClick={() => {
                                   setPedidoACompletar(pedido)
                                   setConfirmModalOpen(true)
                                 }}
                               >
-                                <CIcon icon={cilCheckCircle} className="me-1" /> Completar
+                                <CIcon icon={cilCheckCircle} className="me-1" /> Finalizado
+                              </CButton>
+                            )}
+                            {esEnProceso && (
+                              <CButton
+                                color="danger"
+                                size="sm"
+                                variant="outline"
+                                className="ms-1"
+                                onClick={() => setPedidoACancelar(pedido)}
+                              >
+                                Cancelar pedido
                               </CButton>
                             )}
                           </CTableDataCell>
@@ -454,6 +523,8 @@ const Pedidos = () => {
         productos={productos}
         bebidas={bebidas}
         cajas={cajas}
+        empleadoActual={empleadoActual}
+        esOperativo={esOperativo}
         onSuccess={cargarPedidos}
       />
 
@@ -623,6 +694,32 @@ const Pedidos = () => {
             }}
           >
             Cerrar
+          </CButton>
+        </CModalFooter>
+      </CModal>
+      <CModal
+        visible={!!pedidoACancelar}
+        onClose={() => !cancelando && setPedidoACancelar(null)}
+        backdrop="static"
+      >
+        <CModalHeader>
+          <CModalTitle className="fw-semibold">Confirmar cancelación</CModalTitle>
+        </CModalHeader>
+        <CModalBody>
+          ¿Deseas cancelar el pedido <strong>#{pedidoACancelar?.id_pedidos}</strong> de{' '}
+          <strong>{pedidoACancelar?.cliente}</strong>?
+        </CModalBody>
+        <CModalFooter>
+          <CButton
+            color="secondary"
+            variant="ghost"
+            onClick={() => setPedidoACancelar(null)}
+            disabled={cancelando}
+          >
+            Volver
+          </CButton>
+          <CButton color="danger" onClick={confirmarCancelarPedido} disabled={cancelando}>
+            {cancelando ? 'Cancelando...' : 'Cancelar pedido'}
           </CButton>
         </CModalFooter>
       </CModal>

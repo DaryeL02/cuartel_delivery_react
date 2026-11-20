@@ -24,6 +24,7 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
     local: '',
     usuario: '',
     email: '',
+    password: '',
     nombre: '',
     apellido: '',
     dni: '',
@@ -66,6 +67,7 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
         local: empleado.local_detalle?.id_locales || '',
         usuario: empleado.usuario_detalle?.usuario || '',
         email: empleado.usuario_detalle?.email || '',
+        password: '',
         nombre: empleado.nombre || '',
         apellido: empleado.apellido || '',
         dni: empleado.dni != null ? String(empleado.dni) : '',
@@ -79,6 +81,7 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
         local: '',
         usuario: '',
         email: '',
+        password: '',
         nombre: '',
         apellido: '',
         dni: '',
@@ -126,6 +129,10 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
       nuevosErrores.usuario = 'El usuario debe tener al menos 4 caracteres.'
     } else if (!/^[a-zA-Z0-9._-]+$/.test(usuarioLimpio)) {
       nuevosErrores.usuario = 'Solo se permiten letras, números, puntos y guiones.'
+    }
+
+    if (!modoEditar && !data.password) {
+      nuevosErrores.password = 'La contraseña es obligatoria para crear el usuario.'
     }
 
     if (!data.rol) {
@@ -201,6 +208,7 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
       local: data.local,
       usuario: data.usuario.trim(),
       email: data.email.trim(),
+      ...(data.password ? { password: data.password } : {}),
       nombre: data.nombre.trim(),
       apellido: data.apellido.trim(),
       dni: data.dni.trim(),
@@ -247,7 +255,7 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
   }
 
   const rolesDisponibles = roles.filter(
-    (item) => item.estado !== false || String(item.id_roles) === String(data.rol)
+    (item) => item.estado !== false || String(item.id_roles) === String(data.rol),
   )
 
   return (
@@ -273,7 +281,11 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
             <CCol md={6}>
               <CFormInput
                 type="text"
-                label={<span>Usuario <span className="text-danger">*</span></span>}
+                label={
+                  <span>
+                    Usuario <span className="text-danger">*</span>
+                  </span>
+                }
                 name="usuario"
                 maxLength={30}
                 value={data.usuario}
@@ -284,8 +296,30 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
               />
             </CCol>
             <CCol md={6}>
+              <CFormInput
+                type="password"
+                label={
+                  <span>Contraseña {!modoEditar && <span className="text-danger">*</span>}</span>
+                }
+                name="password"
+                autoComplete="new-password"
+                value={data.password}
+                onChange={handleChange}
+                invalid={!!errors.password}
+                feedbackInvalid={errors.password}
+                required={!modoEditar}
+              />
+              {modoEditar && (
+                <CFormText>Dejar en blanco para mantener la contraseña actual</CFormText>
+              )}
+            </CCol>
+            <CCol md={6}>
               <CFormSelect
-                label={<span>Rol <span className="text-danger">*</span></span>}
+                label={
+                  <span>
+                    Rol <span className="text-danger">*</span>
+                  </span>
+                }
                 name="rol"
                 value={data.rol}
                 onChange={handleChange}
@@ -306,7 +340,11 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
             <CCol md={6}>
               <CFormInput
                 type="email"
-                label={<span>Correo electrónico <span className="text-danger">*</span></span>}
+                label={
+                  <span>
+                    Correo electrónico <span className="text-danger">*</span>
+                  </span>
+                }
                 name="email"
                 maxLength={50}
                 value={data.email}
@@ -318,7 +356,11 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
             </CCol>
             <CCol md={6}>
               <CFormSelect
-                label={<span>Local <span className="text-danger">*</span></span>}
+                label={
+                  <span>
+                    Local <span className="text-danger">*</span>
+                  </span>
+                }
                 name="local"
                 value={data.local}
                 onChange={handleChange}
@@ -348,7 +390,11 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
             <CCol md={6}>
               <CFormInput
                 type="text"
-                label={<span>Nombre <span className="text-danger">*</span></span>}
+                label={
+                  <span>
+                    Nombre <span className="text-danger">*</span>
+                  </span>
+                }
                 name="nombre"
                 maxLength={50}
                 value={data.nombre}
@@ -361,7 +407,11 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
             <CCol md={6}>
               <CFormInput
                 type="text"
-                label={<span>Apellido <span className="text-danger">*</span></span>}
+                label={
+                  <span>
+                    Apellido <span className="text-danger">*</span>
+                  </span>
+                }
                 name="apellido"
                 maxLength={50}
                 value={data.apellido}
@@ -377,11 +427,16 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
               <CFormInput
                 type="text"
                 inputMode="numeric"
-                label={<span>DNI <span className="text-danger">*</span></span>}
+                label={
+                  <span>
+                    DNI <span className="text-danger">*</span>
+                  </span>
+                }
                 name="dni"
                 maxLength={8}
                 value={data.dni}
                 onChange={handleChange}
+                readOnly={modoEditar}
                 invalid={!!errors.dni}
                 feedbackInvalid={errors.dni}
                 placeholder="39472367"
@@ -391,7 +446,7 @@ const ModalFormEmpleado = ({ visible, onClose, empleado, roles, locales, onSucce
             <CCol md={6}>
               <CFormInput
                 type="text"
-                inputMode="tel"
+                inputMode="numeric"
                 label="Teléfono de Contacto"
                 name="telefono"
                 maxLength={20}

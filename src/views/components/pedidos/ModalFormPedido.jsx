@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   CModal,
   CModalHeader,
@@ -28,7 +28,17 @@ import { toast } from 'react-toastify'
 const MAX_DECIMAL_9_2 = 9999999.99
 const MAX_CANTIDAD_ITEM = 999
 
-const ModalFormPedido = ({ visible, onClose, pedido, productos, bebidas = [], cajas, onSuccess }) => {
+const ModalFormPedido = ({
+  visible,
+  onClose,
+  pedido,
+  productos,
+  bebidas = [],
+  cajas,
+  empleadoActual,
+  esOperativo = false,
+  onSuccess,
+}) => {
   const modoEditar = !!pedido
 
   const [data, setData] = useState({
@@ -65,9 +75,13 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, bebidas = [], ca
     }
   }
 
-  const cajasActivas = Array.isArray(cajas)
-    ? cajas.filter((c) => c.empleado_detalle && (c.estado || !c.fecha_hora_cierre))
-    : []
+  const cajasActivas = useMemo(
+    () =>
+      Array.isArray(cajas)
+        ? cajas.filter((c) => c.empleado_detalle && (c.estado || !c.fecha_hora_cierre))
+        : [],
+    [cajas],
+  )
 
   const productosActivos = Array.isArray(productos)
     ? productos.filter((p) => p.estado !== false)
@@ -97,7 +111,11 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, bebidas = [], ca
     } else {
       const cajaConEmpleado = cajasActivas[0]
       setData({
-        empleado: cajaConEmpleado ? cajaConEmpleado.empleado_detalle.id_empleados : '',
+        empleado: esOperativo
+          ? empleadoActual?.id_empleados || ''
+          : cajaConEmpleado
+            ? cajaConEmpleado.empleado_detalle.id_empleados
+            : '',
         cliente: '',
         direccion: '',
         estado: 'En proceso',
@@ -106,7 +124,7 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, bebidas = [], ca
     }
 
     setProductoSeleccionado({ tipo: 'producto', articulo: '', cantidad: '' })
-  }, [pedido, visible, modoEditar, cajas])
+  }, [pedido, visible, modoEditar, cajasActivas, empleadoActual, esOperativo])
 
   const formatearMoneda = (valor) => {
     return Number(valor || 0).toLocaleString('es-AR', {
@@ -307,7 +325,9 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, bebidas = [], ca
     const clienteLimpio = data.cliente.trim()
 
     if (!modoEditar && !data.empleado) {
-      nuevosErrores.empleado = 'Selecciona un empleado con caja activa.'
+      nuevosErrores.empleado = esOperativo
+        ? 'Tu usuario debe estar asociado a un empleado para crear pedidos.'
+        : 'Selecciona un empleado con caja activa.'
     }
 
     if (!clienteLimpio) {
@@ -392,7 +412,8 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, bebidas = [], ca
   }
 
   const totalPedido = data.detalles.reduce((acc, item) => acc + Number(item.subtotal), 0)
-  const sinCajasActivas = !modoEditar && cajasActivas.length === 0
+  const sinCajasActivas = !modoEditar && !esOperativo && cajasActivas.length === 0
+  const sinEmpleadoOperativo = !modoEditar && esOperativo && !empleadoActual
 
   return (
     <CModal visible={visible} onClose={onClose} backdrop="static" size="lg">
@@ -414,7 +435,15 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, bebidas = [], ca
 
       <CForm onSubmit={handleSubmit} noValidate>
         <CModalBody>
-          {sinCajasActivas && (
+          {sinEmpleadoOperativo ? (
+            <CAlert color="warning" className="d-flex align-items-center mb-3">
+              <CIcon icon={cilWarning} className="me-2 flex-shrink-0" size="lg" />
+              <div>
+                Tu usuario no está asociado a un empleado. Contacta a un administrador para poder
+                crear pedidos.
+              </div>
+            </CAlert>
+          ) : sinCajasActivas ? (
             <CAlert color="warning" className="d-flex align-items-center mb-3">
               <CIcon icon={cilWarning} className="me-2 flex-shrink-0" size="lg" />
               <div>
@@ -422,7 +451,7 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, bebidas = [], ca
                 antes de poder registrar nuevos pedidos.
               </div>
             </CAlert>
-          )}
+          ) : null}
 
           {modoEditar && pedido?.pagado && (
             <CAlert color="info" className="py-2 small mb-3">
@@ -436,27 +465,42 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, bebidas = [], ca
             <CRow className="g-3">
               {!modoEditar && (
                 <CCol md={4}>
-                  <CFormSelect
-                    label={
-                      <span>
-                        Empleado / Caja Activa {!modoEditar && <span className="text-danger">*</span>}
-                      </span>
-                    }
-                    name="empleado"
-                    value={data.empleado}
-                    onChange={handleChange}
-                    invalid={!!errores.empleado}
-                    feedbackInvalid={errores.empleado}
-                    disabled={sinCajasActivas}
-                  >
-                    <option value="">-- Seleccione empleado --</option>
-                    {cajasActivas.map((caja) => (
-                      <option key={caja.id_cajas} value={caja.empleado_detalle.id_empleados}>
-                        {caja.empleado_detalle.nombre} {caja.empleado_detalle.apellido} (Caja #
-                        {caja.id_cajas})
-                      </option>
-                    ))}
-                  </CFormSelect>
+                  {esOperativo ? (
+                    <CFormInput
+                      label="Empleado asignado"
+                      value={
+                        empleadoActual
+                          ? `${empleadoActual.nombre} ${empleadoActual.apellido}`
+                          : ''
+                      }
+                      readOnly
+                      disabled={sinEmpleadoOperativo}
+                      invalid={!!errores.empleado}
+                      feedbackInvalid={errores.empleado}
+                    />
+                  ) : (
+                    <CFormSelect
+                      label={
+                        <span>
+                          Empleado / Caja Activa <span className="text-danger">*</span>
+                        </span>
+                      }
+                      name="empleado"
+                      value={data.empleado}
+                      onChange={handleChange}
+                      invalid={!!errores.empleado}
+                      feedbackInvalid={errores.empleado}
+                      disabled={sinCajasActivas}
+                    >
+                      <option value="">-- Seleccione empleado --</option>
+                      {cajasActivas.map((caja) => (
+                        <option key={caja.id_cajas} value={caja.empleado_detalle.id_empleados}>
+                          {caja.empleado_detalle.nombre} {caja.empleado_detalle.apellido} (Caja #
+                          {caja.id_cajas})
+                        </option>
+                      ))}
+                    </CFormSelect>
+                  )}
                 </CCol>
               )}
 
@@ -556,7 +600,7 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, bebidas = [], ca
                 </optgroup>
               </CFormSelect>
             </CCol>
-            <CCol md={3}>
+            <CCol md={5}>
               <CFormInput
                 type="text"
                 inputMode="numeric"
@@ -575,19 +619,19 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, bebidas = [], ca
                 feedbackInvalid={erroresItem.cantidad}
               />
             </CCol>
-            <CCol md={2} className="d-flex flex-column">
-              <label className="form-label d-none d-md-block invisible">Agregar</label>
-              <CButton
-                type="button"
-                color="primary"
-                className="w-100"
-                onClick={handleAgregarProducto}
-                title="Agregar producto al pedido"
-              >
-                <CIcon icon={cilPlus} />
-              </CButton>
-            </CCol>
           </CRow>
+
+          <div className="mb-3">
+            <CButton
+              type="button"
+              color="info"
+              variant="outline"
+              onClick={handleAgregarProducto}
+              title="Agregar producto o bebida al pedido"
+            >
+              <CIcon icon={cilPlus} className="me-1" /> Agregar producto o bebida
+            </CButton>
+          </div>
 
           {/* TABLA DE ÍTEMS DEL PEDIDO */}
           {modoEditar && <h6 className="fw-bold mb-2">Ítems del Pedido</h6>}
@@ -701,7 +745,7 @@ const ModalFormPedido = ({ visible, onClose, pedido, productos, bebidas = [], ca
             type="submit"
             color={modoEditar ? 'success' : 'primary'}
             className={modoEditar ? 'text-white' : ''}
-            disabled={loading || sinCajasActivas}
+            disabled={loading || sinCajasActivas || sinEmpleadoOperativo}
           >
             {loading
               ? 'Guardando...'

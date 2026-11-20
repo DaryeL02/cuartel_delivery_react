@@ -489,15 +489,15 @@ const ModalFormInsumo = ({ visible, onClose, insumo, categorias, proveedores, on
           <CFormInput label="Dirección" value={nuevoProveedor.direccion} maxLength={200}
             invalid={!!erroresProveedor.direccion} feedbackInvalid={erroresProveedor.direccion}
             onChange={(e) => setNuevoProveedor((prev) => ({ ...prev, direccion: e.target.value }))} />
-          <CFormInput label="Teléfono" value={nuevoProveedor.telefono} maxLength={20}
+          <CFormInput label="Teléfono" inputMode="numeric" value={nuevoProveedor.telefono} maxLength={20}
             invalid={!!erroresProveedor.telefono} feedbackInvalid={erroresProveedor.telefono}
-            onChange={(e) => setNuevoProveedor((prev) => ({ ...prev, telefono: e.target.value }))} />
+            onChange={(e) => setNuevoProveedor((prev) => ({ ...prev, telefono: e.target.value.replace(/\D/g, '') }))} />
           <CFormInput label="Correo" type="email" value={nuevoProveedor.email} maxLength={30}
             invalid={!!erroresProveedor.email} feedbackInvalid={erroresProveedor.email}
             onChange={(e) => setNuevoProveedor((prev) => ({ ...prev, email: e.target.value }))} />
-          <CFormInput label="CUIT" value={nuevoProveedor.cuit} maxLength={30}
+          <CFormInput label="CUIT" inputMode="numeric" value={nuevoProveedor.cuit} maxLength={30}
             invalid={!!erroresProveedor.cuit} feedbackInvalid={erroresProveedor.cuit}
-            onChange={(e) => setNuevoProveedor((prev) => ({ ...prev, cuit: e.target.value }))} />
+            onChange={(e) => setNuevoProveedor((prev) => ({ ...prev, cuit: e.target.value.replace(/\D/g, '') }))} />
           <CFormTextarea label="Descripción" value={nuevoProveedor.descripcion} maxLength={200}
             invalid={!!erroresProveedor.descripcion} feedbackInvalid={erroresProveedor.descripcion}
             onChange={(e) => setNuevoProveedor((prev) => ({ ...prev, descripcion: e.target.value }))} />

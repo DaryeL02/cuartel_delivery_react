@@ -74,6 +74,12 @@ const Dashboard = () => {
                   <CBadge color={caja?.estado ? 'success' : 'secondary'}>
                     {caja?.estado ? 'Abierta' : 'Cerrada'}
                   </CBadge>
+                  {caja && (
+                    <div className="mt-2">
+                      <div className="small text-white-50">Saldo actual</div>
+                      <div className="fw-semibold">{formatoMoneda(caja.saldo_actual)}</div>
+                    </div>
+                  )}
                 </CCardBody>
               </CCard>
             </CCol>

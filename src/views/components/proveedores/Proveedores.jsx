@@ -188,9 +188,12 @@ const Proveedores = () => {
             />
             <CFormInput
               label="Teléfono"
+              inputMode="numeric"
               maxLength={20}
               value={proveedor.telefono || ''}
-              onChange={(e) => setProveedor({ ...proveedor, telefono: e.target.value })}
+              onChange={(e) =>
+                setProveedor({ ...proveedor, telefono: e.target.value.replace(/\D/g, '') })
+              }
             />
             <CFormInput
               label="Correo"
@@ -201,9 +204,12 @@ const Proveedores = () => {
             />
             <CFormInput
               label="CUIT"
+              inputMode="numeric"
               maxLength={30}
               value={proveedor.cuit || ''}
-              onChange={(e) => setProveedor({ ...proveedor, cuit: e.target.value })}
+              onChange={(e) =>
+                setProveedor({ ...proveedor, cuit: e.target.value.replace(/\D/g, '') })
+              }
             />
             <CFormTextarea
               label="Descripción"

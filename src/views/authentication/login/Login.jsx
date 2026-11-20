@@ -22,6 +22,7 @@ import miLogo from '../../../assets/brand/logo-cuartel.svg'
 import { eye } from 'src/assets/icons/eye'
 import api from '../../components/api/api'
 import { toast } from 'react-toastify'
+import { isOperationalUser } from '../../../utils/roles'
 
 const Login = () => {
   const [usuario, setUsuario] = useState('')
@@ -83,7 +84,7 @@ const Login = () => {
         localStorage.setItem('token', response.data.token)
         localStorage.setItem('user', JSON.stringify(response.data.user))
         notificar('exito', 'Bienvenido/a')
-        navigate('/dashboard')
+        navigate(isOperationalUser(response.data.user) ? '/pedidos' : '/dashboard')
       } else {
         const msgError = 'No se recibió un token válido del servidor.'
         setError(msgError)

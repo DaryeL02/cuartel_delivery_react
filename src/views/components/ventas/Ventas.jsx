@@ -834,7 +834,7 @@ const Ventas = () => {
                         </optgroup>
                       </CFormSelect>
                     </CCol>
-                    <CCol md={3}>
+                    <CCol md={4}>
                       <CFormInput
                         type="text"
                         inputMode="numeric"
@@ -852,18 +852,18 @@ const Ventas = () => {
                         feedbackInvalid={errores.cantidad}
                       />
                     </CCol>
-                    <CCol md={3} style={{ marginTop: '32px' }}>
-                      <CButton
-                        type="button"
-                        color="primary"
-                        className="w-100"
-                        onClick={handleAgregarProducto}
-                      >
-                        <CIcon icon={cilPlus} className="me-1" /> Agregar
-                      </CButton>
-                    </CCol>
                   </CRow>
 
+                  <div className="mb-3">
+                    <CButton
+                      type="button"
+                      color="info"
+                      variant="outline"
+                      onClick={handleAgregarProducto}
+                    >
+                      <CIcon icon={cilPlus} className="me-1" /> Agregar producto o bebida
+                    </CButton>
+                  </div>
                   <CTable
                     responsive
                     align="middle"
