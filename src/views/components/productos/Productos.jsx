@@ -18,6 +18,11 @@ import {
   CFormInput,
   CBadge,
   CPlaceholder,
+  CModal,
+  CModalBody,
+  CModalFooter,
+  CModalHeader,
+  CModalTitle,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilPlus, cilFastfood } from '@coreui/icons'
@@ -40,6 +45,7 @@ const Productos = ({ onOpenModal }) => {
   const [modalOpen, setModalOpen] = useState(false)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [productoAEditar, setProductoAEditar] = useState(null)
+  const [productoDetalle, setProductoDetalle] = useState(null)
 
   const notificar = (tipo, mensaje) => {
     switch (tipo) {
@@ -84,7 +90,7 @@ const Productos = ({ onOpenModal }) => {
       if (Array.isArray(respuesta.data)) {
         const filtrados = busquedaDebounced.trim()
           ? respuesta.data.filter((producto) =>
-              producto.nombre.toLowerCase().includes(busquedaDebounced.trim().toLowerCase())
+              producto.nombre.toLowerCase().includes(busquedaDebounced.trim().toLowerCase()),
             )
           : respuesta.data
         const inicio = (paginaActual - 1) * PAGE_SIZE
@@ -261,12 +267,25 @@ const Productos = ({ onOpenModal }) => {
                             </CTableDataCell>
 
                             <CTableDataCell>
-                              <div
-                                className="text-body-secondary text-truncate"
-                                style={{ maxWidth: '350px' }}
-                                title={producto.descripcion}
-                              >
-                                {producto.descripcion}
+                              <div className="d-flex align-items-center gap-2">
+                                <div
+                                  className="text-body-secondary text-truncate"
+                                  style={{ maxWidth: '350px', minWidth: 0 }}
+                                  title={producto.descripcion}
+                                >
+                                  {producto.descripcion || 'Sin descripción'}
+                                </div>
+                                <CButton
+                                  type="button"
+                                  size="sm"
+                                  color="info"
+                                  variant="ghost"
+                                  className="text-nowrap"
+                                  aria-label={`Ver descripción y receta de ${producto.nombre}`}
+                                  onClick={() => setProductoDetalle(producto)}
+                                >
+                                  Ver detalle
+                                </CButton>
                               </div>
                             </CTableDataCell>
 
@@ -394,6 +413,56 @@ const Productos = ({ onOpenModal }) => {
         producto={productoAEditar}
         onSuccess={cargarProductos}
       />
+      <CModal visible={Boolean(productoDetalle)} onClose={() => setProductoDetalle(null)} size="lg">
+        <CModalHeader>
+          <CModalTitle>{productoDetalle?.nombre || 'Detalle del producto'}</CModalTitle>
+        </CModalHeader>
+        <CModalBody>
+          <h6>Descripción</h6>
+          <p className="text-body-secondary" style={{ whiteSpace: 'pre-wrap' }}>
+            {productoDetalle?.descripcion || 'Sin descripción'}
+          </p>
+          <h6 className="mt-4">Composición de la receta</h6>
+          {productoDetalle?.insumos_asociados?.length ? (
+            <CTable align="middle" responsive className="mb-0">
+              <CTableHead>
+                <CTableRow>
+                  <CTableHeaderCell>Ingrediente</CTableHeaderCell>
+                  <CTableHeaderCell className="text-end">Cantidad</CTableHeaderCell>
+                  <CTableHeaderCell>Unidad</CTableHeaderCell>
+                </CTableRow>
+              </CTableHead>
+              <CTableBody>
+                {productoDetalle.insumos_asociados.map((detalle) => {
+                  const ingrediente = detalle.insumo || {}
+                  const insumoCompleto = insumos.find(
+                    (insumo) => String(insumo.id_insumos) === String(ingrediente.id_insumos),
+                  )
+
+                  return (
+                    <CTableRow key={detalle.id_productos_insumos}>
+                      <CTableDataCell>{ingrediente.nombre || 'Ingrediente'}</CTableDataCell>
+                      <CTableDataCell className="text-end">{detalle.cantidad}</CTableDataCell>
+                      <CTableDataCell>
+                        {ingrediente.unidad || insumoCompleto?.unidad || '—'}
+                      </CTableDataCell>
+                    </CTableRow>
+                  )
+                })}
+              </CTableBody>
+            </CTable>
+          ) : (
+            <p className="text-body-secondary mb-0">
+              Este producto no tiene ingredientes asociados.
+            </p>
+          )}
+        </CModalBody>
+        <CModalFooter>
+          <CButton color="secondary" variant="ghost" onClick={() => setProductoDetalle(null)}>
+            Cerrar
+          </CButton>
+        </CModalFooter>
+      </CModal>
     </div>
   )
 }

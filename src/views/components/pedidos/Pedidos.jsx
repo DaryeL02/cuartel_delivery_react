@@ -37,10 +37,13 @@ import {
 import api from '../api/api'
 import { cargarResultadosPaginados } from '../api/paginacion'
 import ModalFormPedido from './ModalFormPedido'
+import MenuDesglose from '../MenuDesglose'
 import { toast } from 'react-toastify'
 import {
   isOperationalUser,
   isPedidoCreationRestricted,
+  getUserRoles,
+  hasFullAccess,
   readCurrentUser,
 } from '../../../utils/roles'
 
@@ -48,6 +51,7 @@ const Pedidos = () => {
   const usuarioActual = readCurrentUser()
   const esOperativo = isOperationalUser(usuarioActual)
   const puedeCrearPedido = !isPedidoCreationRestricted(usuarioActual)
+  const esMozo = !hasFullAccess(usuarioActual) && getUserRoles(usuarioActual).has('mozo')
   // Estados de datos desde API
   const [pedidos, setPedidos] = useState([])
   const [productos, setProductos] = useState([])
@@ -261,7 +265,10 @@ const Pedidos = () => {
       )
       notificar('exito', `Pedido #${pedidoACancelar.id_pedidos} cancelado.`)
       setPedidoACancelar(null)
-      cargarPedidos()
+      await cargarPedidos()
+      if (historialVisible) {
+        await cargarHistorial(paginaHistorial)
+      }
     } catch (error) {
       console.error('Error al cancelar pedido:', error.response?.data || error)
       notificar('error', error.response?.data?.detail || 'No se pudo cancelar el pedido.')
@@ -438,7 +445,10 @@ const Pedidos = () => {
                       const resumenItems =
                         detalles.length > 0
                           ? `${detalles.length} ítem(s): ${detalles
-                              .map((d) => `${d.cantidad}x ${d.producto?.nombre || d.bebida?.nombre}`)
+                              .map(
+                                (d) =>
+                                  `${d.cantidad}x ${d.menu?.nombre || d.producto?.nombre || d.bebida?.nombre}`,
+                              )
                               .join(', ')}`
                           : 'Sin detalles'
 
@@ -488,7 +498,7 @@ const Pedidos = () => {
                             >
                               <CIcon icon={cilPencil} className="me-1" /> Editar
                             </CButton>
-                            {!esFinalizado && !esCancelado && (
+                            {!esMozo && !esFinalizado && !esCancelado && (
                               <CButton
                                 color="success"
                                 size="sm"
@@ -588,7 +598,7 @@ const Pedidos = () => {
                     <CTableHeaderCell>Estado</CTableHeaderCell>
                     <CTableHeaderCell>Pagado</CTableHeaderCell>
                     <CTableHeaderCell className="text-end">Total</CTableHeaderCell>
-                    <CTableHeaderCell>Detalle</CTableHeaderCell>
+                    <CTableHeaderCell>Acciones</CTableHeaderCell>
                   </CTableRow>
                 </CTableHead>
                 <CTableBody>
@@ -617,16 +627,21 @@ const Pedidos = () => {
                           size="sm"
                           color="info"
                           variant="outline"
-                          onClick={() =>
-                            setPedidoDetalleHistorial(
-                              pedidoDetalleHistorial?.id_pedidos === pedido.id_pedidos
-                                ? null
-                                : pedido,
-                            )
-                          }
+                          onClick={() => setPedidoDetalleHistorial(pedido)}
                         >
                           Detalles
                         </CButton>
+                        {!pedido.pagado && pedido.estado !== 'Cancelado' && (
+                          <CButton
+                            size="sm"
+                            color="danger"
+                            variant="outline"
+                            className="ms-2"
+                            onClick={() => setPedidoACancelar(pedido)}
+                          >
+                            Cancelar
+                          </CButton>
+                        )}
                       </CTableDataCell>
                     </CTableRow>
                   ))}
@@ -634,38 +649,6 @@ const Pedidos = () => {
               </CTable>
               {!historialPedidos.length && !cargandoHistorial && (
                 <p className="text-center text-body-secondary mb-0">No hay pedidos para mostrar.</p>
-              )}
-              {pedidoDetalleHistorial && (
-                <div className="mt-4">
-                  <h6 className="fw-bold">
-                    Detalle del pedido #{pedidoDetalleHistorial.id_pedidos}
-                  </h6>
-                  <CTable responsive hover>
-                    <CTableHead>
-                      <CTableRow>
-                        <CTableHeaderCell>Producto / bebida</CTableHeaderCell>
-                        <CTableHeaderCell>Cantidad</CTableHeaderCell>
-                        <CTableHeaderCell className="text-end">Subtotal</CTableHeaderCell>
-                      </CTableRow>
-                    </CTableHead>
-                    <CTableBody>
-                      {(pedidoDetalleHistorial.pedido_detalle || []).map((detalle) => (
-                        <CTableRow key={detalle.id_detalles_pedidos}>
-                          <CTableDataCell>
-                            {detalle.producto?.nombre || detalle.bebida?.nombre || '-'}
-                          </CTableDataCell>
-                          <CTableDataCell>{detalle.cantidad}</CTableDataCell>
-                          <CTableDataCell className="text-end">
-                            ${formatearMoneda(detalle.subtotal)}
-                          </CTableDataCell>
-                        </CTableRow>
-                      ))}
-                    </CTableBody>
-                  </CTable>
-                  <div className="text-end fw-bold">
-                    Total: ${formatearMoneda(pedidoDetalleHistorial.precio_total)}
-                  </div>
-                </div>
               )}
               {totalPaginasHistorial > 1 && (
                 <CPagination aria-label="Paginación del historial de pedidos">
@@ -703,6 +686,68 @@ const Pedidos = () => {
               setPedidoDetalleHistorial(null)
             }}
           >
+            Cerrar
+          </CButton>
+        </CModalFooter>
+      </CModal>
+      <CModal
+        visible={!!pedidoDetalleHistorial}
+        onClose={() => setPedidoDetalleHistorial(null)}
+        size="lg"
+      >
+        <CModalHeader>
+          <CModalTitle>Detalles del pedido #{pedidoDetalleHistorial?.id_pedidos}</CModalTitle>
+        </CModalHeader>
+        <CModalBody>
+          <CRow className="g-2 mb-3">
+            <CCol md={6}>
+              <strong>Cliente:</strong> {pedidoDetalleHistorial?.cliente || '-'}
+            </CCol>
+            <CCol md={6}>
+              <strong>Dirección:</strong> {pedidoDetalleHistorial?.direccion || '-'}
+            </CCol>
+            <CCol md={6}>
+              <strong>Estado:</strong> {pedidoDetalleHistorial?.estado || '-'}
+            </CCol>
+            <CCol md={6}>
+              <strong>Fecha:</strong>{' '}
+              {pedidoDetalleHistorial?.fecha_hora_creacion
+                ? new Date(pedidoDetalleHistorial.fecha_hora_creacion).toLocaleString()
+                : '-'}
+            </CCol>
+          </CRow>
+          <CTable responsive hover>
+            <CTableHead>
+              <CTableRow>
+                <CTableHeaderCell>Artículo</CTableHeaderCell>
+                <CTableHeaderCell>Cantidad</CTableHeaderCell>
+                <CTableHeaderCell className="text-end">Subtotal</CTableHeaderCell>
+              </CTableRow>
+            </CTableHead>
+            <CTableBody>
+              {(pedidoDetalleHistorial?.pedido_detalle || []).map((detalle) => (
+                <CTableRow key={detalle.id_detalles_pedidos}>
+                  <CTableDataCell>
+                    {detalle.menu?.nombre ||
+                      detalle.producto?.nombre ||
+                      detalle.bebida?.nombre ||
+                      '-'}
+                    {detalle.menu && <MenuDesglose menu={detalle.menu} />}
+                  </CTableDataCell>
+                  <CTableDataCell>{detalle.cantidad}</CTableDataCell>
+                  <CTableDataCell className="text-end">
+                    ${formatearMoneda(detalle.subtotal)}
+                  </CTableDataCell>
+                </CTableRow>
+              ))}
+            </CTableBody>
+          </CTable>
+          <div className="text-end fw-bold">
+            Total: ${formatearMoneda(pedidoDetalleHistorial?.precio_total)}
+          </div>
+        </CModalBody>
+        <CModalFooter>
+          <CButton color="secondary" onClick={() => setPedidoDetalleHistorial(null)}>
             Cerrar
           </CButton>
         </CModalFooter>

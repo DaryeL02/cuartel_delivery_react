@@ -21,6 +21,7 @@ import {
 } from '@coreui/react'
 import { toast } from 'react-toastify'
 import api from '../api/api'
+import MenuDesglose from '../MenuDesglose'
 
 const fechaLocalActual = () => {
   const hoy = new Date()
@@ -230,7 +231,11 @@ const HistorialPedidos = () => {
               {(pedido?.pedido_detalle || []).map((item) => (
                 <CTableRow key={item.id_detalles_pedidos}>
                   <CTableDataCell>
-                    {item.producto?.nombre || item.bebida?.nombre || '-'}
+                    {item.menu?.nombre ||
+                      item.producto?.nombre ||
+                      item.bebida?.nombre ||
+                      '-'}
+                    {item.menu && <MenuDesglose menu={item.menu} />}
                   </CTableDataCell>
                   <CTableDataCell>{item.cantidad}</CTableDataCell>
                   <CTableDataCell>${Number(item.subtotal).toFixed(2)}</CTableDataCell>

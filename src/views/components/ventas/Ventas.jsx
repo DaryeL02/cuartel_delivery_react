@@ -45,9 +45,25 @@ import {
 } from '@coreui/icons'
 import api from '../api/api'
 import { cargarResultadosPaginados } from '../api/paginacion'
+import MenuDesglose from '../MenuDesglose'
 import { toast } from 'react-toastify'
 
 const MAX_DECIMAL_9_2 = 9999999.99
+
+const calcularPrecioMenu = (menu) => {
+  const total = (menu.detalles || menu.detalle_menu || []).reduce((acumulador, detalle) => {
+    const articulo =
+      detalle.producto_data ||
+      detalle.bebida_data ||
+      (typeof detalle.producto === 'object' && detalle.producto) ||
+      (typeof detalle.bebida === 'object' && detalle.bebida)
+    const precio = Number(articulo?.precio_unitario || 0)
+    const descuento = Number(detalle.descuento || 0)
+    const cantidad = Number(detalle.cantidad || 0)
+    return acumulador + precio * (1 - descuento / 100) * cantidad
+  }, 0)
+  return Number(total.toFixed(2))
+}
 
 const fechaLocalActual = () => {
   const hoy = new Date()
@@ -74,6 +90,7 @@ const Ventas = () => {
     cantidad: '',
   })
   const [productos, setProductos] = useState([])
+  const [menus, setMenus] = useState([])
   const [metodos, setMetodos] = useState([])
   const [metodoSeleccionado, setMetodoSeleccionado] = useState('')
   const [bebidas, setBebidas] = useState([])
@@ -91,6 +108,8 @@ const Ventas = () => {
 
   const [errores, setErrores] = useState({})
   const [confirmModalOpen, setConfirmModalOpen] = useState(false)
+  const [pedidoACancelar, setPedidoACancelar] = useState(null)
+  const [cancelandoPedido, setCancelandoPedido] = useState(false)
   const [loading, setLoading] = useState(false)
 
   const notificar = (tipo, mensaje) => {
@@ -289,6 +308,35 @@ const Ventas = () => {
     seleccionarModoOPedido(idSeleccionado)
   }
 
+  const cancelarPedidoImportado = async () => {
+    if (!pedidoACancelar) return
+
+    setCancelandoPedido(true)
+    try {
+      await api.patch(
+        `/api/pedidos/${pedidoACancelar.id_pedidos}/`,
+        { estado: 'Cancelado' },
+        getAuthConfig(),
+      )
+      notificar('exito', `Pedido #${pedidoACancelar.id_pedidos} cancelado correctamente.`)
+      setPedidoACancelar(null)
+      setPedidoSeleccionado(null)
+      setModoVenta(null)
+      setIdSeleccionado('')
+      setMetodoSeleccionado('')
+      setErrores({})
+      await cargarPedidos()
+    } catch (error) {
+      console.error('Error al cancelar el pedido importado:', error.response?.data || error)
+      notificar(
+        'error',
+        error.response?.data?.detail || 'No se pudo cancelar el pedido. Inténtalo nuevamente.',
+      )
+    } finally {
+      setCancelandoPedido(false)
+    }
+  }
+
   const handleChange = (e) => {
     const { name, value } = e.target
 
@@ -321,7 +369,7 @@ const Ventas = () => {
 
     const nuevosErr = {}
     if (!productoSeleccionado.articulo) {
-      nuevosErr.articulo = 'Selecciona un producto o una bebida.'
+      nuevosErr.articulo = 'Selecciona un producto, una bebida o un menú.'
     }
     const cantidadNum = Number(productoSeleccionado.cantidad)
     if (!productoSeleccionado.cantidad || cantidadNum <= 0) {
@@ -330,23 +378,25 @@ const Ventas = () => {
 
     if (Object.keys(nuevosErr).length > 0) {
       setErrores((prev) => ({ ...prev, ...nuevosErr }))
-      notificar('advertencia', 'Selecciona un producto y una cantidad válida.')
+      notificar('advertencia', 'Selecciona un artículo y una cantidad válida.')
       return
     }
 
+    const esMenu = productoSeleccionado.tipo === 'menu'
     const esBebida = productoSeleccionado.tipo === 'bebida'
-    const articulos = esBebida ? bebidasActivas : productosActivos
-    const idArticulo = esBebida ? 'id_bebidas' : 'id_productos'
+    const articulos = esMenu ? menusActivos : esBebida ? bebidasActivas : productosActivos
+    const idArticulo = esMenu ? 'id_menus' : esBebida ? 'id_bebidas' : 'id_productos'
     const articuloCompleto = articulos.find(
-      (articulo) => String(articulo[idArticulo]) === String(productoSeleccionado.articulo)
+      (articulo) => String(articulo[idArticulo]) === String(productoSeleccionado.articulo),
     )
     if (!articuloCompleto) return
 
-    const precioUnitario = Number(articuloCompleto.precio_unitario)
+    const precioUnitario = esMenu
+      ? calcularPrecioMenu(articuloCompleto)
+      : Number(articuloCompleto.precio_unitario)
+    const claveArticulo = esMenu ? 'menu' : esBebida ? 'bebida' : 'producto'
     const existente = nuevoPedido.detalles.find(
-      (item) =>
-        String(esBebida ? item.bebida?.id_bebidas : item.producto?.id_productos) ===
-        String(articuloCompleto[idArticulo])
+      (item) => String(item[claveArticulo]?.[idArticulo]) === String(articuloCompleto[idArticulo]),
     )
 
     const nuevaCantidadTotal = existente ? existente.cantidad + cantidadNum : cantidadNum
@@ -359,8 +409,7 @@ const Ventas = () => {
     const totalSinEsteProducto = nuevoPedido.detalles
       .filter(
         (item) =>
-          String(esBebida ? item.bebida?.id_bebidas : item.producto?.id_productos) !==
-          String(articuloCompleto[idArticulo]),
+          String(item[claveArticulo]?.[idArticulo]) !== String(articuloCompleto[idArticulo]),
       )
       .reduce((acc, item) => acc + Number(item.subtotal), 0)
 
@@ -376,8 +425,7 @@ const Ventas = () => {
       setNuevoPedido((prev) => ({
         ...prev,
         detalles: prev.detalles.map((item) =>
-          String(esBebida ? item.bebida?.id_bebidas : item.producto?.id_productos) ===
-          String(articuloCompleto[idArticulo])
+          String(item[claveArticulo]?.[idArticulo]) === String(articuloCompleto[idArticulo])
             ? {
                 ...item,
                 cantidad: nuevaCantidadTotal,
@@ -388,8 +436,9 @@ const Ventas = () => {
       }))
     } else {
       const nuevoDetalle = {
-        id_temporal: `${esBebida ? 'bebida' : 'producto'}-${articuloCompleto[idArticulo]}`,
-        [esBebida ? 'bebida' : 'producto']: {
+        id_temporal: `${productoSeleccionado.tipo}-${articuloCompleto[idArticulo]}`,
+        [claveArticulo]: {
+          ...(esMenu ? articuloCompleto : {}),
           [idArticulo]: articuloCompleto[idArticulo],
           nombre: articuloCompleto.nombre,
           precio_unitario: precioUnitario,
@@ -421,7 +470,13 @@ const Ventas = () => {
           if (nuevaCant <= 0) return null
           if (nuevaCant > 9999) return item
           const nuevoSub =
-            nuevaCant * Number(item.producto?.precio_unitario || item.bebida?.precio_unitario || 0)
+            nuevaCant *
+            Number(
+              item.menu?.precio_unitario ??
+                item.producto?.precio_unitario ??
+                item.bebida?.precio_unitario ??
+                0,
+            )
           return {
             ...item,
             cantidad: nuevaCant,
@@ -533,9 +588,9 @@ const Ventas = () => {
         modoVenta === 'importado' ? pedidoSeleccionado.pedido_detalle : nuevoPedido.detalles
 
       const detallesFormateados = listaOrigen.map((item) => ({
-        ...(item.bebida
-          ? { id_bebidas: Number(item.bebida.id_bebidas) }
-          : { id_productos: Number(item.producto.id_productos) }),
+        id_menus: item.menu ? Number(item.menu.id_menus) : null,
+        id_productos: item.producto ? Number(item.producto.id_productos) : null,
+        id_bebidas: item.bebida ? Number(item.bebida.id_bebidas) : null,
         cantidad: Number(item.cantidad),
       }))
 
@@ -610,6 +665,16 @@ const Ventas = () => {
     cargarProductos()
     cargarBebidas()
     cargarMetodos()
+    const cargarMenus = async () => {
+      try {
+        const respuesta = await api.get('/api/menus/', getAuthConfig())
+        setMenus(Array.isArray(respuesta.data) ? respuesta.data : respuesta.data.results || [])
+      } catch (error) {
+        console.error('Error al cargar menús:', error)
+        notificar('error', error.response?.data?.detail || 'No se pudieron cargar los menús.')
+      }
+    }
+    cargarMenus()
     const cargarCajasHistorial = async () => {
       try {
         const respuesta = await api.get('/api/cajas/', getAuthConfig())
@@ -642,6 +707,11 @@ const Ventas = () => {
 
   const productosActivos = productos.filter((p) => p.estado !== false)
   const bebidasActivas = bebidas.filter((b) => b.estado !== false)
+  const menusActivos = menus.filter((menu) => menu.estado === true)
+  const obtenerPrecioMenu = (menu) => {
+    const menuCatalogo = menus.find((item) => String(item.id_menus) === String(menu?.id_menus))
+    return Number(menu?.precio_unitario ?? calcularPrecioMenu(menuCatalogo || menu || {}))
+  }
   const metodosActivos = metodos.filter((m) => m.estado !== false)
   const metodoActualObj = metodosActivos.find(
     (m) => String(m.id_metodos) === String(metodoSeleccionado)
@@ -757,14 +827,26 @@ const Ventas = () => {
                       Detalle del Comprobante (Pedido #{pedidoSeleccionado.id_pedidos} -{' '}
                       {pedidoSeleccionado.cliente})
                     </h6>
-                    <CBadge color="info" shape="rounded-pill">
-                      {pedidoSeleccionado.estado}
-                    </CBadge>
+                    <div className="d-flex align-items-center gap-2">
+                      <CBadge color="info" shape="rounded-pill">
+                        {pedidoSeleccionado.estado}
+                      </CBadge>
+                      <CButton
+                        type="button"
+                        size="sm"
+                        color="danger"
+                        variant="outline"
+                        onClick={() => setPedidoACancelar(pedidoSeleccionado)}
+                        disabled={loading}
+                      >
+                        Cancelar pedido
+                      </CButton>
+                    </div>
                   </div>
                   <CTable responsive align="middle" hover bordered>
                     <CTableHead className="table-theme-header">
                       <CTableRow>
-                        <CTableHeaderCell>Producto</CTableHeaderCell>
+                        <CTableHeaderCell>Artículo</CTableHeaderCell>
                         <CTableHeaderCell className="text-center">Cant.</CTableHeaderCell>
                         <CTableHeaderCell className="text-end">Precio U.</CTableHeaderCell>
                         <CTableHeaderCell className="text-end">Subtotal</CTableHeaderCell>
@@ -773,10 +855,18 @@ const Ventas = () => {
                     <CTableBody>
                       {pedidoSeleccionado?.pedido_detalle?.map((item) => (
                         <CTableRow key={item.id_detalles_pedidos}>
-                          <CTableDataCell>{item.producto?.nombre || item.bebida?.nombre}</CTableDataCell>
+                          <CTableDataCell>
+                            {item.menu?.nombre || item.producto?.nombre || item.bebida?.nombre}
+                            {item.menu && <MenuDesglose menu={item.menu} />}
+                          </CTableDataCell>
                           <CTableDataCell className="text-center">{item.cantidad}</CTableDataCell>
                           <CTableDataCell className="text-end">
-                            ${formatearMoneda(item.producto?.precio_unitario || item.bebida?.precio_unitario)}
+                            $
+                            {formatearMoneda(
+                              Number(item.cantidad) > 0
+                                ? Number(item.subtotal) / Number(item.cantidad)
+                                : 0,
+                            )}
                           </CTableDataCell>
                           <CTableDataCell className="text-end fw-semibold">
                             ${formatearMoneda(item.subtotal)}
@@ -797,7 +887,7 @@ const Ventas = () => {
                         name="articulo"
                         label={
                           <span>
-                            Producto o bebida <span className="text-danger">*</span>
+                            Producto, bebida o menú <span className="text-danger">*</span>
                           </span>
                         }
                         value={
@@ -832,6 +922,13 @@ const Ventas = () => {
                             </option>
                           ))}
                         </optgroup>
+                        <optgroup label="Menús">
+                          {menusActivos.map((item) => (
+                            <option key={`menu-${item.id_menus}`} value={`menu:${item.id_menus}`}>
+                              {item.nombre} (${formatearMoneda(calcularPrecioMenu(item))})
+                            </option>
+                          ))}
+                        </optgroup>
                       </CFormSelect>
                     </CCol>
                     <CCol md={4}>
@@ -861,7 +958,7 @@ const Ventas = () => {
                       variant="outline"
                       onClick={handleAgregarProducto}
                     >
-                      <CIcon icon={cilPlus} className="me-1" /> Agregar producto o bebida
+                      <CIcon icon={cilPlus} className="me-1" /> Agregar artículo
                     </CButton>
                   </div>
                   <CTable
@@ -873,7 +970,7 @@ const Ventas = () => {
                   >
                     <CTableHead className="table-theme-header">
                       <CTableRow>
-                        <CTableHeaderCell>Producto</CTableHeaderCell>
+                        <CTableHeaderCell>Artículo</CTableHeaderCell>
                         <CTableHeaderCell className="text-center">Cant.</CTableHeaderCell>
                         <CTableHeaderCell className="text-end">Precio U.</CTableHeaderCell>
                         <CTableHeaderCell className="text-end">Subtotal</CTableHeaderCell>
@@ -890,7 +987,10 @@ const Ventas = () => {
                       ) : (
                         nuevoPedido.detalles.map((item) => (
                           <CTableRow key={item.id_temporal}>
-                            <CTableDataCell>{item.producto?.nombre || item.bebida?.nombre}</CTableDataCell>
+                            <CTableDataCell>
+                              {item.menu?.nombre || item.producto?.nombre || item.bebida?.nombre}
+                              {item.menu && <MenuDesglose menu={item.menu} />}
+                            </CTableDataCell>
                             <CTableDataCell className="text-center">
                               <div className="d-inline-flex align-items-center gap-1">
                                 <CButton
@@ -919,7 +1019,13 @@ const Ventas = () => {
                               </div>
                             </CTableDataCell>
                             <CTableDataCell className="text-end">
-                              ${formatearMoneda(item.producto?.precio_unitario || item.bebida?.precio_unitario)}
+                              $
+                              {formatearMoneda(
+                                item.menu
+                                  ? obtenerPrecioMenu(item.menu)
+                                  : (item.producto?.precio_unitario ??
+                                    item.bebida?.precio_unitario),
+                              )}
                             </CTableDataCell>
                             <CTableDataCell className="text-end fw-semibold">
                               ${formatearMoneda(item.subtotal)}
@@ -1304,6 +1410,33 @@ const Ventas = () => {
           </CButton>
         </CModalFooter>
       </CModal>
+      <CModal
+        visible={!!pedidoACancelar}
+        onClose={() => !cancelandoPedido && setPedidoACancelar(null)}
+        backdrop="static"
+        alignment="center"
+      >
+        <CModalHeader>
+          <CModalTitle>Confirmar cancelación</CModalTitle>
+        </CModalHeader>
+        <CModalBody>
+          ¿Deseas cancelar el pedido <strong>#{pedidoACancelar?.id_pedidos}</strong>? Esta acción
+          quitará el pedido de la terminal de ventas.
+        </CModalBody>
+        <CModalFooter>
+          <CButton
+            color="secondary"
+            variant="outline"
+            onClick={() => setPedidoACancelar(null)}
+            disabled={cancelandoPedido}
+          >
+            Volver
+          </CButton>
+          <CButton color="danger" onClick={cancelarPedidoImportado} disabled={cancelandoPedido}>
+            {cancelandoPedido ? 'Cancelando...' : 'Confirmar cancelación'}
+          </CButton>
+        </CModalFooter>
+      </CModal>
       <CModal visible={!!ventaDetalle} onClose={() => setVentaDetalle(null)} size="lg">
         <CModalHeader>
           <CModalTitle>Detalle de Venta #{ventaDetalle?.id_ventas}</CModalTitle>
@@ -1340,8 +1473,9 @@ const Ventas = () => {
           <CTable responsive hover>
             <CTableHead>
               <CTableRow>
-                <CTableHeaderCell>Producto / bebida</CTableHeaderCell>
+                <CTableHeaderCell>Artículo</CTableHeaderCell>
                 <CTableHeaderCell>Cantidad</CTableHeaderCell>
+                <CTableHeaderCell className="text-end">Precio U.</CTableHeaderCell>
                 <CTableHeaderCell className="text-end">Subtotal</CTableHeaderCell>
               </CTableRow>
             </CTableHead>
@@ -1349,9 +1483,21 @@ const Ventas = () => {
               {(ventaDetalle?.detalle_venta || []).map((detalle) => (
                 <CTableRow key={detalle.id_detalles_ventas}>
                   <CTableDataCell>
-                    {detalle.producto?.nombre || detalle.bebida?.nombre || '-'}
+                    {detalle.menu?.nombre ||
+                      detalle.producto?.nombre ||
+                      detalle.bebida?.nombre ||
+                      '-'}
+                    {detalle.menu && <MenuDesglose menu={detalle.menu} />}
                   </CTableDataCell>
                   <CTableDataCell>{detalle.cantidad}</CTableDataCell>
+                  <CTableDataCell className="text-end">
+                    $
+                    {formatearMoneda(
+                      Number(detalle.cantidad) > 0
+                        ? Number(detalle.subtotal) / Number(detalle.cantidad)
+                        : 0,
+                    )}
+                  </CTableDataCell>
                   <CTableDataCell className="text-end">
                     ${formatearMoneda(detalle.subtotal)}
                   </CTableDataCell>

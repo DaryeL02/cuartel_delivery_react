@@ -23,11 +23,13 @@ export default function NuevaCaja({ visible, onClose, locales, cajasAbiertas = [
     monto_apertura: '',
     estado: true,
     password: '',
+    justificacion_apertura: '',
   });
 
   const [loading, setLoading] = useState(false);
   const [cargandoSugerencia, setCargandoSugerencia] = useState(false);
   const [cierreAnterior, setCierreAnterior] = useState(null);
+  const [hayCierreAnterior, setHayCierreAnterior] = useState(false);
 
   const notificar = (tipo, mensaje) => {
     switch (tipo) {
@@ -52,39 +54,47 @@ export default function NuevaCaja({ visible, onClose, locales, cajasAbiertas = [
         monto_apertura: '',
         estado: true,
         password: '',
+        justificacion_apertura: '',
       });
       setCierreAnterior(null);
+      setHayCierreAnterior(false);
     }
   }, [visible]);
 
   useEffect(() => {
     if (!visible || !data.local) {
       setCierreAnterior(null);
+      setHayCierreAnterior(false);
       return undefined;
     }
 
     let activo = true;
     setCierreAnterior(null);
+    setHayCierreAnterior(false);
     setCargandoSugerencia(true);
     api.get('/api/cajas/', {
-      params: { local: data.local },
+      params: { local: data.local, solo_cerradas: 'true' },
       headers: { Authorization: `Token ${localStorage.getItem('token')}` },
     }).then(({ data: cajas }) => {
       if (!activo) return;
       const lista = Array.isArray(cajas) ? cajas : cajas?.results || [];
-      const ultimaCaja = lista[0];
+      const listaCerradas = lista
+        .filter((caja) => !caja.estado && caja.fecha_hora_cierre)
+        .sort((a, b) => new Date(b.fecha_hora_cierre) - new Date(a.fecha_hora_cierre));
+      const ultimaCaja = listaCerradas[0];
       const montoSugerido =
         ultimaCaja?.efectivo_real ??
         ultimaCaja?.efectivo_esperado ??
-        ultimaCaja?.monto_cierre;
-      const cierreNumerico = montoSugerido == null ? null : Number(montoSugerido);
-      setCierreAnterior(Number.isFinite(cierreNumerico) ? cierreNumerico : null);
-      if (montoSugerido !== null && montoSugerido !== undefined) {
-        setData((actual) => ({
-          ...actual,
-          monto_apertura: Number(montoSugerido).toFixed(2),
-        }));
-      }
+        ultimaCaja?.monto_cierre ??
+        ultimaCaja?.monto_apertura ??
+        0;
+      const cierreNumerico = Number(montoSugerido);
+      setCierreAnterior(Number.isFinite(cierreNumerico) ? cierreNumerico : 0);
+      setHayCierreAnterior(Boolean(ultimaCaja));
+      setData((actual) => ({
+        ...actual,
+        monto_apertura: (Number.isFinite(cierreNumerico) ? cierreNumerico : 0).toFixed(2),
+      }));
     }).catch((error) => {
       if (!activo) return;
       console.error('Error al consultar el saldo de la caja anterior:', error);
@@ -98,8 +108,9 @@ export default function NuevaCaja({ visible, onClose, locales, cajasAbiertas = [
 
   const diferenciaApertura =
     cierreAnterior !== null && data.monto_apertura !== ''
-      ? Number(data.monto_apertura) - cierreAnterior
+      ? Number((Number(data.monto_apertura) - cierreAnterior).toFixed(2))
       : null;
+  const requiereJustificacion = diferenciaApertura !== null && diferenciaApertura !== 0;
 
   const handleChange = (e) => {
     const { id, value } = e.target;
@@ -108,7 +119,10 @@ export default function NuevaCaja({ visible, onClose, locales, cajasAbiertas = [
       [id]: value,
       ...(id === 'local' ? { monto_apertura: '' } : {}),
     }));
-    if (id === 'local') setCierreAnterior(null);
+    if (id === 'local') {
+      setCierreAnterior(null);
+      setHayCierreAnterior(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -120,6 +134,10 @@ export default function NuevaCaja({ visible, onClose, locales, cajasAbiertas = [
     }
     if (data.monto_apertura === '' || Number(data.monto_apertura) < 0) {
       notificar('advertencia', 'Ingresa un monto inicial válido igual o mayor a 0.');
+      return;
+    }
+    if (requiereJustificacion && !data.justificacion_apertura.trim()) {
+      notificar('advertencia', 'Justifica la diferencia respecto al monto base.');
       return;
     }
     if (!data.password) {
@@ -142,6 +160,7 @@ export default function NuevaCaja({ visible, onClose, locales, cajasAbiertas = [
       console.error('Error al abrir la caja:', error);
       const mensaje =
         error.response?.data?.detail ||
+        error.response?.data?.justificacion_apertura ||
         error.response?.data?.password ||
         'No se pudo abrir la caja. Verifica los datos e intenta nuevamente.';
       notificar(error.response?.status === 409 ? 'advertencia' : 'error', mensaje);
@@ -211,12 +230,32 @@ export default function NuevaCaja({ visible, onClose, locales, cajasAbiertas = [
                 </CFormText>
               ) : (
                 <CFormText>
-                  {cierreAnterior === null && data.local && !cargandoSugerencia
-                    ? 'No hay un cierre anterior para comparar.'
+                  {data.local && !cargandoSugerencia && cierreAnterior !== null && !hayCierreAnterior
+                    ? 'No hay un cierre anterior; el monto base es $0.00.'
                     : 'El monto sugerido corresponde al efectivo contado al cierre de la última caja de este local.'}
                 </CFormText>
               )}
             </CCol>
+            {requiereJustificacion && (
+              <CCol md={12}>
+                <CFormLabel htmlFor="justificacion_apertura">
+                  Justificación de la diferencia <span className="text-danger">*</span>
+                </CFormLabel>
+                <CFormInput
+                  id="justificacion_apertura"
+                  name="justificacion_apertura"
+                  value={data.justificacion_apertura}
+                  onChange={handleChange}
+                  maxLength={50}
+                  required
+                />
+                <CFormText>
+                  {hayCierreAnterior
+                    ? 'Explica el cambio respecto al efectivo del último cierre.'
+                    : 'Explica por qué el monto inicial difiere del saldo base de $0.00.'}
+                </CFormText>
+              </CCol>
+            )}
             <CCol md={12}>
               <CFormLabel htmlFor="password">
                 Contraseña para validar tu identidad <span className="text-danger">*</span>

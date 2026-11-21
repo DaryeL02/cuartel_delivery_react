@@ -110,6 +110,7 @@ const Menus = () => {
   const [pageError, setPageError] = useState('')
   const [notice, setNotice] = useState('')
   const [modalVisible, setModalVisible] = useState(false)
+  const [confirmarMenuVacio, setConfirmarMenuVacio] = useState(false)
   const [deleteMenuVisible, setDeleteMenuVisible] = useState(false)
   const [deleteDetailVisible, setDeleteDetailVisible] = useState(false)
   const [editingMenu, setEditingMenu] = useState(null)
@@ -237,8 +238,8 @@ const Menus = () => {
     })),
   })
 
-  const handleSaveMenu = async (event) => {
-    event.preventDefault()
+  const guardarMenu = async () => {
+    setConfirmarMenuVacio(false)
     setFormError('')
 
     if (formData.fecha_hora_inicio && formData.fecha_hora_fin) {
@@ -274,6 +275,15 @@ const Menus = () => {
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleSaveMenu = (event) => {
+    event.preventDefault()
+    if (!editingMenu && formData.detalles.length === 0) {
+      setConfirmarMenuVacio(true)
+      return
+    }
+    void guardarMenu()
   }
 
   const handleDeleteMenu = async () => {
@@ -665,6 +675,19 @@ const Menus = () => {
                       const valorArticulo = detail.articulo
                         ? `${detail.tipo}:${detail.articulo}`
                         : ''
+                      const articuloSeleccionado =
+                        detail.tipo === 'bebida'
+                          ? bebidas.find(
+                              (bebida) => String(bebida.id_bebidas) === String(detail.articulo),
+                            )
+                          : productos.find(
+                              (producto) =>
+                                String(producto.id_productos) === String(detail.articulo),
+                            )
+                      const precioUnitario = Number(articuloSeleccionado?.precio_unitario || 0)
+                      const cantidad = Number(detail.cantidad || 0)
+                      const descuento = Number(detail.descuento || 0)
+                      const subtotal = precioUnitario * (1 - descuento / 100) * cantidad
 
                       return (
                         <CRow className="g-2 align-items-end" key={`detail-${index}`}>
@@ -734,6 +757,7 @@ const Menus = () => {
                               label={index === 0 ? 'Descuento (%)' : undefined}
                               type="number"
                               min={0}
+                              max={100}
                               step={1}
                               value={detail.descuento}
                               onChange={(event) =>
@@ -753,6 +777,11 @@ const Menus = () => {
                             >
                               <CIcon icon={cilTrash} />
                             </CButton>
+                          </CCol>
+                          <CCol xs={12}>
+                            <div className="small text-body-secondary text-end">
+                              Subtotal: {formatCurrency(subtotal)}
+                            </div>
                           </CCol>
                         </CRow>
                       )
@@ -777,6 +806,30 @@ const Menus = () => {
             </CButton>
           </CModalFooter>
         </CForm>
+      </CModal>
+
+      <CModal
+        visible={confirmarMenuVacio}
+        onClose={() => !saving && setConfirmarMenuVacio(false)}
+        backdrop="static"
+      >
+        <CModalHeader>
+          <CModalTitle>Confirmar menú vacío</CModalTitle>
+        </CModalHeader>
+        <CModalBody>¿Está seguro que quiere crear un menú sin productos?</CModalBody>
+        <CModalFooter>
+          <CButton
+            color="secondary"
+            variant="outline"
+            onClick={() => setConfirmarMenuVacio(false)}
+            disabled={saving}
+          >
+            Cancelar
+          </CButton>
+          <CButton color="primary" onClick={guardarMenu} disabled={saving}>
+            {saving ? 'Guardando...' : 'Crear menú'}
+          </CButton>
+        </CModalFooter>
       </CModal>
 
       <CModal visible={deleteMenuVisible} onClose={() => !saving && setDeleteMenuVisible(false)}>

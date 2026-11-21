@@ -23,10 +23,27 @@ import {
 import CIcon from '@coreui/icons-react'
 import { cilFastfood, cilPencil, cilPlus, cilMinus, cilTrash, cilWarning } from '@coreui/icons'
 import api from '../api/api'
+import MenuDesglose from '../MenuDesglose'
 import { toast } from 'react-toastify'
+import { getUserRoles, hasFullAccess, readCurrentUser } from '../../../utils/roles'
 
 const MAX_DECIMAL_9_2 = 9999999.99
 const MAX_CANTIDAD_ITEM = 999
+
+const calcularPrecioMenu = (menu) => {
+  const total = (menu.detalles || menu.detalle_menu || []).reduce((acumulador, detalle) => {
+    const articulo =
+      detalle.producto_data ||
+      detalle.bebida_data ||
+      (typeof detalle.producto === 'object' && detalle.producto) ||
+      (typeof detalle.bebida === 'object' && detalle.bebida)
+    const precio = Number(articulo?.precio_unitario || 0)
+    const descuento = Number(detalle.descuento || 0)
+    const cantidad = Number(detalle.cantidad || 0)
+    return acumulador + precio * (1 - descuento / 100) * cantidad
+  }, 0)
+  return Number(total.toFixed(2))
+}
 
 const ModalFormPedido = ({
   visible,
@@ -40,6 +57,8 @@ const ModalFormPedido = ({
   onSuccess,
 }) => {
   const modoEditar = !!pedido
+  const usuarioActual = readCurrentUser()
+  const esMozo = !hasFullAccess(usuarioActual) && getUserRoles(usuarioActual).has('mozo')
 
   const [data, setData] = useState({
     empleado: '',
@@ -58,6 +77,7 @@ const ModalFormPedido = ({
   const [errores, setErrores] = useState({})
   const [erroresItem, setErroresItem] = useState({})
   const [loading, setLoading] = useState(false)
+  const [menus, setMenus] = useState([])
 
   const notificar = (tipo, mensaje) => {
     switch (tipo) {
@@ -87,6 +107,31 @@ const ModalFormPedido = ({
     ? productos.filter((p) => p.estado !== false)
     : []
   const bebidasActivas = Array.isArray(bebidas) ? bebidas.filter((b) => b.estado !== false) : []
+  const menusActivos = menus.filter((menu) => menu.estado === true)
+
+  useEffect(() => {
+    if (!visible) return
+
+    const cargarMenus = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        const respuesta = await api.get('/api/menus/', {
+          headers: { Authorization: `Token ${token}` },
+        })
+        setMenus(Array.isArray(respuesta.data) ? respuesta.data : respuesta.data.results || [])
+      } catch (error) {
+        console.error('Error al cargar menús:', error)
+        notificar('error', error.response?.data?.detail || 'No se pudieron cargar los menús.')
+      }
+    }
+
+    cargarMenus()
+  }, [visible])
+
+  const obtenerPrecioMenu = (menu) => {
+    const menuCatalogo = menus.find((item) => String(item.id_menus) === String(menu?.id_menus))
+    return Number(menu?.precio_unitario ?? calcularPrecioMenu(menuCatalogo || menu || {}))
+  }
 
   useEffect(() => {
     if (!visible) return
@@ -104,6 +149,7 @@ const ModalFormPedido = ({
           id_temporal: det.id_detalles_pedidos || Date.now() + Math.random(),
           producto: det.producto,
           bebida: det.bebida,
+          menu: det.menu || det.menu_data,
           cantidad: Number(det.cantidad),
           subtotal: Number(det.subtotal),
         })),
@@ -177,7 +223,7 @@ const ModalFormPedido = ({
     const nuevosErroresItem = {}
 
     if (!productoSeleccionado.articulo) {
-      nuevosErroresItem.articulo = 'Selecciona un producto o una bebida.'
+      nuevosErroresItem.articulo = 'Selecciona un producto, una bebida o un menú.'
     }
     const cantidadNum = Number(productoSeleccionado.cantidad)
     if (!productoSeleccionado.cantidad || isNaN(cantidadNum) || cantidadNum <= 0) {
@@ -191,19 +237,21 @@ const ModalFormPedido = ({
       return
     }
 
+    const esMenu = productoSeleccionado.tipo === 'menu'
     const esBebida = productoSeleccionado.tipo === 'bebida'
-    const articulos = esBebida ? bebidasActivas : productosActivos
-    const idArticulo = esBebida ? 'id_bebidas' : 'id_productos'
+    const articulos = esMenu ? menusActivos : esBebida ? bebidasActivas : productosActivos
+    const idArticulo = esMenu ? 'id_menus' : esBebida ? 'id_bebidas' : 'id_productos'
     const articuloCompleto = articulos.find(
       (articulo) => String(articulo[idArticulo]) === String(productoSeleccionado.articulo)
     )
     if (!articuloCompleto) return
 
-    const precioUnitario = Number(articuloCompleto.precio_unitario)
+    const precioUnitario = esMenu
+      ? calcularPrecioMenu(articuloCompleto)
+      : Number(articuloCompleto.precio_unitario)
+    const claveArticulo = esMenu ? 'menu' : esBebida ? 'bebida' : 'producto'
     const indiceExistente = data.detalles.findIndex(
-      (item) =>
-        (esBebida ? item.bebida?.id_bebidas : item.producto?.id_productos) ===
-        articuloCompleto[idArticulo]
+      (item) => String(item[claveArticulo]?.[idArticulo]) === String(articuloCompleto[idArticulo]),
     )
 
     if (indiceExistente !== -1) {
@@ -253,8 +301,9 @@ const ModalFormPedido = ({
       }
 
       const nuevoDetalle = {
-        id_temporal: `${esBebida ? 'bebida' : 'producto'}-${articuloCompleto[idArticulo]}`,
-        [esBebida ? 'bebida' : 'producto']: {
+        id_temporal: `${productoSeleccionado.tipo}-${articuloCompleto[idArticulo]}`,
+        [claveArticulo]: {
+          ...(esMenu ? articuloCompleto : {}),
           [idArticulo]: articuloCompleto[idArticulo],
           nombre: articuloCompleto.nombre,
           precio_unitario: precioUnitario,
@@ -288,7 +337,9 @@ const ModalFormPedido = ({
             return item
           }
           const precioUnitario = Number(
-            item.producto?.precio_unitario || item.bebida?.precio_unitario || 0,
+            item.menu
+              ? obtenerPrecioMenu(item.menu)
+              : (item.producto?.precio_unitario ?? item.bebida?.precio_unitario ?? 0),
           )
           const nuevoSubtotal = Number((nuevaCantidad * precioUnitario).toFixed(2))
           if (nuevoSubtotal > MAX_DECIMAL_9_2) {
@@ -364,9 +415,9 @@ const ModalFormPedido = ({
     const headers = { Authorization: `Token ${token}` }
 
     const detallesPayload = data.detalles.map((item) => ({
-      ...(item.bebida
-        ? { id_bebidas: Number(item.bebida.id_bebidas) }
-        : { id_productos: Number(item.producto.id_productos) }),
+      id_menus: item.menu ? Number(item.menu.id_menus) : null,
+      id_productos: item.producto ? Number(item.producto.id_productos) : null,
+      id_bebidas: item.bebida ? Number(item.bebida.id_bebidas) : null,
       cantidad: Number(item.cantidad),
     }))
 
@@ -545,7 +596,13 @@ const ModalFormPedido = ({
                     onChange={handleChange}
                   >
                     <option value="En proceso">En proceso</option>
-                    <option value="Finalizado">Finalizado</option>
+                    {esMozo && data.estado === 'Finalizado' ? (
+                      <option value="Finalizado" disabled>
+                        Finalizado (estado actual)
+                      </option>
+                    ) : (
+                      !esMozo && <option value="Finalizado">Finalizado</option>
+                    )}
                     <option value="Cancelado">Cancelado</option>
                   </CFormSelect>
                 </CCol>
@@ -562,7 +619,7 @@ const ModalFormPedido = ({
               <CFormSelect
                 label={
                   <span>
-                    Producto o bebida <span className="text-danger">*</span>
+                    Producto, bebida o menú <span className="text-danger">*</span>
                   </span>
                 }
                 name="articulo"
@@ -598,6 +655,13 @@ const ModalFormPedido = ({
                     </option>
                   ))}
                 </optgroup>
+                <optgroup label="Menús">
+                  {menusActivos.map((item) => (
+                    <option key={`menu-${item.id_menus}`} value={`menu:${item.id_menus}`}>
+                      {item.nombre} (${formatearMoneda(calcularPrecioMenu(item))})
+                    </option>
+                  ))}
+                </optgroup>
               </CFormSelect>
             </CCol>
             <CCol md={5}>
@@ -627,9 +691,9 @@ const ModalFormPedido = ({
               color="info"
               variant="outline"
               onClick={handleAgregarProducto}
-              title="Agregar producto o bebida al pedido"
+              title="Agregar artículo al pedido"
             >
-              <CIcon icon={cilPlus} className="me-1" /> Agregar producto o bebida
+              <CIcon icon={cilPlus} className="me-1" /> Agregar artículo
             </CButton>
           </div>
 
@@ -663,13 +727,16 @@ const ModalFormPedido = ({
               {data.detalles.length === 0 ? (
                 <CTableRow>
                   <CTableDataCell colSpan={5} className="text-center text-body-secondary py-3">
-                    Aún no hay productos agregados al pedido.
+                    Aún no hay artículos agregados al pedido.
                   </CTableDataCell>
                 </CTableRow>
               ) : (
                 data.detalles.map((item) => (
                   <CTableRow key={item.id_temporal}>
-                    <CTableDataCell>{item.producto?.nombre || item.bebida?.nombre}</CTableDataCell>
+                    <CTableDataCell>
+                      {item.menu?.nombre || item.producto?.nombre || item.bebida?.nombre}
+                      {item.menu && <MenuDesglose menu={item.menu} />}
+                    </CTableDataCell>
                     <CTableDataCell className="text-center">
                       <div className="d-inline-flex align-items-center gap-2">
                         <CButton
@@ -700,7 +767,12 @@ const ModalFormPedido = ({
                       </div>
                     </CTableDataCell>
                     <CTableDataCell className="text-end">
-                      ${formatearMoneda(item.producto?.precio_unitario || item.bebida?.precio_unitario)}
+                      $
+                      {formatearMoneda(
+                        item.menu
+                          ? obtenerPrecioMenu(item.menu)
+                          : (item.producto?.precio_unitario ?? item.bebida?.precio_unitario),
+                      )}
                     </CTableDataCell>
                     <CTableDataCell className="text-end fw-bold">
                       ${formatearMoneda(item.subtotal)}
@@ -712,7 +784,7 @@ const ModalFormPedido = ({
                         variant="ghost"
                         size="sm"
                         onClick={() => handleEliminarProducto(item.id_temporal)}
-                        title="Quitar producto"
+                        title="Quitar artículo"
                       >
                         <CIcon icon={cilTrash} />
                       </CButton>

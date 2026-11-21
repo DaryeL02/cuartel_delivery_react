@@ -6,7 +6,6 @@ import {
   CFormCheck,
   CFormInput,
   CFormTextarea,
-  CAlert,
   CRow,
   CCol,
   CModal,
@@ -30,13 +29,13 @@ export default function CerrarCaja({ visible, onClose, caja, onSuccess }) {
     efectivo_real: '',
     digital_real: '',
     observaciones_cierre: '',
+    password: '',
   });
 
   const [loading, setLoading] = useState(false);
   const [cargandoEsperados, setCargandoEsperados] = useState(false);
   const [esperados, setEsperados] = useState({ efectivo: 0, digital: 0 });
   const [esperadosCargados, setEsperadosCargados] = useState(false);
-  const [pedidosEnProceso, setPedidosEnProceso] = useState(0);
 
   const notificar = (tipo, mensaje) => {
     switch (tipo) {
@@ -63,27 +62,17 @@ export default function CerrarCaja({ visible, onClose, caja, onSuccess }) {
       efectivo_real: '',
       digital_real: '',
       observaciones_cierre: '',
+      password: '',
     });
     setEsperadosCargados(false);
-    setPedidosEnProceso(0);
     setCargandoEsperados(true);
 
-    const config = {
+    api.get(`/api/cajas/${caja.id_cajas}/`, {
       headers: { Authorization: `Token ${localStorage.getItem('token')}` },
-    };
-    Promise.all([
-      api.get(`/api/cajas/${caja.id_cajas}/`, config),
-      api.get('/api/pedidos/', {
-        ...config,
-        params: { estado: 'En proceso' },
-      }),
-    ]).then(([{ data: cajaActual }, { data: pedidos }]) => {
+    }).then(({ data: cajaActual }) => {
       if (!activo) return;
       const efectivo = Number(cajaActual.efectivo_esperado || 0);
       const digital = Number(cajaActual.digital_esperado || 0);
-      setPedidosEnProceso(
-        Array.isArray(pedidos) ? pedidos.length : pedidos?.count ?? pedidos?.results?.length ?? 0,
-      );
       setEsperados({ efectivo, digital });
       setData((actual) => ({ ...actual, digital_real: digital.toFixed(2) }));
       setEsperadosCargados(true);
@@ -117,8 +106,8 @@ export default function CerrarCaja({ visible, onClose, caja, onSuccess }) {
     data.digital_real !== '' &&
     montosRealesValidos &&
     data.confirmar_cierre &&
+    Boolean(data.password) &&
     observacionesValidas &&
-    pedidosEnProceso === 0 &&
     !loading;
   const moneda = (valor) => Number(valor || 0).toFixed(2);
   const textoDiferencia =
@@ -135,6 +124,10 @@ export default function CerrarCaja({ visible, onClose, caja, onSuccess }) {
 
     if (!data.confirmar_cierre) {
       notificar('advertencia', 'Confirma explícitamente el cierre de caja.')
+      return;
+    }
+    if (!data.password) {
+      notificar('advertencia', 'Ingresa tu contraseña para confirmar el cierre.');
       return;
     }
 
@@ -158,6 +151,7 @@ export default function CerrarCaja({ visible, onClose, caja, onSuccess }) {
           errores?.efectivo_real?.[0] ||
           errores?.digital_real?.[0] ||
           errores?.observaciones_cierre?.[0] ||
+          errores?.password ||
           'No se pudo cerrar la caja. Verifica los datos e intenta nuevamente.',
       );
     } finally {
@@ -176,12 +170,6 @@ export default function CerrarCaja({ visible, onClose, caja, onSuccess }) {
             <p className="text-center text-body-secondary">Calculando arqueo...</p>
           ) : (
           <>
-          {pedidosEnProceso > 0 && (
-            <CAlert color="warning">
-              Hay {pedidosEnProceso} pedido{pedidosEnProceso === 1 ? '' : 's'} en proceso.
-              Finaliza o cancela los pedidos pendientes antes de cerrar la caja.
-            </CAlert>
-          )}
           <CRow className="g-3">
             <CCol md={12}>
               <CTable responsive bordered>
@@ -272,6 +260,19 @@ export default function CerrarCaja({ visible, onClose, caja, onSuccess }) {
                   ...actual,
                   confirmar_cierre: e.target.checked,
                 }))}
+              />
+            </CCol>
+            <CCol md={12}>
+              <CFormInput
+                label="Contraseña para confirmar el cierre"
+                type="password"
+                autoComplete="current-password"
+                value={data.password}
+                onChange={(e) => setData((actual) => ({
+                  ...actual,
+                  password: e.target.value,
+                }))}
+                required
               />
             </CCol>
           </CRow>

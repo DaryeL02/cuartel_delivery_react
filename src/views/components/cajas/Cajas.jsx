@@ -46,6 +46,7 @@ export default function Cajas() {
   const [cargandoMovimientos, setCargandoMovimientos] = useState(false);
   const [movimientoVisible, setMovimientoVisible] = useState(false);
   const [cajaMovimiento, setCajaMovimiento] = useState(null);
+  const [movimientoEnEdicion, setMovimientoEnEdicion] = useState(null);
   const [movimiento, setMovimiento] = useState({
     tipo_movimiento: 'Ingreso',
     metodo: '',
@@ -57,6 +58,12 @@ export default function Cajas() {
   const rolesActuales = usuarioActual.roles_nombres || [usuarioActual.rol_nombre];
   const puedeAbrirCaja = rolesActuales.some((rol) =>
     ['dueño', 'dueno', 'administrador'].includes((rol || '').toLocaleLowerCase())
+  );
+  const hayCajaAbierta = listaCajas.some((caja) => caja.estado === true);
+  const puedeEditarMovimientos = Boolean(
+    cajaHistorial?.estado &&
+    !cajaHistorial?.fecha_hora_cierre &&
+    cajaHistorial?.es_mia,
   );
 
   const notificar = (tipo, mensaje) => {
@@ -185,7 +192,20 @@ export default function Cajas() {
 
   const abrirMovimiento = (caja) => {
     setCajaMovimiento(caja);
+    setMovimientoEnEdicion(null);
     setMovimiento({ tipo_movimiento: 'Ingreso', metodo: '', concepto: '', monto: '' });
+    setMovimientoVisible(true);
+  };
+
+  const editarMovimiento = (item) => {
+    setCajaMovimiento(cajaHistorial);
+    setMovimientoEnEdicion(item);
+    setMovimiento({
+      tipo_movimiento: item.tipo_movimiento,
+      metodo: '',
+      concepto: item.concepto,
+      monto: item.monto,
+    });
     setMovimientoVisible(true);
   };
 
@@ -195,13 +215,30 @@ export default function Cajas() {
 
     setGuardandoMovimiento(true);
     try {
-      await api.post('/api/movimientos-caja/', {
-        caja: cajaMovimiento.id_cajas,
-        ...movimiento,
-      });
-      notificar('exito', 'Movimiento registrado correctamente.');
+      if (movimientoEnEdicion) {
+        await api.patch(
+          `/api/movimientos-caja/${movimientoEnEdicion.id_movimientos}/`,
+          {
+            tipo_movimiento: movimiento.tipo_movimiento,
+            concepto: movimiento.concepto,
+            monto: movimiento.monto,
+          },
+        );
+        notificar('exito', 'Movimiento actualizado correctamente.');
+      } else {
+        await api.post('/api/movimientos-caja/', {
+          caja: cajaMovimiento.id_cajas,
+          ...movimiento,
+        });
+        notificar('exito', 'Movimiento registrado correctamente.');
+      }
+      const actualizarDetalles = Boolean(movimientoEnEdicion);
       setMovimientoVisible(false);
       setCajaMovimiento(null);
+      setMovimientoEnEdicion(null);
+      if (actualizarDetalles) {
+        await verMovimientos(cajaHistorial, volverAlHistorial);
+      }
       await cargarCajas();
     } catch (error) {
       console.error('Error al registrar un movimiento de caja:', error);
@@ -233,32 +270,34 @@ export default function Cajas() {
 
   return (
     <div className="p-3">
-      {/* SECCIÓN SUPERIOR: BOTÓN SIEMPRE DISPONIBLE PARA ABRIR OTRA CAJA */}
+      {/* SECCIÓN SUPERIOR */}
       <div className="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
         <h4 className="m-0 fw-bold text-body-secondary">Cajas</h4>
         <div className="d-flex gap-2">
           <CButton color="info" variant="outline" onClick={abrirHistorial}>
             Historial
           </CButton>
-          <CTooltip
-            content={
-              !puedeAbrirCaja
-                ? 'Requiere permisos de Administrador o Dueño para abrir una caja'
-                : 'Abrir una nueva caja'
-            }
-            placement="left"
-          >
-            <span className="d-inline-block" tabIndex={0}>
-              <CButton
-                color="success"
-                onClick={() => setModalNuevaCajaOpen(true)}
-                disabled={!puedeAbrirCaja}
-                style={!puedeAbrirCaja ? { pointerEvents: 'none' } : undefined}
-              >
-                + Abrir Nueva Caja
-              </CButton>
-            </span>
-          </CTooltip>
+          {!hayCajaAbierta && (
+            <CTooltip
+              content={
+                !puedeAbrirCaja
+                  ? 'Requiere permisos de Administrador o Dueño para abrir una caja'
+                  : 'Abrir una nueva caja'
+              }
+              placement="left"
+            >
+              <span className="d-inline-block" tabIndex={0}>
+                <CButton
+                  color="success"
+                  onClick={() => setModalNuevaCajaOpen(true)}
+                  disabled={!puedeAbrirCaja}
+                  style={!puedeAbrirCaja ? { pointerEvents: 'none' } : undefined}
+                >
+                  + Abrir Nueva Caja
+                </CButton>
+              </span>
+            </CTooltip>
+          )}
         </div>
       </div>
 
@@ -267,36 +306,33 @@ export default function Cajas() {
         <CCard className="text-center p-5 shadow-sm border-dashed">
           <CCardBody>
             <p className="text-body-secondary fs-5">No hay cajas creadas en este turno.</p>
-            <CTooltip
-              content={
-                !puedeAbrirCaja
-                  ? 'Requiere permisos de Administrador o Dueño para abrir una caja'
-                  : 'Iniciar la primera apertura del turno'
-              }
-              placement="top"
-            >
-              <span className="d-inline-block" tabIndex={0}>
-                <CButton
-                  color="success"
-                  size="lg"
-                  onClick={() => setModalNuevaCajaOpen(true)}
-                  disabled={!puedeAbrirCaja}
-                  style={!puedeAbrirCaja ? { pointerEvents: 'none' } : undefined}
-                >
-                  Iniciar Primera Apertura
-                </CButton>
-              </span>
-            </CTooltip>
+            {!hayCajaAbierta && (
+              <CTooltip
+                content={
+                  !puedeAbrirCaja
+                    ? 'Requiere permisos de Administrador o Dueño para abrir una caja'
+                    : 'Iniciar la primera apertura del turno'
+                }
+                placement="top"
+              >
+                <span className="d-inline-block" tabIndex={0}>
+                  <CButton
+                    color="success"
+                    size="lg"
+                    onClick={() => setModalNuevaCajaOpen(true)}
+                    disabled={!puedeAbrirCaja}
+                    style={!puedeAbrirCaja ? { pointerEvents: 'none' } : undefined}
+                  >
+                    Iniciar Primera Apertura
+                  </CButton>
+                </span>
+              </CTooltip>
+            )}
           </CCardBody>
         </CCard>
       ) : (
         listaCajas.map((itemCaja) => {
           const cajaAbierta = itemCaja.estado && !itemCaja.fecha_hora_cierre;
-          const cierreAnterior = itemCaja.efectivo_cierre_anterior;
-          const diferenciaApertura =
-            cierreAnterior == null
-              ? null
-              : Number(itemCaja.monto_apertura || 0) - Number(cierreAnterior);
           return (
             <CCard
               key={itemCaja.id_cajas}
@@ -319,22 +355,19 @@ export default function Cajas() {
               <CCardBody>
                 <CRow className="row-cols-2 row-cols-lg-5 mb-3 text-center align-items-center">
                   <CCol className="border-end">
-                    <div className="text-body-secondary small uppercase fw-bold">Monto Apertura</div>
+                    <div className="text-body-secondary small uppercase fw-bold">Saldo Base de Apertura</div>
                     <div className="fs-5 fw-semibold text-body-secondary">
                       ${itemCaja.monto_apertura ? Number(itemCaja.monto_apertura).toFixed(2) : '0.00'}
                     </div>
-                    {diferenciaApertura !== null && Number.isFinite(diferenciaApertura) && (
-                      <div
-                        className={`small fw-semibold ${
-                          diferenciaApertura < 0 ? 'text-danger' : 'text-success'
-                        }`}
+                    {Number(itemCaja.ajuste_apertura || 0) !== 0 && (
+                      <CBadge
+                        color={Number(itemCaja.ajuste_apertura) > 0 ? 'success' : 'danger'}
+                        className="mt-1"
                       >
-                        {diferenciaApertura > 0
-                          ? `Agregado: +${diferenciaApertura.toFixed(2)}`
-                          : diferenciaApertura < 0
-                            ? `Restado: -${Math.abs(diferenciaApertura).toFixed(2)}`
-                            : 'Sin variación: $0.00'}
-                      </div>
+                        Ajuste de apertura:{' '}
+                        {Number(itemCaja.ajuste_apertura) > 0 ? '+' : '-'}$
+                        {Math.abs(Number(itemCaja.ajuste_apertura)).toFixed(2)}
+                      </CBadge>
                     )}
                   </CCol>
                   <CCol className="border-end">
@@ -447,32 +480,36 @@ export default function Cajas() {
         }}
       >
         <CModalHeader>
-          <CModalTitle>Registrar movimiento de caja</CModalTitle>
+          <CModalTitle>
+            {movimientoEnEdicion ? 'Editar movimiento de caja' : 'Registrar movimiento de caja'}
+          </CModalTitle>
         </CModalHeader>
         <form id="form-movimiento-caja" onSubmit={registrarMovimiento}>
           <CModalBody>
             <p className="text-body-secondary">
               Caja #{cajaMovimiento?.id_cajas}
             </p>
-            <CFormSelect
-              className="mb-3"
-              label="Medio de pago"
-              value={movimiento.metodo}
-              onChange={(event) =>
-                setMovimiento((actual) => ({
-                  ...actual,
-                  metodo: event.target.value,
-                }))
-              }
-              required
-            >
-              <option value="">Selecciona un medio...</option>
-              {metodosPago.map((metodo) => (
-                <option key={metodo.id_metodos} value={metodo.id_metodos}>
-                  {metodo.nombre}
-                </option>
-              ))}
-            </CFormSelect>
+            {!movimientoEnEdicion && (
+              <CFormSelect
+                className="mb-3"
+                label="Medio de pago"
+                value={movimiento.metodo}
+                onChange={(event) =>
+                  setMovimiento((actual) => ({
+                    ...actual,
+                    metodo: event.target.value,
+                  }))
+                }
+                required
+              >
+                <option value="">Selecciona un medio...</option>
+                {metodosPago.map((metodo) => (
+                  <option key={metodo.id_metodos} value={metodo.id_metodos}>
+                    {metodo.nombre}
+                  </option>
+                ))}
+              </CFormSelect>
+            )}
             <CFormSelect
               className="mb-3"
               label="Tipo de movimiento"
@@ -526,7 +563,11 @@ export default function Cajas() {
               form="form-movimiento-caja"
               disabled={guardandoMovimiento}
             >
-              {guardandoMovimiento ? 'Guardando...' : 'Registrar movimiento'}
+              {guardandoMovimiento
+                ? 'Guardando...'
+                : movimientoEnEdicion
+                  ? 'Guardar cambios'
+                  : 'Registrar movimiento'}
             </CButton>
           </CModalFooter>
         </form>
@@ -759,6 +800,7 @@ export default function Cajas() {
                       <CTableHeaderCell>Referencia</CTableHeaderCell>
                       <CTableHeaderCell>Responsable</CTableHeaderCell>
                       <CTableHeaderCell className="text-end">Monto</CTableHeaderCell>
+                      {puedeEditarMovimientos && <CTableHeaderCell>Acciones</CTableHeaderCell>}
                     </CTableRow>
                   </CTableHead>
                   <CTableBody>
@@ -781,6 +823,20 @@ export default function Cajas() {
                         <CTableDataCell className="text-end">
                           ${Number(movimiento.monto || 0).toFixed(2)}
                         </CTableDataCell>
+                        {puedeEditarMovimientos && (
+                          <CTableDataCell>
+                            {!movimiento.venta_id && !movimiento.compra_id && (
+                              <CButton
+                                color="primary"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => editarMovimiento(movimiento)}
+                              >
+                                Editar
+                              </CButton>
+                            )}
+                          </CTableDataCell>
+                        )}
                       </CTableRow>
                     ))}
                   </CTableBody>
