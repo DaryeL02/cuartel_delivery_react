@@ -15,6 +15,10 @@ const ProtectedRoute = () => {
     return <Outlet />
   }
 
+  if (location.pathname === '/perfil') {
+    return <Outlet />
+  }
+
   if (isOperationalUser(usuarioActual)) {
     const rutaPedidosPermitida =
       location.pathname === '/pedidos' ||

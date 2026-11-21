@@ -38,11 +38,16 @@ import api from '../api/api'
 import { cargarResultadosPaginados } from '../api/paginacion'
 import ModalFormPedido from './ModalFormPedido'
 import { toast } from 'react-toastify'
-import { isOperationalUser, readCurrentUser } from '../../../utils/roles'
+import {
+  isOperationalUser,
+  isPedidoCreationRestricted,
+  readCurrentUser,
+} from '../../../utils/roles'
 
 const Pedidos = () => {
   const usuarioActual = readCurrentUser()
   const esOperativo = isOperationalUser(usuarioActual)
+  const puedeCrearPedido = !isPedidoCreationRestricted(usuarioActual)
   // Estados de datos desde API
   const [pedidos, setPedidos] = useState([])
   const [productos, setProductos] = useState([])
@@ -315,10 +320,15 @@ const Pedidos = () => {
                   setPedidoAEditar(null)
                   setModalOpen(true)
                 }}
-                disabled={esOperativo && !empleadoActualCargado}
+                disabled={!puedeCrearPedido || (esOperativo && !empleadoActualCargado)}
+                title={!puedeCrearPedido ? 'Tu rol no puede crear pedidos.' : undefined}
               >
                 <CIcon icon={cilPlus} className="me-1" />
-                {esOperativo && !empleadoActualCargado ? 'Cargando...' : 'Nuevo Pedido'}
+                {!puedeCrearPedido
+                  ? 'Creación no permitida'
+                  : esOperativo && !empleadoActualCargado
+                    ? 'Cargando...'
+                    : 'Nuevo Pedido'}
               </CButton>
             </div>
           </div>

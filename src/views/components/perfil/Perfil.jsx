@@ -1,227 +1,183 @@
 import React, { useEffect, useState } from 'react'
 import {
+  CAlert,
+  CAvatar,
+  CButton,
   CCard,
   CCardBody,
   CCardHeader,
   CCol,
-  CRow,
+  CForm,
   CFormInput,
-  CButton,
-  CAvatar,
-  CBadge
+  CRow,
 } from '@coreui/react'
 import api from '../api/api'
 
-export default function Perfil() {
+const Perfil = () => {
+  const [perfil, setPerfil] = useState(null)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmacionPassword, setConfirmacionPassword] = useState('')
+  const [error, setError] = useState('')
+  const [guardando, setGuardando] = useState(false)
 
-  const [empleado, setEmpleado] = useState(null)
-  // const [isEditing, setIsEditing] = useState(false)
-  const [sinDatos, setSinDatos] = useState(null)
+  useEffect(() => {
+    let activo = true
+    api
+      .get('/api/empleados/me/')
+      .then(({ data }) => {
+        if (!activo) return
+        setPerfil(data)
+        setEmail(data.email || '')
+      })
+      .catch((requestError) => {
+        if (!activo) return
+        console.error('Error al cargar el perfil:', requestError)
+        setError(
+          requestError.response?.data?.detail ||
+            requestError.response?.data?.error ||
+            'No se pudo cargar el perfil.',
+        )
+      })
+    return () => {
+      activo = false
+    }
+  }, [])
 
+  const guardarPerfil = async (event) => {
+    event.preventDefault()
+    setError('')
+    if (password && password !== confirmacionPassword) {
+      setError('Las contraseñas no coinciden.')
+      return
+    }
 
-  const cargarEmpleado = async () => {
+    setGuardando(true)
     try {
-      const token = localStorage.getItem('token')
-      const respuesta = await api.get('/api/empleados/me/', {
-        headers: {
-          'Authorization': `Token ${token}`
-        }
-    })  
-      setEmpleado(respuesta.data)
-    } catch (error) {
-      console.error('Error al cargar empleado:', error)
-      setSinDatos(true)
+      const payload = { email }
+      if (password) payload.password = password
+      const { data } = await api.patch('/api/empleados/me/', payload)
+      setPerfil(data)
+      setEmail(data.email || '')
+      setPassword('')
+      setConfirmacionPassword('')
+    } catch (requestError) {
+      console.error('Error al actualizar el perfil:', requestError)
+      const responseData = requestError.response?.data
+      setError(
+        responseData?.email?.[0] ||
+          responseData?.password?.[0] ||
+          responseData?.detail ||
+          'No se pudo actualizar el perfil.',
+      )
+    } finally {
+      setGuardando(false)
     }
   }
 
-  // const handleInputChange = (e) => {
-  // const { name, value } = e.target
-  // setEmpleado({ ...empleado, [name]: value })
-  // }
-
-  // const handleSave = () => {
-  //   setIsEditing(false)
-  //   alert('Datos del empleado y credenciales actualizados en el sistema.')
-  // }
-
-  useEffect(() => {
-    cargarEmpleado()
-  }, [])
-
+  const empleado = perfil?.empleado
+  const iniciales = `${empleado?.nombre?.[0] || ''}${empleado?.apellido?.[0] || ''}` || 'U'
 
   return (
     <div className="p-4 bg-body-tertiary" style={{ minHeight: '100vh' }}>
-      {empleado 
-      ?
       <CRow className="justify-content-center">
-        <CCol xs={12} lg={10}>
+        <CCol xs={12} lg={9}>
           <CCard className="shadow-sm border-0">
-            <CCardHeader className="bg-dark text-white py-3 fw-semibold d-flex justify-content-between align-items-center">
-              <span>Ficha Técnica y Credenciales del Empleado</span>
-              <CBadge color={empleado.estado ? 'success' : 'danger'} shape="rounded-pill">
-                {empleado.estado ? 'EMPLEADO ACTIVO' : 'INACTIVO'}
-              </CBadge>
+            <CCardHeader className="bg-dark text-white py-3 fw-semibold">
+              Perfil de usuario
             </CCardHeader>
             <CCardBody className="p-4">
-              
-              <div className="d-flex align-items-center gap-4 mb-4 pb-4 border-bottom">
-                <CAvatar color="primary" text="white" size="xl" className="fw-bold">
-                  {empleado.nombre.charAt(0)}{empleado.apellido.charAt(0)}
-                </CAvatar>
-                <div>
-                  <h3 className="mb-1 fw-bold text-body">{empleado.nombre} {empleado.apellido}</h3>
-                  <p className="text-primary mb-1 fw-semibold">
-                    🏪 {empleado.local_detalle.nombre}
-                  </p>
-                  <small className="text-body-secondary d-block">
-                    ID Empleado: {empleado.id_empleados} | DNI: {empleado.dni}
-                  </small>
-                </div>
-              </div>
-
-              <CRow>
-                <CCol md={6} className="border-end-md-custom mb-4 mb-md-0">
-                  <h5 className="text-primary fw-bold mb-3">Datos del Personal</h5>
-                  
-                  <div className="mb-3">
-                    <label className="form-label text-body-secondary small fw-bold">Nombre (VARCHAR)</label>
-                    <CFormInput
-                      type="text"
-                      name="nombre"
-                      value={empleado.nombre}
-                      // disabled={!isEditing}
-                      // onChange={handleInputChange}
-                      disabled
-                    />
-                  </div>
-
-                  <div className="mb-3">
-                    <label className="form-label text-body-secondary small fw-bold">Apellido (VARCHAR)</label>
-                    <CFormInput
-                      type="text"
-                      name="apellido"
-                      value={empleado.apellido}
-                      // disabled={!isEditing}
-                      // onChange={handleInputChange}
-                      disabled
-                    />
-                  </div>
-
-                  <div className="mb-3">
-                    <label className="form-label text-body-secondary small fw-bold">DNI (INT - No Editable)</label>
-                    <CFormInput
-                      type="number"
-                      value={empleado.dni}
-                      disabled
-                    />
-                  </div>
-
-                  <div className="mb-3">
-                    <label className="form-label text-body-secondary small fw-bold">Teléfono (VARCHAR)</label>
-                    <CFormInput
-                      type="text"
-                      name="telefono"
-                      value={empleado.telefono}
-                      // disabled={!isEditing}
-                      // onChange={handleInputChange}
-                      disabled
-                    />
-                  </div>
-
-                  <div className="mb-3">
-                    <label className="form-label text-body-secondary small fw-bold">Domicilio (VARCHAR)</label>
-                    <CFormInput
-                      type="text"
-                      name="domicilio"
-                      value={empleado.domicilio}
-                      // disabled={!isEditing}
-                      // onChange={handleInputChange}
-                      disabled
-                    />
-                  </div>
-                </CCol>
-
-                <CCol md={6}>
-                  <h5 className="text-danger fw-bold mb-3">Seguridad y Cuenta de Usuario</h5>
-
-                  <div className="mb-3">
-                    <label className="form-label text-body-secondary small fw-bold">ID Usuario (PK INT)</label>
-                    <CFormInput
-                      type="text"
-                      value={empleado.usuario_detalle.id_usuarios}
-                      disabled
-                    />
-                  </div>
-
-                  <div className="mb-3">
-                    <label className="form-label text-body-secondary small fw-bold">Nombre de Usuario (VARCHAR)</label>
-                    <CFormInput
-                      type="text"
-                      name="usuario"
-                      value={empleado.usuario_detalle.usuario}
-                      // disabled={!isEditing}
-                      disabled
-                      // onChange={handleInputChange}
-                    />
-                  </div>
-
-                  <div className="mb-3">
-                    <label className="form-label text-body-secondary small fw-bold">Contraseña (VARCHAR)</label>
-                    <CFormInput
-                      type="password"
-                      name="password"
-                      value={empleado.password}
-                      // disabled={!isEditing}
-                      // onChange={handleInputChange}
-                      disabled
-                      placeholder="Nueva contraseña"
-                    />
-                  </div>
-
-                  {/* <div className="p-3 bg-light rounded border mt-4">
-                    <div className="d-flex justify-content-between mb-2">
-                      <span className="text-body-secondary small">Creación de Cuenta:</span>
-                      <span className="small fw-medium text-body">{empleado.fecha_hora_creacion_usr}</span>
+              {error && <CAlert color="danger">{error}</CAlert>}
+              {!perfil ? (
+                <p className="text-center text-body-secondary mb-0">Cargando perfil...</p>
+              ) : (
+                <>
+                  {empleado && (
+                    <div className="d-flex align-items-center gap-3 mb-4 pb-4 border-bottom">
+                      <CAvatar color="primary" textColor="white" size="xl" className="fw-bold">
+                        {iniciales}
+                      </CAvatar>
+                      <div>
+                        <h3 className="mb-1 fw-bold">
+                          {empleado.nombre} {empleado.apellido}
+                        </h3>
+                        <div className="text-body-secondary">
+                          {empleado.local_detalle?.nombre || 'Sin local asignado'}
+                        </div>
+                      </div>
                     </div>
-                    <div className="d-flex justify-content-between">
-                      <span className="text-body-secondary small">Última Modificación:</span>
-                      <span className="small fw-medium text-body">{empleado.fecha_hora_modificacion_usr}</span>
+                  )}
+                  <CForm onSubmit={guardarPerfil}>
+                    <CRow className="g-3">
+                      {empleado && (
+                        <>
+                          <CCol md={6}>
+                            <CFormInput label="Nombre" value={empleado.nombre || ''} disabled />
+                          </CCol>
+                          <CCol md={6}>
+                            <CFormInput label="Apellido" value={empleado.apellido || ''} disabled />
+                          </CCol>
+                          <CCol md={6}>
+                            <CFormInput label="DNI" value={empleado.dni || ''} disabled />
+                          </CCol>
+                          <CCol md={6}>
+                            <CFormInput label="Teléfono" value={empleado.telefono || ''} disabled />
+                          </CCol>
+                          <CCol xs={12}>
+                            <CFormInput
+                              label="Domicilio"
+                              value={empleado.domicilio || ''}
+                              disabled
+                            />
+                          </CCol>
+                        </>
+                      )}
+                      <CCol xs={12}>
+                        <CFormInput
+                          label="Correo electrónico"
+                          type="email"
+                          autoComplete="email"
+                          maxLength={50}
+                          value={email}
+                          onChange={(event) => setEmail(event.target.value)}
+                          required
+                        />
+                      </CCol>
+                      <CCol md={6}>
+                        <CFormInput
+                          label="Nueva contraseña (opcional)"
+                          type="password"
+                          autoComplete="new-password"
+                          value={password}
+                          onChange={(event) => setPassword(event.target.value)}
+                          placeholder="Dejar en blanco para mantener la actual"
+                        />
+                      </CCol>
+                      <CCol md={6}>
+                        <CFormInput
+                          label="Confirmar nueva contraseña"
+                          type="password"
+                          autoComplete="new-password"
+                          value={confirmacionPassword}
+                          onChange={(event) => setConfirmacionPassword(event.target.value)}
+                          disabled={!password}
+                        />
+                      </CCol>
+                    </CRow>
+                    <div className="d-flex justify-content-end mt-4">
+                      <CButton type="submit" color="primary" disabled={guardando}>
+                        {guardando ? 'Guardando...' : 'Guardar cambios'}
+                      </CButton>
                     </div>
-                  </div> */}
-                </CCol>
-              </CRow>
-
-              {/* <div className="d-flex justify-content-end gap-2 pt-3 mt-4 border-top">
-                {isEditing ? (
-                  <>
-                    <CButton color="secondary" onClick={() => setIsEditing(false)}>
-                      Cancelar
-                    </CButton>
-                    <CButton color="success" className="text-white fw-medium" onClick={handleSave}>
-                      Guardar Cambios (Update)
-                    </CButton>
-                  </>
-                ) : (
-                  <CButton color="primary" className="px-4" onClick={() => setIsEditing(true)}>
-                    Editar Perfil
-                  </CButton>
-                )}
-              </div> */}
-
+                  </CForm>
+                </>
+              )}
             </CCardBody>
           </CCard>
         </CCol>
       </CRow>
-      : sinDatos
-      ?
-      <div className="p-4 text-center bg-body-tertiary" style={{ minHeight: '100vh' }}>
-        <p className="text-body-secondary fw-bold">No hay empleado asignado a esta cuenta</p>
-      </div>
-      :
-      <div className="p-4 text-center bg-body-tertiary" style={{ minHeight: '100vh' }}>
-        <p className="text-body-secondary fw-bold">Cargando datos del empleado...</p>
-      </div>
-    }
     </div>
   )
 }
+
+export default Perfil

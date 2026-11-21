@@ -7,6 +7,7 @@ import {
   CCardHeader,
   CFormInput,
   CFormSelect,
+  CFormTextarea,
   CInputGroup,
   CInputGroupText,
   CModal,
@@ -31,10 +32,21 @@ const nuevaLinea = () => ({
   tipo: 'insumo',
   articulo: '',
   cantidad: 1,
-  precio_unitario: '',
+  precio_unitario: '0.00',
   unidad: '',
 })
 const listaDesde = (data) => (Array.isArray(data) ? data : data?.results || [])
+const aCentavos = (valor) => {
+  if (valor === '') return null
+  const texto = String(valor)
+  const decimales = texto.split('.')[1]
+  const numero = Number(texto)
+  if (!Number.isFinite(numero) || numero < 0 || (decimales !== undefined && decimales.length > 2)) {
+    return null
+  }
+  return Math.round(numero * 100)
+}
+const formatoMoneda = (centavos) => (centavos / 100).toFixed(2)
 const fechaLocalActual = () => {
   const hoy = new Date()
   return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(
@@ -49,8 +61,9 @@ const Compras = () => {
   const [insumos, setInsumos] = useState([])
   const [bebidas, setBebidas] = useState([])
   const [proveedor, setProveedor] = useState('')
-  const [metodo, setMetodo] = useState('')
   const [lineas, setLineas] = useState([nuevaLinea()])
+  const [montoEfectivo, setMontoEfectivo] = useState('0.00')
+  const [montoTransferencia, setMontoTransferencia] = useState('0.00')
   const [cajas, setCajas] = useState([])
   const [historialVisible, setHistorialVisible] = useState(false)
   const [historialCompras, setHistorialCompras] = useState([])
@@ -63,6 +76,18 @@ const Compras = () => {
   const [totalPaginasHistorial, setTotalPaginasHistorial] = useState(1)
   const [detalle, setDetalle] = useState(null)
   const [guardando, setGuardando] = useState(false)
+  const [confirmacionVisible, setConfirmacionVisible] = useState(false)
+  const [proveedorVisible, setProveedorVisible] = useState(false)
+  const [guardandoProveedor, setGuardandoProveedor] = useState(false)
+  const [nuevoProveedor, setNuevoProveedor] = useState({
+    nombre: '',
+    direccion: '',
+    telefono: '',
+    email: '',
+    cuit: '',
+    descripcion: '',
+  })
+  const [erroresProveedor, setErroresProveedor] = useState({})
 
   const cargarListas = async () => {
     try {
@@ -136,14 +161,15 @@ const Compras = () => {
     cargarHistorial(1)
   }
 
-  const total = useMemo(
+  const totalCentavos = useMemo(
     () =>
       lineas.reduce(
-        (suma, item) => suma + Number(item.cantidad || 0) * Number(item.precio_unitario || 0),
+        (suma, item) => suma + (aCentavos(item.precio_unitario) ?? 0) * Number(item.cantidad || 0),
         0,
       ),
     [lineas],
   )
+  const total = totalCentavos / 100
   const cajaAbierta = useMemo(
     () =>
       cajas
@@ -151,6 +177,43 @@ const Compras = () => {
         .sort((a, b) => a.id_cajas - b.id_cajas)[0],
     [cajas],
   )
+  const metodoEfectivo = metodos.find((item) =>
+    item.nombre.toLocaleLowerCase().includes('efectivo'),
+  )
+  const metodoTransferencia = metodos.find((item) =>
+    item.nombre.toLocaleLowerCase().includes('transferencia'),
+  )
+  const efectivoDisponible = Number(
+    cajaAbierta?.efectivo_esperado ?? cajaAbierta?.monto_apertura ?? 0,
+  )
+  const efectivoDisponibleCentavos = Math.max(0, Math.round(efectivoDisponible * 100))
+  const montoEfectivoCentavos = aCentavos(montoEfectivo)
+  const montoTransferenciaCentavos = aCentavos(montoTransferencia)
+  const pagoCompleto =
+    montoEfectivoCentavos !== null &&
+    montoTransferenciaCentavos !== null &&
+    montoEfectivoCentavos >= 0 &&
+    montoTransferenciaCentavos >= 0 &&
+    montoEfectivoCentavos + montoTransferenciaCentavos === totalCentavos
+  const efectivoInsuficiente =
+    montoEfectivoCentavos !== null && montoEfectivoCentavos > efectivoDisponibleCentavos
+  const pagoValido = Boolean(
+    pagoCompleto && !efectivoInsuficiente && metodoEfectivo && metodoTransferencia,
+  )
+
+  const cambiarMontoEfectivo = (valor) => {
+    setMontoEfectivo(valor)
+    const centavos = aCentavos(valor)
+    setMontoTransferencia(
+      centavos === null ? '' : formatoMoneda(Math.max(totalCentavos - centavos, 0)),
+    )
+  }
+
+  const cambiarMontoTransferencia = (valor) => {
+    setMontoTransferencia(valor)
+    const centavos = aCentavos(valor)
+    setMontoEfectivo(centavos === null ? '' : formatoMoneda(Math.max(totalCentavos - centavos, 0)))
+  }
 
   const actualizarLinea = (index, cambios) => {
     setLineas((actuales) =>
@@ -160,12 +223,11 @@ const Compras = () => {
 
   const elegirArticulo = (index, seleccion) => {
     if (!seleccion) {
-      actualizarLinea(index, { articulo: '', precio_unitario: '', unidad: '' })
+      actualizarLinea(index, { articulo: '', precio_unitario: '0.00', unidad: '' })
       return
     }
 
     const [tipo, idArticulo] = seleccion.split(':')
-    const linea = lineas[index]
     const item = (tipo === 'insumo' ? insumos : bebidas).find(
       (registro) =>
         String(registro[tipo === 'insumo' ? 'id_insumos' : 'id_bebidas']) === idArticulo,
@@ -174,8 +236,7 @@ const Compras = () => {
       tipo,
       articulo: idArticulo,
       unidad: item?.unidad || '',
-      precio_unitario:
-        tipo === 'bebida' ? String(item?.precio_unitario || '') : linea.precio_unitario,
+      precio_unitario: '0.00',
     })
   }
 
@@ -185,21 +246,45 @@ const Compras = () => {
       toast.warning('Debes tener una caja abierta para registrar una compra.')
       return
     }
-    if (total > Number(cajaAbierta.saldo_actual || 0)) {
-      toast.warning('El total de la compra supera el saldo disponible en caja.')
-      return
-    }
     if (
-      !proveedor ||
-      !metodo ||
       !lineas.length ||
       lineas.some(
-        (item) => !item.articulo || Number(item.cantidad) <= 0 || Number(item.precio_unitario) <= 0,
+        (item) =>
+          !item.articulo ||
+          !Number.isInteger(Number(item.cantidad)) ||
+          Number(item.cantidad) <= 0 ||
+          Number(item.precio_unitario) <= 0,
       )
     ) {
-      toast.warning('Completa proveedor, método de pago y los datos de cada ítem.')
+      toast.warning('Completa los datos de cada ítem.')
       return
     }
+
+    if (!metodoEfectivo || !metodoTransferencia) {
+      toast.error('Configura los métodos de pago Efectivo y Transferencia para registrar compras.')
+      return
+    }
+
+    const efectivoInicial = Math.min(totalCentavos, efectivoDisponibleCentavos)
+    setMontoEfectivo(formatoMoneda(efectivoInicial))
+    setMontoTransferencia(formatoMoneda(totalCentavos - efectivoInicial))
+    setConfirmacionVisible(true)
+  }
+
+  const confirmarCompra = async () => {
+    if (!pagoCompleto) {
+      toast.warning('La suma de los pagos debe coincidir con el total de la compra.')
+      return
+    }
+    if (efectivoInsuficiente) {
+      toast.warning('El monto en efectivo supera el saldo disponible en caja.')
+      return
+    }
+    if (!metodoEfectivo || !metodoTransferencia) {
+      toast.error('No se encontraron los métodos de pago requeridos.')
+      return
+    }
+
     setGuardando(true)
     try {
       const detalles = lineas.map((item) => ({
@@ -208,13 +293,16 @@ const Compras = () => {
         precio_unitario: Number(item.precio_unitario).toFixed(2),
       }))
       await api.post('/api/compras/', {
-        proveedor: Number(proveedor),
-        metodo: Number(metodo),
+        proveedor: proveedor ? Number(proveedor) : null,
+        metodo_efectivo: Number(metodoEfectivo.id_metodos),
+        metodo_transferencia: Number(metodoTransferencia.id_metodos),
+        monto_efectivo: formatoMoneda(montoEfectivoCentavos),
+        monto_transferencia: formatoMoneda(montoTransferenciaCentavos),
         detalles,
       })
       toast.success('Compra registrada y stock actualizado.')
+      setConfirmacionVisible(false)
       setProveedor('')
-      setMetodo('')
       setLineas([nuevaLinea()])
       await cargarListas()
     } catch (error) {
@@ -225,6 +313,50 @@ const Compras = () => {
       toast.error(mensaje)
     } finally {
       setGuardando(false)
+    }
+  }
+
+  const crearProveedor = async (event) => {
+    event.preventDefault()
+    setErroresProveedor({})
+    setGuardandoProveedor(true)
+    try {
+      const { data: proveedorCreado } = await api.post('/api/proveedores/', {
+        ...nuevoProveedor,
+        nombre: nuevoProveedor.nombre.trim(),
+      })
+      setProveedores((actuales) => [...actuales, proveedorCreado])
+      setProveedor(String(proveedorCreado.id_proveedores))
+      setNuevoProveedor({
+        nombre: '',
+        direccion: '',
+        telefono: '',
+        email: '',
+        cuit: '',
+        descripcion: '',
+      })
+      setProveedorVisible(false)
+      toast.success('Proveedor creado y seleccionado.')
+    } catch (error) {
+      const datosError = error.response?.data
+      if (datosError && typeof datosError === 'object') {
+        setErroresProveedor(
+          Object.fromEntries(
+            Object.entries(datosError).map(([campo, valor]) => [
+              campo,
+              Array.isArray(valor) ? valor[0] : String(valor),
+            ]),
+          ),
+        )
+      }
+      toast.error(
+        datosError?.detail ||
+          datosError?.nombre?.[0] ||
+          Object.values(datosError || {}).flat()[0] ||
+          'No se pudo crear el proveedor.',
+      )
+    } finally {
+      setGuardandoProveedor(false)
     }
   }
 
@@ -241,21 +373,15 @@ const Compras = () => {
           <form onSubmit={registrarCompra}>
             {!cajaAbierta ? (
               <CAlert color="warning">Abre una caja antes de registrar una compra.</CAlert>
-            ) : total > Number(cajaAbierta.saldo_actual || 0) ? (
-              <CAlert color="danger">
-                Saldo insuficiente en caja. Disponible: $
-                {Number(cajaAbierta.saldo_actual || 0).toFixed(2)}.
-              </CAlert>
             ) : null}
             <div className="row g-3 mb-3">
-              <div className="col-md-6">
+              <div className="col-md-8">
                 <CFormSelect
-                  label={<span>Proveedor <span className="text-danger">*</span></span>}
+                  label="Proveedor"
                   value={proveedor}
                   onChange={(e) => setProveedor(e.target.value)}
-                  required
                 >
-                  <option value="">Seleccionar proveedor...</option>
+                  <option value="">Sin proveedor</option>
                   {proveedores.map((item) => (
                     <option key={item.id_proveedores} value={item.id_proveedores}>
                       {item.nombre}
@@ -263,20 +389,16 @@ const Compras = () => {
                   ))}
                 </CFormSelect>
               </div>
-              <div className="col-md-6">
-                <CFormSelect
-                  label={<span>Método de pago <span className="text-danger">*</span></span>}
-                  value={metodo}
-                  onChange={(e) => setMetodo(e.target.value)}
-                  required
+              <div className="col-md-4 d-flex align-items-end">
+                <CButton
+                  type="button"
+                  color="info"
+                  variant="outline"
+                  className="w-100"
+                  onClick={() => setProveedorVisible(true)}
                 >
-                  <option value="">Seleccionar método...</option>
-                  {metodos.map((item) => (
-                    <option key={item.id_metodos} value={item.id_metodos}>
-                      {item.nombre}
-                    </option>
-                  ))}
-                </CFormSelect>
+                  Nuevo proveedor
+                </CButton>
               </div>
             </div>
             <div className="mb-3">
@@ -292,9 +414,13 @@ const Compras = () => {
             {lineas.map((item, index) => {
               return (
                 <div className="row g-2 align-items-end mb-3" key={index}>
-                  <div className="col-md-6">
+                  <div className="col-md-5">
                     <CFormSelect
-                      label={<span>Insumo o bebida <span className="text-danger">*</span></span>}
+                      label={
+                        <span>
+                          Insumo o bebida <span className="text-danger">*</span>
+                        </span>
+                      }
                       value={item.articulo ? `${item.tipo}:${item.articulo}` : ''}
                       onChange={(e) => elegirArticulo(index, e.target.value)}
                       required
@@ -316,7 +442,7 @@ const Compras = () => {
                       </optgroup>
                     </CFormSelect>
                   </div>
-                  <div className="col-md-2">
+                  <div className="col-md-3">
                     <label className="form-label">
                       Cantidad <span className="text-danger">*</span>
                     </label>
@@ -332,9 +458,13 @@ const Compras = () => {
                       <CInputGroupText>{item.unidad || '-'}</CInputGroupText>
                     </CInputGroup>
                   </div>
-                  <div className="col-md-2">
+                  <div className="col-md-3">
                     <CFormInput
-                      label={<span>Precio unitario <span className="text-danger">*</span></span>}
+                      label={
+                        <span>
+                          Precio unitario <span className="text-danger">*</span>
+                        </span>
+                      }
                       type="number"
                       min="0.01"
                       step="0.01"
@@ -343,7 +473,7 @@ const Compras = () => {
                       required
                     />
                   </div>
-                  <div className="col-md-2 d-flex gap-2">
+                  <div className="col-md-1 d-flex gap-2">
                     <CButton
                       type="button"
                       color="secondary"
@@ -364,14 +494,8 @@ const Compras = () => {
             </small>
             <div className="d-flex justify-content-between align-items-center border-top pt-3">
               <div className="fs-5 fw-bold">Total: ${total.toFixed(2)}</div>
-              <CButton
-                type="submit"
-                color="primary"
-                disabled={
-                  guardando || !cajaAbierta || total > Number(cajaAbierta.saldo_actual || 0)
-                }
-              >
-                {guardando ? 'Registrando...' : 'Registrar compra'}
+              <CButton type="submit" color="primary" disabled={guardando || !cajaAbierta}>
+                {guardando ? 'Procesando Compra...' : 'Procesar Compra'}
               </CButton>
             </div>
           </form>
@@ -426,18 +550,178 @@ const Compras = () => {
             </CTableBody>
           </CTable>
           {!compras.length && (
-            <p className="text-center text-body-secondary mb-0">
-              No hay compras registradas hoy.
-            </p>
+            <p className="text-center text-body-secondary mb-0">No hay compras registradas hoy.</p>
           )}
         </CCardBody>
       </CCard>
 
       <CModal
-        visible={historialVisible}
-        onClose={() => setHistorialVisible(false)}
-        size="xl"
+        visible={confirmacionVisible}
+        onClose={() => !guardando && setConfirmacionVisible(false)}
+        backdrop="static"
+        alignment="center"
       >
+        <CModalHeader>
+          <CModalTitle>Confirmar compra</CModalTitle>
+        </CModalHeader>
+        <CModalBody>
+          <p>Revisa los datos antes de procesar la compra.</p>
+          <div className="p-3 bg-body-secondary rounded border">
+            <div className="d-flex justify-content-between mb-2">
+              <span>Proveedor:</span>
+              <strong>
+                {proveedores.find((item) => String(item.id_proveedores) === String(proveedor))
+                  ?.nombre || 'Sin proveedor'}
+              </strong>
+            </div>
+            <div className="d-flex justify-content-between align-items-center border-top pt-2">
+              <span className="fw-bold">Precio Total:</span>
+              <span className="fs-4 fw-bold">${total.toFixed(2)}</span>
+            </div>
+            <div className="mt-3">
+              <CFormInput
+                label="Monto en Efectivo"
+                type="number"
+                min="0"
+                step="0.01"
+                value={montoEfectivo}
+                onChange={(event) => cambiarMontoEfectivo(event.target.value)}
+              />
+              <small className="text-body-secondary">
+                Disponible en caja: ${efectivoDisponible.toFixed(2)}
+              </small>
+            </div>
+            <CFormInput
+              className="mt-3"
+              label="Monto en Transferencia"
+              type="number"
+              min="0"
+              step="0.01"
+              value={montoTransferencia}
+              onChange={(event) => cambiarMontoTransferencia(event.target.value)}
+            />
+            {!pagoCompleto && (
+              <CAlert color="warning" className="mt-3 mb-0">
+                Los montos deben sumar exactamente ${total.toFixed(2)}.
+              </CAlert>
+            )}
+            {efectivoInsuficiente && (
+              <CAlert color="danger" className="mt-3 mb-0">
+                El monto en efectivo supera el saldo disponible de ${efectivoDisponible.toFixed(2)}.
+              </CAlert>
+            )}
+          </div>
+        </CModalBody>
+        <CModalFooter>
+          <CButton
+            color="secondary"
+            variant="ghost"
+            onClick={() => setConfirmacionVisible(false)}
+            disabled={guardando}
+          >
+            Volver
+          </CButton>
+          <CButton color="success" onClick={confirmarCompra} disabled={guardando || !pagoValido}>
+            {guardando ? 'Procesando...' : 'Confirmar y procesar compra'}
+          </CButton>
+        </CModalFooter>
+      </CModal>
+
+      <CModal
+        visible={proveedorVisible}
+        onClose={() => !guardandoProveedor && setProveedorVisible(false)}
+        backdrop="static"
+      >
+        <CModalHeader>
+          <CModalTitle>Nuevo proveedor</CModalTitle>
+        </CModalHeader>
+        <form onSubmit={crearProveedor}>
+          <CModalBody className="d-grid gap-3">
+            <CFormInput
+              label={
+                <span>
+                  Nombre <span className="text-danger">*</span>
+                </span>
+              }
+              value={nuevoProveedor.nombre}
+              maxLength={100}
+              invalid={!!erroresProveedor.nombre}
+              feedbackInvalid={erroresProveedor.nombre}
+              onChange={(event) => {
+                setNuevoProveedor((actual) => ({ ...actual, nombre: event.target.value }))
+                setErroresProveedor((actual) => ({ ...actual, nombre: null }))
+              }}
+              required
+            />
+            <CFormInput
+              label="Dirección"
+              value={nuevoProveedor.direccion}
+              maxLength={200}
+              onChange={(event) =>
+                setNuevoProveedor((actual) => ({ ...actual, direccion: event.target.value }))
+              }
+            />
+            <CFormInput
+              label="Teléfono"
+              inputMode="numeric"
+              value={nuevoProveedor.telefono}
+              maxLength={20}
+              onChange={(event) =>
+                setNuevoProveedor((actual) => ({
+                  ...actual,
+                  telefono: event.target.value.replace(/\D/g, ''),
+                }))
+              }
+            />
+            <CFormInput
+              label="Correo"
+              type="email"
+              value={nuevoProveedor.email}
+              maxLength={30}
+              invalid={!!erroresProveedor.email}
+              feedbackInvalid={erroresProveedor.email}
+              onChange={(event) =>
+                setNuevoProveedor((actual) => ({ ...actual, email: event.target.value }))
+              }
+            />
+            <CFormInput
+              label="CUIT"
+              inputMode="numeric"
+              value={nuevoProveedor.cuit}
+              maxLength={30}
+              onChange={(event) =>
+                setNuevoProveedor((actual) => ({
+                  ...actual,
+                  cuit: event.target.value.replace(/\D/g, ''),
+                }))
+              }
+            />
+            <CFormTextarea
+              label="Descripción"
+              value={nuevoProveedor.descripcion}
+              maxLength={200}
+              onChange={(event) =>
+                setNuevoProveedor((actual) => ({ ...actual, descripcion: event.target.value }))
+              }
+            />
+          </CModalBody>
+          <CModalFooter>
+            <CButton
+              color="secondary"
+              type="button"
+              onClick={() => setProveedorVisible(false)}
+              disabled={guardandoProveedor}
+            >
+              Cancelar
+            </CButton>
+            <CButton color="primary" type="submit" disabled={guardandoProveedor}>
+              {guardandoProveedor ? 'Guardando...' : 'Crear y seleccionar'}
+            </CButton>
+          </CModalFooter>
+        </form>
+      </CModal>
+
+      <CModal visible={historialVisible} onClose={() => setHistorialVisible(false)} size="xl">
         <CModalHeader>
           <CModalTitle>Historial Completo de Compras</CModalTitle>
         </CModalHeader>
@@ -540,9 +824,7 @@ const Compras = () => {
                 </CTableBody>
               </CTable>
               {!historialCompras.length && (
-                <p className="text-center text-body-secondary mb-0">
-                  No hay compras para mostrar.
-                </p>
+                <p className="text-center text-body-secondary mb-0">No hay compras para mostrar.</p>
               )}
               {totalPaginasHistorial > 1 && (
                 <CPagination aria-label="Paginación del historial de compras">

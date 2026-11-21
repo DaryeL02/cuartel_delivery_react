@@ -6,6 +6,7 @@ import {
   CFormCheck,
   CFormInput,
   CFormTextarea,
+  CAlert,
   CRow,
   CCol,
   CModal,
@@ -35,6 +36,7 @@ export default function CerrarCaja({ visible, onClose, caja, onSuccess }) {
   const [cargandoEsperados, setCargandoEsperados] = useState(false);
   const [esperados, setEsperados] = useState({ efectivo: 0, digital: 0 });
   const [esperadosCargados, setEsperadosCargados] = useState(false);
+  const [pedidosEnProceso, setPedidosEnProceso] = useState(0);
 
   const notificar = (tipo, mensaje) => {
     switch (tipo) {
@@ -63,14 +65,25 @@ export default function CerrarCaja({ visible, onClose, caja, onSuccess }) {
       observaciones_cierre: '',
     });
     setEsperadosCargados(false);
+    setPedidosEnProceso(0);
     setCargandoEsperados(true);
 
-    api.get(`/api/cajas/${caja.id_cajas}/`, {
+    const config = {
       headers: { Authorization: `Token ${localStorage.getItem('token')}` },
-    }).then(({ data: cajaActual }) => {
+    };
+    Promise.all([
+      api.get(`/api/cajas/${caja.id_cajas}/`, config),
+      api.get('/api/pedidos/', {
+        ...config,
+        params: { estado: 'En proceso' },
+      }),
+    ]).then(([{ data: cajaActual }, { data: pedidos }]) => {
       if (!activo) return;
       const efectivo = Number(cajaActual.efectivo_esperado || 0);
       const digital = Number(cajaActual.digital_esperado || 0);
+      setPedidosEnProceso(
+        Array.isArray(pedidos) ? pedidos.length : pedidos?.count ?? pedidos?.results?.length ?? 0,
+      );
       setEsperados({ efectivo, digital });
       setData((actual) => ({ ...actual, digital_real: digital.toFixed(2) }));
       setEsperadosCargados(true);
@@ -105,6 +118,7 @@ export default function CerrarCaja({ visible, onClose, caja, onSuccess }) {
     montosRealesValidos &&
     data.confirmar_cierre &&
     observacionesValidas &&
+    pedidosEnProceso === 0 &&
     !loading;
   const moneda = (valor) => Number(valor || 0).toFixed(2);
   const textoDiferencia =
@@ -152,7 +166,7 @@ export default function CerrarCaja({ visible, onClose, caja, onSuccess }) {
   };
 
   return (
-    <CModal visible={visible} onClose={onClose} backdrop="static">
+    <CModal visible={visible} onClose={onClose} backdrop="static" size="xl">
       <CModalHeader>
         <CModalTitle>Cerrar Caja #{caja?.id_cajas}</CModalTitle>
       </CModalHeader>
@@ -161,6 +175,13 @@ export default function CerrarCaja({ visible, onClose, caja, onSuccess }) {
           {cargandoEsperados ? (
             <p className="text-center text-body-secondary">Calculando arqueo...</p>
           ) : (
+          <>
+          {pedidosEnProceso > 0 && (
+            <CAlert color="warning">
+              Hay {pedidosEnProceso} pedido{pedidosEnProceso === 1 ? '' : 's'} en proceso.
+              Finaliza o cancela los pedidos pendientes antes de cerrar la caja.
+            </CAlert>
+          )}
           <CRow className="g-3">
             <CCol md={12}>
               <CTable responsive bordered>
@@ -179,6 +200,7 @@ export default function CerrarCaja({ visible, onClose, caja, onSuccess }) {
                     <CTableDataCell>
                       <CFormInput
                         aria-label="Efectivo real contado"
+                        size="lg"
                         type="number"
                         min="0"
                         step="0.01"
@@ -198,6 +220,7 @@ export default function CerrarCaja({ visible, onClose, caja, onSuccess }) {
                     <CTableDataCell>
                       <CFormInput
                         aria-label="Total real de medios digitales"
+                        size="lg"
                         type="number"
                         step="0.01"
                         value={data.digital_real}
@@ -252,6 +275,7 @@ export default function CerrarCaja({ visible, onClose, caja, onSuccess }) {
               />
             </CCol>
           </CRow>
+          </>
           )}
         </CModalBody>
         <CModalFooter>

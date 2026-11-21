@@ -40,6 +40,7 @@ export default function Cajas() {
   const [locales, setLocales] = useState([]);
   const [cajaACerrar, setCajaACerrar] = useState(null);
   const [cajaHistorial, setCajaHistorial] = useState(null);
+  const [metodosPago, setMetodosPago] = useState([]);
   const [volverAlHistorial, setVolverAlHistorial] = useState(false);
   const [movimientosCaja, setMovimientosCaja] = useState([]);
   const [cargandoMovimientos, setCargandoMovimientos] = useState(false);
@@ -47,6 +48,7 @@ export default function Cajas() {
   const [cajaMovimiento, setCajaMovimiento] = useState(null);
   const [movimiento, setMovimiento] = useState({
     tipo_movimiento: 'Ingreso',
+    metodo: '',
     concepto: '',
     monto: '',
   });
@@ -183,7 +185,7 @@ export default function Cajas() {
 
   const abrirMovimiento = (caja) => {
     setCajaMovimiento(caja);
-    setMovimiento({ tipo_movimiento: 'Ingreso', concepto: '', monto: '' });
+    setMovimiento({ tipo_movimiento: 'Ingreso', metodo: '', concepto: '', monto: '' });
     setMovimientoVisible(true);
   };
 
@@ -221,6 +223,12 @@ export default function Cajas() {
   useEffect(() => {
     cargarCajas();
     cargarLocales();
+    api.get('/api/metodos/').then(({ data }) => {
+      setMetodosPago(Array.isArray(data) ? data : data?.results || []);
+    }).catch((error) => {
+      console.error('Error al cargar los métodos de pago:', error);
+      notificar('error', error.response?.data?.detail || 'No se pudieron cargar los métodos de pago.');
+    });
   }, []);
 
   return (
@@ -284,6 +292,11 @@ export default function Cajas() {
       ) : (
         listaCajas.map((itemCaja) => {
           const cajaAbierta = itemCaja.estado && !itemCaja.fecha_hora_cierre;
+          const cierreAnterior = itemCaja.efectivo_cierre_anterior;
+          const diferenciaApertura =
+            cierreAnterior == null
+              ? null
+              : Number(itemCaja.monto_apertura || 0) - Number(cierreAnterior);
           return (
             <CCard
               key={itemCaja.id_cajas}
@@ -304,26 +317,45 @@ export default function Cajas() {
               </CCardHeader>
 
               <CCardBody>
-                <CRow className="mb-3 text-center align-items-center">
-                  <CCol sm={6} md={3} className="border-end">
+                <CRow className="row-cols-2 row-cols-lg-5 mb-3 text-center align-items-center">
+                  <CCol className="border-end">
                     <div className="text-body-secondary small uppercase fw-bold">Monto Apertura</div>
                     <div className="fs-5 fw-semibold text-body-secondary">
                       ${itemCaja.monto_apertura ? Number(itemCaja.monto_apertura).toFixed(2) : '0.00'}
                     </div>
+                    {diferenciaApertura !== null && Number.isFinite(diferenciaApertura) && (
+                      <div
+                        className={`small fw-semibold ${
+                          diferenciaApertura < 0 ? 'text-danger' : 'text-success'
+                        }`}
+                      >
+                        {diferenciaApertura > 0
+                          ? `Agregado: +${diferenciaApertura.toFixed(2)}`
+                          : diferenciaApertura < 0
+                            ? `Restado: -${Math.abs(diferenciaApertura).toFixed(2)}`
+                            : 'Sin variación: $0.00'}
+                      </div>
+                    )}
                   </CCol>
-                  <CCol sm={6} md={3} className="border-end">
-                    <div className="text-body-secondary small uppercase fw-bold">Saldo en Sistema</div>
+                  <CCol className="border-end">
+                    <div className="text-body-secondary small uppercase fw-bold">Saldo Efectivo</div>
                     <div className="fs-5 fw-semibold text-primary">
-                      ${Number(itemCaja.saldo_actual || 0).toFixed(2)}
+                      ${Number(itemCaja.efectivo_esperado ?? itemCaja.monto_apertura ?? 0).toFixed(2)}
                     </div>
                   </CCol>
-                  <CCol sm={6} md={3} className="border-end">
+                  <CCol className="border-end">
+                    <div className="text-body-secondary small uppercase fw-bold">Transferencia</div>
+                    <div className="fs-5 fw-semibold text-info">
+                      ${Number(itemCaja.digital_esperado ?? 0).toFixed(2)}
+                    </div>
+                  </CCol>
+                  <CCol className="border-end">
                     <div className="text-body-secondary small uppercase fw-bold">Apertura Registrada</div>
                     <div className="small fw-semibold">
                       {new Date(itemCaja.fecha_hora_apertura).toLocaleString()}
                     </div>
                   </CCol>
-                  <CCol sm={6} md={3}>
+                  <CCol>
                     <div className="text-body-secondary small uppercase fw-bold">Cierre Registrado</div>
                     <div className="small fw-semibold text-danger">
                       {itemCaja.fecha_hora_cierre
@@ -422,6 +454,25 @@ export default function Cajas() {
             <p className="text-body-secondary">
               Caja #{cajaMovimiento?.id_cajas}
             </p>
+            <CFormSelect
+              className="mb-3"
+              label="Medio de pago"
+              value={movimiento.metodo}
+              onChange={(event) =>
+                setMovimiento((actual) => ({
+                  ...actual,
+                  metodo: event.target.value,
+                }))
+              }
+              required
+            >
+              <option value="">Selecciona un medio...</option>
+              {metodosPago.map((metodo) => (
+                <option key={metodo.id_metodos} value={metodo.id_metodos}>
+                  {metodo.nombre}
+                </option>
+              ))}
+            </CFormSelect>
             <CFormSelect
               className="mb-3"
               label="Tipo de movimiento"
@@ -703,6 +754,7 @@ export default function Cajas() {
                     <CTableRow>
                       <CTableHeaderCell>Fecha</CTableHeaderCell>
                       <CTableHeaderCell>Tipo</CTableHeaderCell>
+                      <CTableHeaderCell>Medio de pago</CTableHeaderCell>
                       <CTableHeaderCell>Concepto</CTableHeaderCell>
                       <CTableHeaderCell>Referencia</CTableHeaderCell>
                       <CTableHeaderCell>Responsable</CTableHeaderCell>
@@ -716,6 +768,7 @@ export default function Cajas() {
                           {new Date(movimiento.fecha_hora_creacion).toLocaleString()}
                         </CTableDataCell>
                         <CTableDataCell>{movimiento.tipo_movimiento}</CTableDataCell>
+                        <CTableDataCell>{movimiento.metodo_detalle || 'Efectivo'}</CTableDataCell>
                         <CTableDataCell>{movimiento.concepto}</CTableDataCell>
                         <CTableDataCell>
                           {movimiento.venta_id

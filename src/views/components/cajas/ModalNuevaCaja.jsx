@@ -26,6 +26,8 @@ export default function NuevaCaja({ visible, onClose, locales, cajasAbiertas = [
   });
 
   const [loading, setLoading] = useState(false);
+  const [cargandoSugerencia, setCargandoSugerencia] = useState(false);
+  const [cierreAnterior, setCierreAnterior] = useState(null);
 
   const notificar = (tipo, mensaje) => {
     switch (tipo) {
@@ -51,15 +53,62 @@ export default function NuevaCaja({ visible, onClose, locales, cajasAbiertas = [
         estado: true,
         password: '',
       });
+      setCierreAnterior(null);
     }
   }, [visible]);
+
+  useEffect(() => {
+    if (!visible || !data.local) {
+      setCierreAnterior(null);
+      return undefined;
+    }
+
+    let activo = true;
+    setCierreAnterior(null);
+    setCargandoSugerencia(true);
+    api.get('/api/cajas/', {
+      params: { local: data.local },
+      headers: { Authorization: `Token ${localStorage.getItem('token')}` },
+    }).then(({ data: cajas }) => {
+      if (!activo) return;
+      const lista = Array.isArray(cajas) ? cajas : cajas?.results || [];
+      const ultimaCaja = lista[0];
+      const montoSugerido =
+        ultimaCaja?.efectivo_real ??
+        ultimaCaja?.efectivo_esperado ??
+        ultimaCaja?.monto_cierre;
+      const cierreNumerico = montoSugerido == null ? null : Number(montoSugerido);
+      setCierreAnterior(Number.isFinite(cierreNumerico) ? cierreNumerico : null);
+      if (montoSugerido !== null && montoSugerido !== undefined) {
+        setData((actual) => ({
+          ...actual,
+          monto_apertura: Number(montoSugerido).toFixed(2),
+        }));
+      }
+    }).catch((error) => {
+      if (!activo) return;
+      console.error('Error al consultar el saldo de la caja anterior:', error);
+      notificar('error', error.response?.data?.detail || 'No se pudo calcular el monto inicial sugerido.');
+    }).finally(() => {
+      if (activo) setCargandoSugerencia(false);
+    });
+
+    return () => { activo = false };
+  }, [data.local, visible]);
+
+  const diferenciaApertura =
+    cierreAnterior !== null && data.monto_apertura !== ''
+      ? Number(data.monto_apertura) - cierreAnterior
+      : null;
 
   const handleChange = (e) => {
     const { id, value } = e.target;
     setData((prevData) => ({
       ...prevData,
       [id]: value,
+      ...(id === 'local' ? { monto_apertura: '' } : {}),
     }));
+    if (id === 'local') setCierreAnterior(null);
   };
 
   const handleSubmit = async (e) => {
@@ -145,13 +194,28 @@ export default function NuevaCaja({ visible, onClose, locales, cajasAbiertas = [
               <CFormInput
                 type="number"
                 id="monto_apertura"
-                placeholder="0.00"
+                placeholder={cargandoSugerencia ? 'Calculando...' : '0.00'}
                 step="0.01"
                 min="0"
                 value={data.monto_apertura}
                 onChange={handleChange}
                 required
               />
+              {diferenciaApertura !== null && Number.isFinite(diferenciaApertura) ? (
+                <CFormText className={diferenciaApertura < 0 ? 'text-danger' : 'text-success'}>
+                  {diferenciaApertura > 0
+                    ? `Agregado: +${diferenciaApertura.toFixed(2)}`
+                    : diferenciaApertura < 0
+                      ? `Restado: -${Math.abs(diferenciaApertura).toFixed(2)}`
+                      : 'Sin variación: $0.00'}
+                </CFormText>
+              ) : (
+                <CFormText>
+                  {cierreAnterior === null && data.local && !cargandoSugerencia
+                    ? 'No hay un cierre anterior para comparar.'
+                    : 'El monto sugerido corresponde al efectivo contado al cierre de la última caja de este local.'}
+                </CFormText>
+              )}
             </CCol>
             <CCol md={12}>
               <CFormLabel htmlFor="password">

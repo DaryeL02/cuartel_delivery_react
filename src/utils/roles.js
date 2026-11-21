@@ -1,5 +1,6 @@
 const FULL_ACCESS_ROLES = new Set(['administrador', 'dueno'])
 const OPERATIONAL_ROLES = new Set(['mozo', 'cadete', 'ayudante de cocina', 'planchero'])
+const PEDIDO_CREATION_RESTRICTED_ROLES = new Set(['ayudante', 'ayudante de cocina', 'planchero'])
 
 const normalizeRole = (role) =>
   String(role || '')
@@ -21,6 +22,10 @@ export const hasFullAccess = (user) =>
 
 export const isOperationalUser = (user) =>
   !hasFullAccess(user) && [...getUserRoles(user)].some((role) => OPERATIONAL_ROLES.has(role))
+
+export const isPedidoCreationRestricted = (user) =>
+  !hasFullAccess(user) &&
+  [...getUserRoles(user)].some((role) => PEDIDO_CREATION_RESTRICTED_ROLES.has(role))
 
 export const readCurrentUser = () => {
   try {

@@ -102,6 +102,7 @@ const formatCurrency = (value) =>
 const Menus = () => {
   const [menus, setMenus] = useState([])
   const [productos, setProductos] = useState([])
+  const [bebidas, setBebidas] = useState([])
   const [selectedMenuId, setSelectedMenuId] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
@@ -130,12 +131,14 @@ const Menus = () => {
     setLoading(true)
     setPageError('')
     try {
-      const [loadedMenus, productosResponse] = await Promise.all([
+      const [loadedMenus, productosResponse, bebidasResponse] = await Promise.all([
         loadAllMenus(),
         api.get('/api/productos/'),
+        api.get('/api/bebidas/'),
       ])
       setMenus(loadedMenus)
       setProductos(Array.isArray(productosResponse.data) ? productosResponse.data : [])
+      setBebidas(Array.isArray(bebidasResponse.data) ? bebidasResponse.data : [])
       setSelectedMenuId(
         (currentId) =>
           loadedMenus.find((menu) => String(menu.id_menus) === String(preferredMenuId))?.id_menus ??
@@ -169,7 +172,8 @@ const Menus = () => {
       fecha_hora_inicio: formatDateForInput(menu.fecha_hora_inicio),
       fecha_hora_fin: formatDateForInput(menu.fecha_hora_fin),
       detalles: (menu.detalles || []).map((detalle) => ({
-        producto: String(detalle.producto),
+        tipo: detalle.bebida ? 'bebida' : 'producto',
+        articulo: String(detalle.bebida || detalle.producto),
         cantidad: detalle.cantidad,
         descuento: detalle.descuento,
       })),
@@ -191,7 +195,13 @@ const Menus = () => {
       ...current,
       detalles: current.detalles.map((detail, detailIndex) =>
         detailIndex === index
-          ? { ...detail, [field]: field === 'producto' ? value : value }
+          ? field === 'articulo'
+            ? {
+                ...detail,
+                tipo: value ? value.split(':')[0] : 'producto',
+                articulo: value ? value.split(':')[1] : '',
+              }
+            : { ...detail, [field]: value }
           : detail,
       ),
     }))
@@ -200,7 +210,10 @@ const Menus = () => {
   const addDetail = () => {
     setFormData((current) => ({
       ...current,
-      detalles: [...current.detalles, { producto: '', cantidad: 1, descuento: 0 }],
+      detalles: [
+        ...current.detalles,
+        { tipo: 'producto', articulo: '', cantidad: 1, descuento: 0 },
+      ],
     }))
   }
 
@@ -217,7 +230,8 @@ const Menus = () => {
     fecha_hora_inicio: formatDateForApi(formData.fecha_hora_inicio),
     fecha_hora_fin: formatDateForApi(formData.fecha_hora_fin),
     detalles: formData.detalles.map((detail) => ({
-      producto: Number(detail.producto),
+      producto: detail.tipo === 'producto' ? Number(detail.articulo) : null,
+      bebida: detail.tipo === 'bebida' ? Number(detail.articulo) : null,
       cantidad: Number(detail.cantidad),
       descuento: Number(detail.descuento),
     })),
@@ -234,14 +248,14 @@ const Menus = () => {
       }
     }
 
-    if (formData.detalles.some((detail) => !detail.producto)) {
-      setFormError('Selecciona un producto para cada artículo agregado.')
+    if (formData.detalles.some((detail) => !detail.articulo)) {
+      setFormError('Selecciona un producto o una bebida para cada artículo agregado.')
       return
     }
 
-    const selectedProductIds = formData.detalles.map((detail) => String(detail.producto))
-    if (new Set(selectedProductIds).size !== selectedProductIds.length) {
-      setFormError('No puedes agregar el mismo producto más de una vez al menú.')
+    const selectedItemIds = formData.detalles.map((detail) => `${detail.tipo}:${detail.articulo}`)
+    if (new Set(selectedItemIds).size !== selectedItemIds.length) {
+      setFormError('No puedes agregar el mismo artículo más de una vez al menú.')
       return
     }
 
@@ -289,7 +303,8 @@ const Menus = () => {
       const detalles = (selectedMenu.detalles || [])
         .filter((detalle) => detalle.id_detalles_menus !== detailToDelete.id_detalles_menus)
         .map((detalle) => ({
-          producto: Number(detalle.producto),
+          producto: detalle.bebida ? null : Number(detalle.producto),
+          bebida: detalle.bebida ? Number(detalle.bebida) : null,
           cantidad: Number(detalle.cantidad),
           descuento: Number(detalle.descuento),
         }))
@@ -392,9 +407,11 @@ const Menus = () => {
                     const productNames = (menu.detalles || [])
                       .map(
                         (detalle) =>
+                          detalle.bebida_data?.nombre ||
                           detalle.producto_data?.nombre ||
                           productos.find((producto) => producto.id_productos === detalle.producto)
-                            ?.nombre,
+                            ?.nombre ||
+                          bebidas.find((bebida) => bebida.id_bebidas === detalle.bebida)?.nombre,
                       )
                       .filter(Boolean)
 
@@ -517,9 +534,11 @@ const Menus = () => {
               ) : (
                 <div className="d-flex flex-column gap-3">
                   {selectedMenu.detalles.map((detalle) => {
-                    const producto =
+                    const articulo =
+                      detalle.bebida_data ||
                       detalle.producto_data ||
-                      productos.find((item) => item.id_productos === detalle.producto)
+                      productos.find((item) => item.id_productos === detalle.producto) ||
+                      bebidas.find((item) => item.id_bebidas === detalle.bebida)
 
                     return (
                       <div
@@ -535,14 +554,15 @@ const Menus = () => {
                           </CAvatar>
                           <div>
                             <div className="fw-semibold">
-                              {producto?.nombre || `Producto #${detalle.producto}`}
+                              {articulo?.nombre ||
+                                `${detalle.bebida ? 'Bebida' : 'Producto'} #${detalle.bebida || detalle.producto}`}
                             </div>
                             <small className="text-body-secondary">
                               Cantidad: {detalle.cantidad}
                               {Number(detalle.descuento) > 0 &&
                                 ` · Descuento: ${detalle.descuento}%`}
                               {' · '}
-                              {formatCurrency(producto?.precio_unitario)}
+                              {formatCurrency(articulo?.precio_unitario)}
                             </small>
                           </div>
                         </div>
@@ -550,7 +570,7 @@ const Menus = () => {
                           color="danger"
                           variant="ghost"
                           size="sm"
-                          aria-label={`Quitar ${producto?.nombre || 'producto'} del menú`}
+                          aria-label={`Quitar ${articulo?.nombre || 'artículo'} del menú`}
                           disabled={saving}
                           onClick={() => {
                             setDetailToDelete(detalle)
@@ -620,7 +640,7 @@ const Menus = () => {
               </CCol>
               <CCol xs={12}>
                 <div className="d-flex justify-content-between align-items-center mb-2">
-                  <h6 className="mb-0">Productos incluidos</h6>
+                  <h6 className="mb-0">Artículos incluidos</h6>
                   <CButton
                     type="button"
                     color="primary"
@@ -629,44 +649,71 @@ const Menus = () => {
                     onClick={addDetail}
                   >
                     <CIcon icon={cilPlus} className="me-1" />
-                    Agregar producto
+                    Agregar artículo
                   </CButton>
                 </div>
                 {formData.detalles.length === 0 ? (
                   <p className="small text-body-secondary mb-0">
-                    No agregaste productos. Puedes añadirlos ahora o más tarde.
+                    No agregaste artículos. Puedes añadirlos ahora o más tarde.
                   </p>
                 ) : (
                   <div className="d-flex flex-column gap-2">
                     {formData.detalles.map((detail, index) => {
-                      const usedProductIds = formData.detalles
+                      const usedItemIds = formData.detalles
                         .filter((_, detailIndex) => detailIndex !== index)
-                        .map((item) => String(item.producto))
+                        .map((item) => `${item.tipo}:${item.articulo}`)
+                      const valorArticulo = detail.articulo
+                        ? `${detail.tipo}:${detail.articulo}`
+                        : ''
 
                       return (
                         <CRow className="g-2 align-items-end" key={`detail-${index}`}>
                           <CCol md={6}>
                             <CFormSelect
-                              label={index === 0 ? 'Producto' : undefined}
-                              value={detail.producto}
+                              label={index === 0 ? 'Producto o bebida' : undefined}
+                              value={valorArticulo}
                               onChange={(event) =>
-                                handleDetailChange(index, 'producto', event.target.value)
+                                handleDetailChange(index, 'articulo', event.target.value)
                               }
                               required
                             >
-                              <option value="">Selecciona un producto...</option>
-                              {productos
-                                .filter(
-                                  (producto) =>
-                                    !usedProductIds.includes(String(producto.id_productos)) ||
-                                    String(producto.id_productos) === String(detail.producto),
-                                )
-                                .map((producto) => (
-                                  <option key={producto.id_productos} value={producto.id_productos}>
-                                    {producto.nombre}
-                                    {producto.estado === false ? ' (inactivo)' : ''}
-                                  </option>
-                                ))}
+                              <option value="">Selecciona...</option>
+                              <optgroup label="Productos">
+                                {productos
+                                  .filter(
+                                    (producto) =>
+                                      !usedItemIds.includes(`producto:${producto.id_productos}`) ||
+                                      (detail.tipo === 'producto' &&
+                                        String(producto.id_productos) === String(detail.articulo)),
+                                  )
+                                  .map((producto) => (
+                                    <option
+                                      key={`producto-${producto.id_productos}`}
+                                      value={`producto:${producto.id_productos}`}
+                                    >
+                                      {producto.nombre}
+                                      {producto.estado === false ? ' (inactivo)' : ''}
+                                    </option>
+                                  ))}
+                              </optgroup>
+                              <optgroup label="Bebidas">
+                                {bebidas
+                                  .filter(
+                                    (bebida) =>
+                                      !usedItemIds.includes(`bebida:${bebida.id_bebidas}`) ||
+                                      (detail.tipo === 'bebida' &&
+                                        String(bebida.id_bebidas) === String(detail.articulo)),
+                                  )
+                                  .map((bebida) => (
+                                    <option
+                                      key={`bebida-${bebida.id_bebidas}`}
+                                      value={`bebida:${bebida.id_bebidas}`}
+                                    >
+                                      {bebida.nombre}
+                                      {bebida.estado === false ? ' (inactiva)' : ''}
+                                    </option>
+                                  ))}
+                              </optgroup>
                             </CFormSelect>
                           </CCol>
                           <CCol xs={4} md={2}>
@@ -701,7 +748,7 @@ const Menus = () => {
                               color="danger"
                               variant="outline"
                               className="w-100"
-                              aria-label="Quitar producto"
+                              aria-label="Quitar artículo"
                               onClick={() => removeDetailFromForm(index)}
                             >
                               <CIcon icon={cilTrash} />
