@@ -33,11 +33,13 @@ const ComprasTable = ({
 
     return compras.filter((compra) => {
       const proveedor = compra.proveedor_data?.nombre || ''
-      const metodo = compra.metodo_data?.nombre || ''
+      const pagos = `${compra.monto_efectivo || ''} ${compra.monto_transferencia || ''} ${
+        compra.metodo_data?.nombre || ''
+      }`
       const insumos = (compra.detalles || [])
         .map((detalle) => detalle.insumo_data?.nombre || '')
         .join(' ')
-      return `${compra.id_compras} ${proveedor} ${metodo} ${insumos}`.toLowerCase().includes(search)
+      return `${compra.id_compras} ${proveedor} ${pagos} ${insumos}`.toLowerCase().includes(search)
     })
   }, [compras, searchTerm])
 
@@ -47,7 +49,7 @@ const ComprasTable = ({
         <div>
           <h5 className="mb-0">Compras de insumos</h5>
           <small className="text-body-secondary">
-            Registra compras relacionadas con proveedores, métodos de pago e insumos.
+            Registra compras y sus pagos en efectivo o transferencia.
           </small>
         </div>
         <div className="d-flex flex-wrap gap-2">
@@ -78,7 +80,7 @@ const ComprasTable = ({
                 <CTableHeaderCell className="text-center">N°</CTableHeaderCell>
                 <CTableHeaderCell>Fecha</CTableHeaderCell>
                 <CTableHeaderCell>Proveedor</CTableHeaderCell>
-                <CTableHeaderCell>Método de pago</CTableHeaderCell>
+                <CTableHeaderCell>Pagos</CTableHeaderCell>
                 <CTableHeaderCell>Insumos</CTableHeaderCell>
                 <CTableHeaderCell className="text-end">Total</CTableHeaderCell>
                 <CTableHeaderCell className="text-center">Acciones</CTableHeaderCell>
@@ -113,7 +115,21 @@ const ComprasTable = ({
                     <CTableDataCell>
                       {compra.proveedor_data?.nombre || 'Sin proveedor'}
                     </CTableDataCell>
-                    <CTableDataCell>{compra.metodo_data?.nombre || '—'}</CTableDataCell>
+                    <CTableDataCell className="text-nowrap">
+                      {Number(compra.monto_efectivo) > 0 ||
+                      Number(compra.monto_transferencia) > 0 ? (
+                        <>
+                          {Number(compra.monto_efectivo) > 0 && (
+                            <div>Efectivo: {formatCurrency(compra.monto_efectivo)}</div>
+                          )}
+                          {Number(compra.monto_transferencia) > 0 && (
+                            <div>Transferencia: {formatCurrency(compra.monto_transferencia)}</div>
+                          )}
+                        </>
+                      ) : (
+                        compra.metodo_data?.nombre || 'Sin pagos'
+                      )}
+                    </CTableDataCell>
                     <CTableDataCell>
                       <div className="d-flex flex-wrap gap-1">
                         {(compra.detalles || []).map((detalle) => (

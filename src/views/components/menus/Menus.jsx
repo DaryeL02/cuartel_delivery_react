@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   CAlert,
   CAvatar,
@@ -53,6 +53,21 @@ const formatDateForInput = (value) => {
 
 const formatDateForApi = (value) => (value ? new Date(value).toISOString() : null)
 
+const getProductImage = (product) =>
+  product?.imagen ||
+  product?.imagen_url ||
+  product?.imagen_producto ||
+  product?.foto ||
+  product?.image ||
+  ''
+
+const getMenuImageUrl = (image) => {
+  if (!image) return ''
+
+  if (/^(https?:|data:|blob:)/i.test(image)) return image
+  return new URL(image, api.defaults.baseURL).toString()
+}
+
 const loadAllMenus = async () => {
   const menus = []
   let url = '/api/menus/'
@@ -84,7 +99,10 @@ const getErrorMessage = (error) => {
 
   const data = error.response?.data
   if (!data)
-    return 'No se pudo completar la operación. Verifica tu conexión e inténtalo nuevamente.'
+    return (
+      error.message ||
+      'No se pudo completar la operación. Verifica tu conexión e inténtalo nuevamente.'
+    )
   if (typeof data === 'string') return data
   if (data.detail) return data.detail
 
@@ -122,6 +140,7 @@ const Menus = () => {
   const [formError, setFormError] = useState('')
 
   const selectedMenu = menus.find((menu) => menu.id_menus === selectedMenuId) || null
+
   const filteredMenus = useMemo(
     () =>
       menus.filter((menu) =>
@@ -194,9 +213,7 @@ const Menus = () => {
     setFormData((current) => ({
       ...current,
       detalles: current.detalles.map((detail, detailIndex) =>
-        detailIndex === index
-          ? { ...detail, [field]: field === 'producto' ? value : value }
-          : detail,
+        detailIndex === index ? { ...detail, [field]: value } : detail,
       ),
     }))
   }
@@ -255,10 +272,17 @@ const Menus = () => {
       const response = editingMenu
         ? await api.put(`/api/menus/${editingMenu.id_menus}/`, payload)
         : await api.post('/api/menus/', payload)
+      const savedMenu = response.data
+      const savedMenuId = savedMenu?.id_menus ?? editingMenu?.id_menus
+
+      if (!savedMenuId) {
+        throw new Error('El menú se guardó, pero la API no devolvió su identificador.')
+      }
+
       setModalVisible(false)
       setNotice(editingMenu ? 'Menú actualizado correctamente.' : 'Menú creado correctamente.')
       setSearchTerm('')
-      await loadData(response.data?.id_menus ?? editingMenu?.id_menus ?? null)
+      await loadData(savedMenuId)
     } catch (error) {
       setFormError(getErrorMessage(error))
     } finally {
@@ -525,56 +549,84 @@ const Menus = () => {
                 <p className="text-body-secondary mb-0">
                   Selecciona un menú para ver y administrar sus productos.
                 </p>
-              ) : (selectedMenu.detalles || []).length === 0 ? (
-                <p className="text-body-secondary mb-0">Este menú todavía no tiene productos.</p>
               ) : (
-                <div className="d-flex flex-column gap-3">
-                  {selectedMenu.detalles.map((detalle) => {
-                    const producto =
-                      detalle.producto_data ||
-                      productos.find((item) => item.id_productos === detalle.producto)
+                <div className="d-flex flex-column gap-4">
+                  <CRow className="g-4 align-items-center">
+                    <CCol xs={12}>
+                      <h4 className="mb-2">{selectedMenu.nombre}</h4>
+                      <p className="text-body-secondary mb-0">
+                        {selectedMenu.estado
+                          ? 'Descubre todo lo disponible en este menú.'
+                          : 'Este menú está inactivo.'}
+                      </p>
+                    </CCol>
+                  </CRow>
+                  {(selectedMenu.detalles || []).length === 0 ? (
+                    <p className="text-body-secondary mb-0">
+                      Esta carta todavía no tiene productos. Edita el menú para agregar opciones.
+                    </p>
+                  ) : (
+                    <CRow className="g-3">
+                      {selectedMenu.detalles.map((detalle) => {
+                        const catalogProduct = productos.find(
+                          (item) => String(item.id_productos) === String(detalle.producto),
+                        )
+                        const producto = detalle.producto_data || catalogProduct
+                        const productImage =
+                          getProductImage(producto) || getProductImage(catalogProduct)
 
-                    return (
-                      <div
-                        key={detalle.id_detalles_menus}
-                        className="d-flex justify-content-between align-items-center gap-3 border-bottom pb-3"
-                      >
-                        <div className="d-flex align-items-center gap-3">
-                          <CAvatar
-                            color="primary"
-                            className="bg-opacity-10 text-primary fw-semibold"
-                          >
-                            <CIcon icon={cilFastfood} size="sm" />
-                          </CAvatar>
-                          <div>
-                            <div className="fw-semibold">
-                              {producto?.nombre || `Producto #${detalle.producto}`}
-                            </div>
-                            <small className="text-body-secondary">
-                              Cantidad: {detalle.cantidad}
-                              {Number(detalle.descuento) > 0 &&
-                                ` · Descuento: ${detalle.descuento}%`}
-                              {' · '}
-                              {formatCurrency(producto?.precio_unitario)}
-                            </small>
-                          </div>
-                        </div>
-                        <CButton
-                          color="danger"
-                          variant="ghost"
-                          size="sm"
-                          aria-label={`Quitar ${producto?.nombre || 'producto'} del menú`}
-                          disabled={saving}
-                          onClick={() => {
-                            setDetailToDelete(detalle)
-                            setDeleteDetailVisible(true)
-                          }}
-                        >
-                          <CIcon icon={cilTrash} />
-                        </CButton>
-                      </div>
-                    )
-                  })}
+                        return (
+                          <CCol xs={12} md={6} xl={4} key={detalle.id_detalles_menus}>
+                            <CCard className="h-100 border">
+                              {productImage && (
+                                <img
+                                  src={getMenuImageUrl(productImage)}
+                                  alt={`Imagen de ${producto?.nombre || 'producto'}`}
+                                  className="card-img-top"
+                                  style={{ height: '180px', objectFit: 'cover' }}
+                                />
+                              )}
+                              <CCardBody className="d-flex flex-column">
+                                <div className="d-flex justify-content-between align-items-start gap-2">
+                                  <div>
+                                    <h6 className="mb-1">
+                                      {producto?.nombre || `Producto #${detalle.producto}`}
+                                    </h6>
+                                    {producto?.descripcion && (
+                                      <p className="small text-body-secondary mb-2">
+                                        {producto.descripcion}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <CButton
+                                    color="danger"
+                                    variant="ghost"
+                                    size="sm"
+                                    aria-label={`Quitar ${producto?.nombre || 'producto'} del menú`}
+                                    disabled={saving}
+                                    onClick={() => {
+                                      setDetailToDelete(detalle)
+                                      setDeleteDetailVisible(true)
+                                    }}
+                                  >
+                                    <CIcon icon={cilTrash} />
+                                  </CButton>
+                                </div>
+                                <div className="mt-auto pt-2">
+                                  <strong>{formatCurrency(producto?.precio_unitario)}</strong>
+                                  <div className="small text-body-secondary">
+                                    Cantidad: {detalle.cantidad}
+                                    {Number(detalle.descuento) > 0 &&
+                                      ` · Descuento: ${detalle.descuento}%`}
+                                  </div>
+                                </div>
+                              </CCardBody>
+                            </CCard>
+                          </CCol>
+                        )
+                      })}
+                    </CRow>
+                  )}
                 </div>
               )}
             </CCardBody>

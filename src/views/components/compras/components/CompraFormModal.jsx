@@ -17,7 +17,12 @@ import CIcon from '@coreui/icons-react'
 import { cilCart, cilPlus, cilTrash } from '@coreui/icons'
 import { formatCurrency } from '../utils/compras'
 
-const emptyForm = { metodo: '', proveedor: '', detalles: [] }
+const emptyForm = {
+  proveedor: '',
+  monto_efectivo: '0.00',
+  monto_transferencia: '0.00',
+  detalles: [],
+}
 
 const CompraFormModal = ({
   visible,
@@ -25,7 +30,6 @@ const CompraFormModal = ({
   formError,
   proveedores,
   insumos,
-  metodosPago,
   proveedoresInsumos,
   onClose,
   onSubmit,
@@ -47,7 +51,13 @@ const CompraFormModal = ({
     return insumos.filter((insumo) => suppliedIds.has(String(insumo.id_insumos)))
   }, [formData.proveedor, insumos, proveedoresInsumos])
 
-  const total = formData.detalles.reduce((sum, detail) => sum + (Number(detail.subtotal) || 0), 0)
+  const toCents = (value) => Math.round(Number(Number(value).toFixed(2)) * 100)
+  const totalCents = formData.detalles.reduce(
+    (sum, detail) =>
+      sum + (Number.isFinite(Number(detail.subtotal)) ? toCents(detail.subtotal) : 0),
+    0,
+  )
+  const total = totalCents / 100
 
   const handleSubmit = (event) => {
     event.preventDefault()
@@ -86,9 +96,24 @@ const CompraFormModal = ({
       return
     }
 
+    const paymentAmounts = [formData.monto_efectivo, formData.monto_transferencia]
+    if (
+      paymentAmounts.some(
+        (amount) => amount === '' || !Number.isFinite(Number(amount)) || Number(amount) < 0,
+      )
+    ) {
+      onSubmit(null, 'Ingresa montos de pago válidos y no negativos.')
+      return
+    }
+    if (paymentAmounts.reduce((sum, amount) => sum + toCents(amount), 0) > totalCents) {
+      onSubmit(null, 'La suma de efectivo y transferencia no puede superar el total de la compra.')
+      return
+    }
+
     onSubmit({
-      metodo: Number(formData.metodo),
       proveedor: formData.proveedor ? Number(formData.proveedor) : null,
+      monto_efectivo: Number(formData.monto_efectivo).toFixed(2),
+      monto_transferencia: Number(formData.monto_transferencia).toFixed(2),
       detalles: formData.detalles.map((detail) => ({
         insumo: Number(detail.insumo),
         cantidad: Number(detail.cantidad),
@@ -156,22 +181,35 @@ const CompraFormModal = ({
               </CFormSelect>
             </CCol>
             <CCol md={6}>
-              <CFormSelect
-                label="Método de pago"
-                name="metodo"
-                value={formData.metodo}
+              <CFormInput
+                label="Pago en efectivo"
+                name="monto_efectivo"
+                type="number"
+                min={0}
+                step="0.01"
+                value={formData.monto_efectivo}
                 onChange={(event) =>
-                  setFormData((current) => ({ ...current, metodo: event.target.value }))
+                  setFormData((current) => ({ ...current, monto_efectivo: event.target.value }))
                 }
                 required
-              >
-                <option value="">Selecciona un método de pago...</option>
-                {metodosPago.map((metodo) => (
-                  <option key={metodo.id_metodos} value={metodo.id_metodos}>
-                    {metodo.nombre}
-                  </option>
-                ))}
-              </CFormSelect>
+              />
+            </CCol>
+            <CCol md={6}>
+              <CFormInput
+                label="Pago por transferencia"
+                name="monto_transferencia"
+                type="number"
+                min={0}
+                step="0.01"
+                value={formData.monto_transferencia}
+                onChange={(event) =>
+                  setFormData((current) => ({
+                    ...current,
+                    monto_transferencia: event.target.value,
+                  }))
+                }
+                required
+              />
             </CCol>
 
             <CCol xs={12}>
@@ -291,11 +329,7 @@ const CompraFormModal = ({
           >
             Cancelar
           </CButton>
-          <CButton
-            color="primary"
-            type="submit"
-            disabled={saving || !formData.metodo || !formData.detalles.length}
-          >
+          <CButton color="primary" type="submit" disabled={saving || !formData.detalles.length}>
             {saving ? 'Guardando...' : 'Registrar compra'}
           </CButton>
         </CModalFooter>

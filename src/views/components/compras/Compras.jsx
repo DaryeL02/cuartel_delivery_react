@@ -10,7 +10,6 @@ const Compras = () => {
   const [compras, setCompras] = useState([])
   const [proveedores, setProveedores] = useState([])
   const [insumos, setInsumos] = useState([])
-  const [metodosPago, setMetodosPago] = useState([])
   const [proveedoresInsumos, setProveedoresInsumos] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
@@ -25,19 +24,18 @@ const Compras = () => {
     setLoading(true)
     setErrorMessage('')
     try {
-      const [loadedCompras, loadedProveedores, loadedInsumos, loadedMetodos, loadedRelaciones] =
-        await Promise.all([
+      const [loadedCompras, loadedProveedores, loadedInsumos, loadedRelaciones] = await Promise.all(
+        [
           loadAll('/api/compras/'),
           loadAll('/api/proveedores/'),
           loadAll('/api/insumos/'),
-          loadAll('/api/metodos-pago/'),
           loadAll('/api/proveedores-insumos/'),
-        ])
+        ],
+      )
 
       setCompras(loadedCompras)
       setProveedores(loadedProveedores)
       setInsumos(loadedInsumos)
-      setMetodosPago(loadedMetodos.filter((metodo) => metodo.estado))
       setProveedoresInsumos(loadedRelaciones)
     } catch (error) {
       setErrorMessage(getErrorMessage(error))
@@ -113,7 +111,7 @@ const Compras = () => {
         onSearchChange={setSearchTerm}
         onCreate={openForm}
         onDelete={setCompraToDelete}
-        canCreate={metodosPago.length > 0}
+        canCreate
       />
       <CompraFormModal
         visible={formVisible}
@@ -121,7 +119,6 @@ const Compras = () => {
         formError={formError}
         proveedores={proveedores}
         insumos={insumos}
-        metodosPago={metodosPago}
         proveedoresInsumos={proveedoresInsumos}
         onClose={() => setFormVisible(false)}
         onSubmit={handleCreate}
