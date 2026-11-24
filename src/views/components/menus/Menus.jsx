@@ -117,7 +117,6 @@ const Menus = () => {
   const [menus, setMenus] = useState([])
   const [productos, setProductos] = useState([])
   const [bebidas, setBebidas] = useState([])
-  const [selectedMenuId, setSelectedMenuId] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -126,14 +125,11 @@ const Menus = () => {
   const [modalVisible, setModalVisible] = useState(false)
   const [confirmarMenuVacio, setConfirmarMenuVacio] = useState(false)
   const [deleteMenuVisible, setDeleteMenuVisible] = useState(false)
-  const [deleteDetailVisible, setDeleteDetailVisible] = useState(false)
   const [editingMenu, setEditingMenu] = useState(null)
   const [menuToDelete, setMenuToDelete] = useState(null)
-  const [detailToDelete, setDetailToDelete] = useState(null)
   const [formData, setFormData] = useState(emptyForm)
   const [formError, setFormError] = useState('')
 
-  const selectedMenu = menus.find((menu) => menu.id_menus === selectedMenuId) || null
   const filteredMenus = useMemo(
     () =>
       menus.filter((menu) =>
@@ -151,7 +147,7 @@ const Menus = () => {
       * Number(detail.cantidad || 0)
   }, 0)
 
-  const loadData = async (preferredMenuId = null) => {
+  const loadData = async () => {
     setLoading(true)
     setPageError('')
     try {
@@ -163,13 +159,6 @@ const Menus = () => {
       setMenus(loadedMenus)
       setProductos(Array.isArray(productosResponse.data) ? productosResponse.data : [])
       setBebidas(Array.isArray(bebidasResponse.data) ? bebidasResponse.data : [])
-      setSelectedMenuId(
-        (currentId) =>
-          loadedMenus.find((menu) => String(menu.id_menus) === String(preferredMenuId))?.id_menus ??
-          loadedMenus.find((menu) => String(menu.id_menus) === String(currentId))?.id_menus ??
-          loadedMenus[0]?.id_menus ??
-          null,
-      )
     } catch (error) {
       setPageError(getErrorMessage(error))
     } finally {
@@ -305,7 +294,7 @@ const Menus = () => {
       setModalVisible(false)
       setNotice(editingMenu ? 'Menú actualizado correctamente.' : 'Menú creado correctamente.')
       setSearchTerm('')
-      await loadData(response.data?.id_menus ?? editingMenu?.id_menus ?? null)
+      await loadData()
     } catch (error) {
       setFormError(getErrorMessage(error))
     } finally {
@@ -332,32 +321,6 @@ const Menus = () => {
       setDeleteMenuVisible(false)
       setNotice('Menú eliminado correctamente.')
       setMenuToDelete(null)
-      await loadData()
-    } catch (error) {
-      setPageError(getErrorMessage(error))
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleDeleteDetail = async () => {
-    if (!selectedMenu || !detailToDelete) return
-
-    setSaving(true)
-    setPageError('')
-    try {
-      const detalles = (selectedMenu.detalles || [])
-        .filter((detalle) => detalle.id_detalles_menus !== detailToDelete.id_detalles_menus)
-        .map((detalle) => ({
-          producto: detalle.bebida ? null : Number(detalle.producto),
-          bebida: detalle.bebida ? Number(detalle.bebida) : null,
-          cantidad: Number(detalle.cantidad),
-          descuento: Number(detalle.descuento),
-        }))
-      await api.patch(`/api/menus/${selectedMenu.id_menus}/`, { detalles })
-      setDeleteDetailVisible(false)
-      setDetailToDelete(null)
-      setNotice('Producto quitado del menú.')
       await loadData()
     } catch (error) {
       setPageError(getErrorMessage(error))
@@ -467,8 +430,7 @@ const Menus = () => {
                     return (
                       <CTableRow
                         key={menu.id_menus}
-                        active={selectedMenuId === menu.id_menus}
-                        onClick={() => setSelectedMenuId(menu.id_menus)}
+                        onClick={() => openEditModal(menu)}
                         style={{ cursor: 'pointer' }}
                       >
                         <CTableDataCell className="text-center text-body-secondary fw-medium">
@@ -556,90 +518,6 @@ const Menus = () => {
           </span>
         </div>
       </CCard>
-
-      <CRow>
-        <CCol xs={12} className="mb-4">
-          <CCard className="shadow-sm">
-            <CCardHeader className="d-flex justify-content-between align-items-center">
-              <strong>
-                {selectedMenu ? `Productos del menú: ${selectedMenu.nombre}` : 'Productos del menú'}
-              </strong>
-              {selectedMenu && (
-                <CButton
-                  color="primary"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => openEditModal(selectedMenu)}
-                >
-                  <CIcon icon={cilPlus} className="me-1" />
-                  Agregar o modificar productos
-                </CButton>
-              )}
-            </CCardHeader>
-            <CCardBody>
-              {!selectedMenu ? (
-                <p className="text-body-secondary mb-0">
-                  Selecciona un menú para ver y administrar sus productos.
-                </p>
-              ) : (selectedMenu.detalles || []).length === 0 ? (
-                <p className="text-body-secondary mb-0">Este menú todavía no tiene productos.</p>
-              ) : (
-                <div className="d-flex flex-column gap-3">
-                  {selectedMenu.detalles.map((detalle) => {
-                    const articulo =
-                      detalle.bebida_data ||
-                      detalle.producto_data ||
-                      productos.find((item) => item.id_productos === detalle.producto) ||
-                      bebidas.find((item) => item.id_bebidas === detalle.bebida)
-
-                    return (
-                      <div
-                        key={detalle.id_detalles_menus}
-                        className="d-flex justify-content-between align-items-center gap-3 border-bottom pb-3"
-                      >
-                        <div className="d-flex align-items-center gap-3">
-                          <CAvatar
-                            color="primary"
-                            className="bg-opacity-10 text-primary fw-semibold"
-                          >
-                            <CIcon icon={cilFastfood} size="sm" />
-                          </CAvatar>
-                          <div>
-                            <div className="fw-semibold">
-                              {articulo?.nombre ||
-                                `${detalle.bebida ? 'Bebida' : 'Producto'} #${detalle.bebida || detalle.producto}`}
-                            </div>
-                            <small className="text-body-secondary">
-                              Cantidad: {detalle.cantidad}
-                              {Number(detalle.descuento) > 0 &&
-                                ` · Descuento: ${detalle.descuento}%`}
-                              {' · '}
-                              {formatCurrency(articulo?.precio_unitario)}
-                            </small>
-                          </div>
-                        </div>
-                        <CButton
-                          color="danger"
-                          variant="ghost"
-                          size="sm"
-                          aria-label={`Quitar ${articulo?.nombre || 'artículo'} del menú`}
-                          disabled={saving}
-                          onClick={() => {
-                            setDetailToDelete(detalle)
-                            setDeleteDetailVisible(true)
-                          }}
-                        >
-                          <CIcon icon={cilTrash} />
-                        </CButton>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </CCardBody>
-          </CCard>
-        </CCol>
-      </CRow>
 
       <CModal
         visible={modalVisible}
@@ -903,30 +781,6 @@ const Menus = () => {
         </CModalFooter>
       </CModal>
 
-      <CModal
-        visible={deleteDetailVisible}
-        onClose={() => !saving && setDeleteDetailVisible(false)}
-      >
-        <CModalHeader>
-          <CModalTitle>Quitar producto</CModalTitle>
-        </CModalHeader>
-        <CModalBody>
-          ¿Deseas quitar este producto del menú <strong>{selectedMenu?.nombre}</strong>?
-        </CModalBody>
-        <CModalFooter>
-          <CButton
-            color="secondary"
-            variant="ghost"
-            onClick={() => setDeleteDetailVisible(false)}
-            disabled={saving}
-          >
-            Cancelar
-          </CButton>
-          <CButton color="danger" onClick={handleDeleteDetail} disabled={saving}>
-            {saving ? 'Quitando...' : 'Quitar producto'}
-          </CButton>
-        </CModalFooter>
-      </CModal>
     </>
   )
 }

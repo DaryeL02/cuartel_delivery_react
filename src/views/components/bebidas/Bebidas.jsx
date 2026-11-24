@@ -322,7 +322,6 @@ const Bebidas = () => {
                 <CTableHeaderCell>Nombre</CTableHeaderCell>
                 <CTableHeaderCell>Stock</CTableHeaderCell>
                 <CTableHeaderCell>Mínimo</CTableHeaderCell>
-                <CTableHeaderCell>Unidad</CTableHeaderCell>
                 <CTableHeaderCell>Precio</CTableHeaderCell>
                 <CTableHeaderCell>Estado</CTableHeaderCell>
                 <CTableHeaderCell>Acciones</CTableHeaderCell>
@@ -339,9 +338,12 @@ const Bebidas = () => {
                     >
                       {item.stock_actual}
                     </CBadge>
+                    <small className="ms-2 text-body-secondary">unidades</small>
                   </CTableDataCell>
-                  <CTableDataCell>{item.stock_minimo}</CTableDataCell>
-                  <CTableDataCell>{item.unidad}</CTableDataCell>
+                  <CTableDataCell>
+                    {item.stock_minimo}
+                    <small className="ms-2 text-body-secondary">unidades</small>
+                  </CTableDataCell>
                   <CTableDataCell>${Number(item.precio_unitario).toFixed(2)}</CTableDataCell>
                   <CTableDataCell>
                     <CBadge color={item.estado ? 'success' : 'secondary'}>
@@ -482,10 +484,6 @@ const Bebidas = () => {
                   placeholder="0.00"
                   autoComplete="off"
                 />
-              </CCol>
-
-              <CCol md={6}>
-                <CFormInput label="Unidad" value="unidades" readOnly />
               </CCol>
 
               {mostrarAlertaStockBajo && (
