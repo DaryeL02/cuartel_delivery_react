@@ -99,6 +99,20 @@ const formatCurrency = (value) =>
     maximumFractionDigits: 2,
   })
 
+const calcularPrecioMenu = (menu) => {
+  const detalles = menu.detalles || menu.detalle_menu || []
+  return detalles.reduce((total, detalle) => {
+    const articulo =
+      detalle.bebida_data ||
+      detalle.producto_data ||
+      (typeof detalle.bebida === 'object' ? detalle.bebida : null) ||
+      (typeof detalle.producto === 'object' ? detalle.producto : null)
+    return total + Number(articulo?.precio_unitario || 0)
+      * (1 - Number(detalle.descuento || 0) / 100)
+      * Number(detalle.cantidad || 0)
+  }, 0)
+}
+
 const Menus = () => {
   const [menus, setMenus] = useState([])
   const [productos, setProductos] = useState([])
@@ -127,6 +141,15 @@ const Menus = () => {
       ),
     [menus, searchTerm],
   )
+  const precioTotalFormulario = formData.detalles.reduce((total, detail) => {
+    const articulo =
+      detail.tipo === 'bebida'
+        ? bebidas.find((item) => String(item.id_bebidas) === String(detail.articulo))
+        : productos.find((item) => String(item.id_productos) === String(detail.articulo))
+    return total + Number(articulo?.precio_unitario || 0)
+      * (1 - Number(detail.descuento || 0) / 100)
+      * Number(detail.cantidad || 0)
+  }, 0)
 
   const loadData = async (preferredMenuId = null) => {
     setLoading(true)
@@ -192,6 +215,11 @@ const Menus = () => {
   }
 
   const handleDetailChange = (index, field, value) => {
+    if (field === 'descuento' && value !== '') {
+      const descuento = Number(value)
+      if (!Number.isInteger(descuento) || descuento < 0 || descuento > 100) return
+    }
+
     setFormData((current) => ({
       ...current,
       detalles: current.detalles.map((detail, detailIndex) =>
@@ -251,6 +279,14 @@ const Menus = () => {
 
     if (formData.detalles.some((detail) => !detail.articulo)) {
       setFormError('Selecciona un producto o una bebida para cada artículo agregado.')
+      return
+    }
+
+    if (formData.detalles.some((detail) => {
+      const descuento = Number(detail.descuento)
+      return !Number.isInteger(descuento) || descuento < 0 || descuento > 100
+    })) {
+      setFormError('El descuento de cada artículo debe estar entre 0 y 100%.')
       return
     }
 
@@ -389,6 +425,9 @@ const Menus = () => {
                   <CTableHeaderCell className="border-0" style={{ width: '12%' }}>
                     Fin
                   </CTableHeaderCell>
+                  <CTableHeaderCell className="text-end border-0" style={{ width: '10%' }}>
+                    Precio total
+                  </CTableHeaderCell>
                   <CTableHeaderCell className="text-center border-0" style={{ width: '8%' }}>
                     Estado
                   </CTableHeaderCell>
@@ -400,13 +439,13 @@ const Menus = () => {
               <CTableBody>
                 {loading ? (
                   <CTableRow>
-                    <CTableDataCell colSpan={7} className="text-center text-body-secondary py-4">
+                    <CTableDataCell colSpan={8} className="text-center text-body-secondary py-4">
                       Cargando menús...
                     </CTableDataCell>
                   </CTableRow>
                 ) : filteredMenus.length === 0 ? (
                   <CTableRow>
-                    <CTableDataCell colSpan={7} className="text-center text-body-secondary py-4">
+                    <CTableDataCell colSpan={8} className="text-center text-body-secondary py-4">
                       {searchTerm
                         ? 'No hay menús que coincidan con la búsqueda.'
                         : 'Todavía no hay menús registrados.'}
@@ -469,6 +508,9 @@ const Menus = () => {
                           {menu.fecha_hora_fin
                             ? new Date(menu.fecha_hora_fin).toLocaleString('es-AR')
                             : 'Sin definir'}
+                        </CTableDataCell>
+                        <CTableDataCell className="text-end fw-semibold text-success text-nowrap">
+                          {formatCurrency(menu.precio_total ?? calcularPrecioMenu(menu))}
                         </CTableDataCell>
                         <CTableDataCell className="text-center">
                           <CBadge color={menu.estado ? 'success' : 'secondary'}>
@@ -788,6 +830,12 @@ const Menus = () => {
                     })}
                   </div>
                 )}
+                <div className="d-flex justify-content-end align-items-center mt-3 pt-3 border-top">
+                  <span className="fw-semibold me-2">Precio total del menú:</span>
+                  <CBadge color="success" className="fs-6">
+                    {formatCurrency(precioTotalFormulario)}
+                  </CBadge>
+                </div>
               </CCol>
             </CRow>
           </CModalBody>

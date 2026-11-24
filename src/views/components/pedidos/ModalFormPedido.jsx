@@ -23,6 +23,7 @@ import {
 import CIcon from '@coreui/icons-react'
 import { cilFastfood, cilPencil, cilPlus, cilMinus, cilTrash, cilWarning } from '@coreui/icons'
 import api from '../api/api'
+import { extraerMensajeError } from '../api/errorMessage'
 import MenuDesglose from '../MenuDesglose'
 import { toast } from 'react-toastify'
 import { getUserRoles, hasFullAccess, readCurrentUser } from '../../../utils/roles'
@@ -450,12 +451,12 @@ const ModalFormPedido = ({
         modoEditar ? 'Error al actualizar pedido:' : 'Error al crear pedido:',
         error.response?.data || error
       )
-      const mensajeError =
-        error.response?.data?.detail ||
-        error.response?.data?.non_field_errors?.[0] ||
-        (modoEditar
+      const mensajeError = extraerMensajeError(
+        error,
+        modoEditar
           ? 'Error al modificar el pedido. Por favor, intenta nuevamente.'
-          : 'Error al guardar el pedido. Por favor, intenta nuevamente.')
+          : 'Error al guardar el pedido. Por favor, intenta nuevamente.',
+      )
       notificar('error', mensajeError)
     } finally {
       setLoading(false)

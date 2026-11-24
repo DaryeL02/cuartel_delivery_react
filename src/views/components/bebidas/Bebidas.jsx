@@ -31,6 +31,14 @@ import api from '../api/api'
 const MAX_STOCK = 2147483647
 const MAX_PRECIO = 9999999.99
 
+const getStockBadgeColor = (stockActual, stockMinimo) => {
+  const actual = Number(stockActual)
+  const minimo = Number(stockMinimo)
+  if (actual <= 0) return 'danger'
+  if (actual <= minimo) return 'warning'
+  return 'success'
+}
+
 const emptyBebida = {
   nombre: '',
   descripcion: '',
@@ -324,7 +332,14 @@ const Bebidas = () => {
               {lista.map((item) => (
                 <CTableRow key={item.id_bebidas}>
                   <CTableDataCell>{item.nombre}</CTableDataCell>
-                  <CTableDataCell>{item.stock_actual}</CTableDataCell>
+                  <CTableDataCell>
+                    <CBadge
+                      color={getStockBadgeColor(item.stock_actual, item.stock_minimo)}
+                      shape="rounded-pill"
+                    >
+                      {item.stock_actual}
+                    </CBadge>
+                  </CTableDataCell>
                   <CTableDataCell>{item.stock_minimo}</CTableDataCell>
                   <CTableDataCell>{item.unidad}</CTableDataCell>
                   <CTableDataCell>${Number(item.precio_unitario).toFixed(2)}</CTableDataCell>

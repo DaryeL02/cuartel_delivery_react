@@ -45,6 +45,7 @@ import {
 } from '@coreui/icons'
 import api from '../api/api'
 import { cargarResultadosPaginados } from '../api/paginacion'
+import { extraerMensajeError } from '../api/errorMessage'
 import MenuDesglose from '../MenuDesglose'
 import { toast } from 'react-toastify'
 
@@ -604,21 +605,7 @@ const Ventas = () => {
         return
       }
 
-      // 1. Si es un PEDIDO NUEVO, lo creamos ya marcado como pagado: true
-      if (modoVenta === 'nuevo') {
-        const payloadPedido = {
-          empleado: Number(idEmpleado),
-          cliente: nuevoPedido.cliente.trim(),
-          direccion: nuevoPedido.direccion.trim(),
-          estado: 'En proceso',
-          pagado: true,
-          detalles: detallesFormateados,
-        }
-
-        await api.post('/api/pedidos/', payloadPedido, config)
-      }
-
-      // 2. Registramos la venta en /api/ventas/
+      // Registramos la venta directa o el pedido importado en /api/ventas/
       const datosVenta = {
         caja: Number(cajaSeleccionada.id_cajas),
         metodo: Number(metodoSeleccionado),
@@ -627,7 +614,7 @@ const Ventas = () => {
 
       await api.post('/api/ventas/', datosVenta, config)
 
-      // 3. Si es un PEDIDO IMPORTADO, actualizamos pagado: true sin tocar su estado de preparación
+      // Si es un PEDIDO IMPORTADO, actualizamos pagado: true sin tocar su estado de preparación
       if (modoVenta === 'importado') {
         await api.patch(
           `/api/pedidos/${pedidoSeleccionado.id_pedidos}/`,
@@ -638,7 +625,7 @@ const Ventas = () => {
 
       notificar('exito', 'Venta registrada con éxito.')
 
-      // 4. Limpiamos el formulario y recargamos los pedidos pendientes de pago
+      // Limpiamos el formulario y recargamos los pedidos pendientes de pago
       setPedidoSeleccionado(null)
       setModoVenta(null)
       setIdSeleccionado('')
@@ -649,10 +636,10 @@ const Ventas = () => {
       cargarVentasCaja(cajaSeleccionada?.id_cajas)
     } catch (error) {
       console.error('Error al procesar la venta:', error.response?.data || error)
-      const mensajeBackend =
-        error.response?.data?.detail ||
-        error.response?.data?.non_field_errors?.[0] ||
-        'No se pudo registrar la venta. Por favor, intenta nuevamente.'
+      const mensajeBackend = extraerMensajeError(
+        error,
+        'No se pudo registrar la venta. Por favor, intenta nuevamente.',
+      )
       notificar('error', mensajeBackend)
     } finally {
       setLoading(false)

@@ -13,7 +13,6 @@ import {
   CTableDataCell,
   CButton,
   CBadge,
-  CAvatar,
   CPagination,
   CPaginationItem,
   CFormInput,
@@ -211,23 +210,9 @@ const Empleados = ({ onOpenModal }) => {
                             </CPlaceholder>
                           </CTableDataCell>
                           <CTableDataCell>
-                            <div className="d-flex align-items-center gap-3">
-                              <CPlaceholder
-                                animation="glow"
-                                className="rounded-circle"
-                                style={{ width: '38px', height: '38px', flexShrink: 0 }}
-                              >
-                                <CPlaceholder xs={12} className="h-100 rounded-circle" />
-                              </CPlaceholder>
-                              <div className="w-100">
-                                <CPlaceholder animation="glow" className="mb-1">
-                                  <CPlaceholder xs={8} />
-                                </CPlaceholder>
-                                <CPlaceholder animation="glow">
-                                  <CPlaceholder xs={5} size="sm" />
-                                </CPlaceholder>
-                              </div>
-                            </div>
+                            <CPlaceholder animation="glow" className="w-75">
+                              <CPlaceholder xs={8} />
+                            </CPlaceholder>
                           </CTableDataCell>
                           <CTableDataCell>
                             <CPlaceholder animation="glow">
@@ -269,18 +254,9 @@ const Empleados = ({ onOpenModal }) => {
                               </CTableDataCell>
 
                               <CTableDataCell>
-                                <div className="d-flex align-items-center gap-3">
-                                  <CAvatar
-                                    color="light"
-                                    text={empleado.nombre ? empleado.nombre.charAt(0).toUpperCase() : '?'}
-                                    className="fw-semibold text-primary"
-                                  />
-                                  <div>
                                     <div className="fw-semibold text-body">
                                       {empleado.nombre} {empleado.apellido}
                                     </div>
-                                  </div>
-                                </div>
                               </CTableDataCell>
 
                               <CTableDataCell className="text-body-secondary">

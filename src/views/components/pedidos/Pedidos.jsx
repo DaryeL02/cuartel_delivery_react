@@ -36,6 +36,7 @@ import {
 } from '@coreui/icons'
 import api from '../api/api'
 import { cargarResultadosPaginados } from '../api/paginacion'
+import { extraerMensajeError } from '../api/errorMessage'
 import ModalFormPedido from './ModalFormPedido'
 import MenuDesglose from '../MenuDesglose'
 import { toast } from 'react-toastify'
@@ -248,7 +249,10 @@ const Pedidos = () => {
       cargarPedidos()
     } catch (error) {
       console.error('Error al finalizar pedido:', error.response?.data || error)
-      notificar('error', 'No se pudo cambiar el estado del pedido.')
+      notificar(
+        'error',
+        extraerMensajeError(error, 'No se pudo cambiar el estado del pedido.'),
+      )
     } finally {
       setCompletando(false)
     }
