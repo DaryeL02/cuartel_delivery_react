@@ -275,7 +275,7 @@ const Pedidos = () => {
       }
     } catch (error) {
       console.error('Error al cancelar pedido:', error.response?.data || error)
-      notificar('error', error.response?.data?.detail || 'No se pudo cancelar el pedido.')
+      notificar('error', extraerMensajeError(error, 'No se pudo cancelar el pedido.'))
     } finally {
       setCancelando(false)
     }
@@ -635,7 +635,7 @@ const Pedidos = () => {
                         >
                           Detalles
                         </CButton>
-                        {!pedido.pagado && pedido.estado !== 'Cancelado' && (
+                        {pedido.estado?.toLowerCase() === 'en proceso' && (
                           <CButton
                             size="sm"
                             color="danger"

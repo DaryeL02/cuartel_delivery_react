@@ -935,19 +935,19 @@ const Ventas = () => {
                         invalid={!!errores.cantidad}
                         feedbackInvalid={errores.cantidad}
                       />
+                      <div className="d-flex justify-content-end mt-2">
+                        <CButton
+                          type="button"
+                          color="info"
+                          variant="outline"
+                          onClick={handleAgregarProducto}
+                        >
+                          <CIcon icon={cilPlus} className="me-1" /> Agregar artículo
+                        </CButton>
+                      </div>
                     </CCol>
                   </CRow>
 
-                  <div className="mb-3">
-                    <CButton
-                      type="button"
-                      color="info"
-                      variant="outline"
-                      onClick={handleAgregarProducto}
-                    >
-                      <CIcon icon={cilPlus} className="me-1" /> Agregar artículo
-                    </CButton>
-                  </div>
                   <CTable
                     responsive
                     align="middle"

@@ -683,20 +683,19 @@ const ModalFormPedido = ({
                 invalid={!!erroresItem.cantidad}
                 feedbackInvalid={erroresItem.cantidad}
               />
+              <div className="d-flex justify-content-end mt-2">
+                <CButton
+                  type="button"
+                  color="info"
+                  variant="outline"
+                  onClick={handleAgregarProducto}
+                  title="Agregar artículo al pedido"
+                >
+                  <CIcon icon={cilPlus} className="me-1" /> Agregar artículo
+                </CButton>
+              </div>
             </CCol>
           </CRow>
-
-          <div className="mb-3">
-            <CButton
-              type="button"
-              color="info"
-              variant="outline"
-              onClick={handleAgregarProducto}
-              title="Agregar artículo al pedido"
-            >
-              <CIcon icon={cilPlus} className="me-1" /> Agregar artículo
-            </CButton>
-          </div>
 
           {/* TABLA DE ÍTEMS DEL PEDIDO */}
           {modoEditar && <h6 className="fw-bold mb-2">Ítems del Pedido</h6>}
